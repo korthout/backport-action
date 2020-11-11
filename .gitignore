@@ -1,6 +1,7 @@
+lib
 
-# Created by https://www.toptal.com/developers/gitignore/api/node,visualstudiocode,intellij+all
-# Edit at https://www.toptal.com/developers/gitignore?templates=node,visualstudiocode,intellij+all
+# Modified from https://www.toptal.com/developers/gitignore/api/node,visualstudiocode,intellij+all
+#dist # removed because this action requires the dist to be available in the repo
 
 ### Intellij+all ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
@@ -176,7 +177,7 @@ typings/
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+#dist # removed because this action requires the dist to be available in the repo
 
 # Gatsby files
 .cache/
