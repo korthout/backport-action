@@ -1456,7 +1456,7 @@ function run() {
 }
 function callBackportScript(pwd, headref, baseref, target, branchname) {
     return __awaiter(this, void 0, void 0, function* () {
-        return exec_1.exec(`${pwd}/backport.sh`, [headref, baseref, target, branchname], {
+        return exec_1.exec(`backport.sh`, [pwd, headref, baseref, target, branchname], {
             listeners: {
                 stdout: (data) => console.log(data.toString()),
             },

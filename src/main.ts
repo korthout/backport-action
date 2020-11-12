@@ -141,7 +141,7 @@ async function callBackportScript(
   target: string,
   branchname: string
 ): Promise<number> {
-  return exec(`${pwd}/backport.sh`, [headref, baseref, target, branchname], {
+  return exec(`backport.sh`, [pwd, headref, baseref, target, branchname], {
     listeners: {
       stdout: (data) => console.log(data.toString()),
     },
