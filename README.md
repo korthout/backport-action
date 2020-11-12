@@ -1,4 +1,7 @@
 # Backport action
+
+> This project is still in a very early development stage
+
 This is a GitHub action to backport a pull request (PR) after merging it onto branches that are specified using labels.
 
 For example, a PR with labels
@@ -39,7 +42,10 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           github_workspace: ${{ github.workspace }}
+          version: master
 ```
+
+> `version:` must refer to the same version as the `uses`
 
 ## Code in Main
 
