@@ -1390,6 +1390,7 @@ function run() {
         try {
             const token = core.getInput("github_token", { required: true });
             const pwd = core.getInput("github_workspace", { required: true });
+            const version = core.getInput("version", { required: true });
             const payload = github.context
                 .payload;
             const owner = github.context.repo.owner;
@@ -1414,7 +1415,7 @@ function run() {
                 try {
                     const branchname = `backport-${issue_number}-to-${target}`;
                     console.log(`Start backport to ${branchname}`);
-                    const exitcode = yield callBackportScript(pwd, headref, baseref, target, branchname);
+                    const exitcode = yield callBackportScript(pwd, headref, baseref, target, branchname, version);
                     if (exitcode != 0) {
                         const message = composeMessageForGitFailure(target, exitcode);
                         console.error(message);
@@ -1454,9 +1455,9 @@ function run() {
         }
     });
 }
-function callBackportScript(pwd, headref, baseref, target, branchname) {
+function callBackportScript(pwd, headref, baseref, target, branchname, version) {
     return __awaiter(this, void 0, void 0, function* () {
-        return exec_1.exec(`backport.sh`, [pwd, headref, baseref, target, branchname], {
+        return exec_1.exec(`/home/runner/work/_actions/zeebe-io/backport-action/${version}/backport.sh`, [pwd, headref, baseref, target, branchname], {
             listeners: {
                 stdout: (data) => console.log(data.toString()),
             },

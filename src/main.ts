@@ -33,6 +33,7 @@ async function run(): Promise<void> {
   try {
     const token = core.getInput("github_token", { required: true });
     const pwd = core.getInput("github_workspace", { required: true });
+    const version = core.getInput("version", { required: true });
     const payload = github.context
       .payload as EventPayloads.WebhookPayloadPullRequest;
 
@@ -71,7 +72,8 @@ async function run(): Promise<void> {
           headref,
           baseref,
           target,
-          branchname
+          branchname,
+          version
         );
 
         if (exitcode != 0) {
@@ -139,13 +141,18 @@ async function callBackportScript(
   headref: string,
   baseref: string,
   target: string,
-  branchname: string
+  branchname: string,
+  version: string
 ): Promise<number> {
-  return exec(`backport.sh`, [pwd, headref, baseref, target, branchname], {
-    listeners: {
-      stdout: (data) => console.log(data.toString()),
-    },
-  });
+  return exec(
+    `/home/runner/work/_actions/zeebe-io/backport-action/${version}/backport.sh`,
+    [pwd, headref, baseref, target, branchname],
+    {
+      listeners: {
+        stdout: (data) => console.log(data.toString()),
+      },
+    }
+  );
 }
 
 async function createComment(comment: Comment, token: string): Promise<any> {
