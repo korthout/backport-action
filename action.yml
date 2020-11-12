@@ -8,6 +8,9 @@ inputs:
   github_workspace:
     description: The GitHub workspace directory path
     required: true
+  version:
+    description: The version of backport-action
+    required: true
 runs:
   using: "node12"
   main: "dist/index.js"

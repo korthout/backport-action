@@ -4,10 +4,11 @@
 set -ex
 
 # Check usage
-if [ -z "$1" ] | [ -z "$2" ] | [ -z "$3" ] | [ -z "$4" ]
+if [ -z "$1" ] | [ -z "$2" ] | [ -z "$3" ] | [ -z "$4" ] | [ -z "$5" ]
 then
-  echo "Usage: backport.sh headref baseref target branchname
+  echo "Usage: backport.sh directory headref baseref target branchname
   where:
+    directory the root of the git repository
     headref refers to the source branch of the merge commit, i.e. PR head
     baseref refers to the target branch of the merge commit, i.e. PR merge target
     target refers to the target to backport onto, e.g. stable/0.24
@@ -23,11 +24,14 @@ then
   exit 1
 fi
 
-headref=$1
-baseref=$2
-target=$3
-branchname=$4
+root=$1
+headref=$2
+baseref=$3
+target=$4
+branchname=$5
 worktree=".worktree/backport-$branchname"
+
+cd "${root}"
 
 git config --global user.email "github-actions[bot]@users.noreply.github.com"
 git config --global user.name "github-actions[bot]"
