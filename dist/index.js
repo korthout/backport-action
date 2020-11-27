@@ -1395,11 +1395,11 @@ function run() {
                 .payload;
             const owner = github.context.repo.owner;
             const repo = payload.repository.name;
-            const issue_number = payload.pull_request.number;
-            const issue_title = payload.pull_request.title;
-            const headref = payload.pull_request.head.sha;
-            const baseref = payload.pull_request.base.sha;
-            const labels = payload.pull_request.labels;
+            const pr = payload.pull_request;
+            const headref = pr.head.sha;
+            const baseref = pr.base.sha;
+            const labels = pr.labels;
+            const reviewers = pr.requested_reviewers.map((r) => r.login);
             console.log(`Detected labels on PR: ${labels.map((label) => label.name)}`);
             for (const label of labels) {
                 console.log(`Working on label ${label.name}`);
@@ -1413,18 +1413,18 @@ function run() {
                 const target = match[1];
                 console.log(`Found target in label: ${target}`);
                 try {
-                    const branchname = `backport-${issue_number}-to-${target}`;
+                    const branchname = `backport-${pr.number}-to-${target}`;
                     console.log(`Start backport to ${branchname}`);
                     const exitcode = yield callBackportScript(pwd, headref, baseref, target, branchname, version);
                     if (exitcode != 0) {
                         const message = composeMessageForGitFailure(target, exitcode);
                         console.error(message);
-                        yield createComment({ owner, repo, issue_number, body: message }, token);
+                        yield createComment({ owner, repo, issue_number: pr.number, body: message }, token);
                         continue;
                     }
-                    const { title, body } = composePRContent(target, issue_title, issue_number);
                     console.info(`Create PR for ${branchname}`);
-                    const response = yield createPR({
+                    const { title, body } = composePRContent(target, pr.title, pr.number);
+                    const new_pr_response = yield createPR({
                         owner,
                         repo,
                         title,
@@ -1433,19 +1433,26 @@ function run() {
                         base: target,
                         maintainer_can_modify: true,
                     }, token);
-                    if (response.status != 201) {
-                        console.error(JSON.stringify(response));
-                        const message = composeMessageForCreatePRFailed(response);
-                        yield createComment({ owner, repo, issue_number, body: message }, token);
+                    if (new_pr_response.status != 201) {
+                        console.error(JSON.stringify(new_pr_response));
+                        const message = composeMessageForCreatePRFailed(new_pr_response);
+                        yield createComment({ owner, repo, issue_number: pr.number, body: message }, token);
                         continue;
                     }
-                    const pr_number = response.data.number;
-                    const message = `Successfully created backport PR #${pr_number} for \`${target}\`.`;
-                    yield createComment({ owner, repo, issue_number, body: message }, token);
+                    const new_pr = new_pr_response.data;
+                    const review_response = yield requestReviewers({ owner, repo, pull_number: new_pr.number, reviewers }, token);
+                    if (review_response.status != 201) {
+                        console.error(JSON.stringify(review_response));
+                        const message = composeMessageForRequestReviewersFailed(review_response, target);
+                        yield createComment({ owner, repo, issue_number: pr.number, body: message }, token);
+                        continue;
+                    }
+                    const message = composeMessageForSuccess(new_pr.number, target);
+                    yield createComment({ owner, repo, issue_number: pr.number, body: message }, token);
                 }
                 catch (error) {
                     console.error(error.message);
-                    yield createComment({ owner, repo, issue_number, body: error.message }, token);
+                    yield createComment({ owner, repo, issue_number: pr.number, body: error.message }, token);
                 }
             }
         }
@@ -1482,6 +1489,12 @@ function composePRContent(target, issue_title, issue_number) {
                       Backport of #${issue_number} to \`${target}\`.`;
     return { title, body };
 }
+function requestReviewers(request, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log(`Request reviewers: ${request.reviewers}`);
+        return github.getOctokit(token).pulls.requestReviewers(request);
+    });
+}
 function composeMessageForGitFailure(target, exitcode) {
     //TODO better error messages depending on exit code
     return dedent_1.default `Backport failed for ${target} with exitcode ${exitcode}`;
@@ -1491,6 +1504,15 @@ function composeMessageForCreatePRFailed(response) {
                 Request to create PR rejected with status ${response.status}.
 
                 (see action log for full response)`;
+}
+function composeMessageForRequestReviewersFailed(response, target) {
+    return dedent_1.default `${composeMessageForSuccess(response.data.number, target)}
+                But, request reviewers was rejected with status ${response.status}.
+
+                (see action log for full response)`;
+}
+function composeMessageForSuccess(pr_number, target) {
+    return dedent_1.default `Successfully created backport PR #${pr_number} for \`${target}\`.`;
 }
 run();
 
