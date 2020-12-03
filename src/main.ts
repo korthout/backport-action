@@ -2,7 +2,11 @@ import * as core from "@actions/core";
 import { exec } from "@actions/exec";
 import * as github from "@actions/github";
 import { EventPayloads } from "@octokit/webhooks";
-import { OctokitResponse, PullsCreateResponseData } from "@octokit/types";
+import {
+  OctokitResponse,
+  PullsCreateResponseData,
+  PullsRequestReviewersResponseData,
+} from "@octokit/types";
 import dedent from "dedent";
 
 const labelRegExp = /^backport ([^ ]+)?$/;
@@ -29,6 +33,13 @@ type PRContent = {
   body: string;
 };
 
+type ReviewRequest = {
+  owner: string;
+  repo: string;
+  pull_number: number;
+  reviewers: string[];
+};
+
 async function run(): Promise<void> {
   try {
     const token = core.getInput("github_token", { required: true });
@@ -40,11 +51,11 @@ async function run(): Promise<void> {
     const owner = github.context.repo.owner;
     const repo = payload.repository.name;
 
-    const issue_number = payload.pull_request.number;
-    const issue_title = payload.pull_request.title;
-    const headref = payload.pull_request.head.sha;
-    const baseref = payload.pull_request.base.sha;
-    const labels = payload.pull_request.labels;
+    const mainpr = payload.pull_request;
+    const headref = mainpr.head.sha;
+    const baseref = mainpr.base.sha;
+    const labels = mainpr.labels;
+    const reviewers = mainpr.requested_reviewers?.map((r) => r.login) ?? [];
 
     console.log(`Detected labels on PR: ${labels.map((label) => label.name)}`);
 
@@ -64,7 +75,7 @@ async function run(): Promise<void> {
       console.log(`Found target in label: ${target}`);
 
       try {
-        const branchname = `backport-${issue_number}-to-${target}`;
+        const branchname = `backport-${mainpr.number}-to-${target}`;
 
         console.log(`Start backport to ${branchname}`);
         const exitcode = await callBackportScript(
@@ -80,20 +91,19 @@ async function run(): Promise<void> {
           const message = composeMessageForGitFailure(target, exitcode);
           console.error(message);
           await createComment(
-            { owner, repo, issue_number, body: message },
+            { owner, repo, issue_number: mainpr.number, body: message },
             token
           );
           continue;
         }
 
+        console.info(`Create PR for ${branchname}`);
         const { title, body } = composePRContent(
           target,
-          issue_title,
-          issue_number
+          mainpr.title,
+          mainpr.number
         );
-
-        console.info(`Create PR for ${branchname}`);
-        const response = await createPR(
+        const new_pr_response = await createPR(
           {
             owner,
             repo,
@@ -106,26 +116,48 @@ async function run(): Promise<void> {
           token
         );
 
-        if (response.status != 201) {
-          console.error(JSON.stringify(response));
-          const message = composeMessageForCreatePRFailed(response);
+        if (new_pr_response.status != 201) {
+          console.error(JSON.stringify(new_pr_response));
+          const message = composeMessageForCreatePRFailed(new_pr_response);
           await createComment(
-            { owner, repo, issue_number, body: message },
+            { owner, repo, issue_number: mainpr.number, body: message },
+            token
+          );
+          continue;
+        }
+        const new_pr = new_pr_response.data;
+
+        const review_response = await requestReviewers(
+          { owner, repo, pull_number: new_pr.number, reviewers },
+          token
+        );
+        if (review_response.status != 201) {
+          console.error(JSON.stringify(review_response));
+          const message = composeMessageForRequestReviewersFailed(
+            review_response,
+            target
+          );
+          await createComment(
+            { owner, repo, issue_number: mainpr.number, body: message },
             token
           );
           continue;
         }
 
-        const pr_number = response.data.number;
-        const message = `Successfully created backport PR #${pr_number} for \`${target}\`.`;
+        const message = composeMessageForSuccess(new_pr.number, target);
         await createComment(
-          { owner, repo, issue_number, body: message },
+          { owner, repo, issue_number: mainpr.number, body: message },
           token
         );
       } catch (error) {
         console.error(error.message);
         await createComment(
-          { owner, repo, issue_number, body: error.message },
+          {
+            owner,
+            repo,
+            issue_number: mainpr.number,
+            body: error.message,
+          },
           token
         );
       }
@@ -179,6 +211,11 @@ function composePRContent(
   return { title, body };
 }
 
+async function requestReviewers(request: ReviewRequest, token: string) {
+  console.log(`Request reviewers: ${request.reviewers}`);
+  return github.getOctokit(token).pulls.requestReviewers(request);
+}
+
 function composeMessageForGitFailure(target: string, exitcode: number): string {
   //TODO better error messages depending on exit code
   return dedent`Backport failed for ${target} with exitcode ${exitcode}`;
@@ -191,6 +228,22 @@ function composeMessageForCreatePRFailed(
                 Request to create PR rejected with status ${response.status}.
 
                 (see action log for full response)`;
+}
+
+function composeMessageForRequestReviewersFailed(
+  response: OctokitResponse<PullsRequestReviewersResponseData>,
+  target: string
+): string {
+  return dedent`${composeMessageForSuccess(response.data.number, target)}
+                But, request reviewers was rejected with status ${
+                  response.status
+                }.
+
+                (see action log for full response)`;
+}
+
+function composeMessageForSuccess(pr_number: number, target: string) {
+  return dedent`Successfully created backport PR #${pr_number} for \`${target}\`.`;
 }
 
 run();
