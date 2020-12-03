@@ -8,7 +8,6 @@ import {
   PullsRequestReviewersResponseData,
 } from "@octokit/types";
 import dedent from "dedent";
-import { resolve } from "path";
 
 const labelRegExp = /^backport ([^ ]+)?$/;
 
@@ -38,7 +37,7 @@ type ReviewRequest = {
   owner: string;
   repo: string;
   pull_number: number;
-  reviewers?: string[];
+  reviewers: string[];
 };
 
 async function run(): Promise<void> {
@@ -52,11 +51,11 @@ async function run(): Promise<void> {
     const owner = github.context.repo.owner;
     const repo = payload.repository.name;
 
-    const pr = payload.pull_request;
-    const headref = pr.head.sha;
-    const baseref = pr.base.sha;
-    const labels = pr.labels;
-    const reviewers = pr.requested_reviewers.map((r) => r.login);
+    const mainpr = payload.pull_request;
+    const headref = mainpr.head.sha;
+    const baseref = mainpr.base.sha;
+    const labels = mainpr.labels;
+    const reviewers = mainpr.requested_reviewers?.map((r) => r.login) ?? [];
 
     console.log(`Detected labels on PR: ${labels.map((label) => label.name)}`);
 
@@ -76,7 +75,7 @@ async function run(): Promise<void> {
       console.log(`Found target in label: ${target}`);
 
       try {
-        const branchname = `backport-${pr.number}-to-${target}`;
+        const branchname = `backport-${mainpr.number}-to-${target}`;
 
         console.log(`Start backport to ${branchname}`);
         const exitcode = await callBackportScript(
@@ -92,14 +91,18 @@ async function run(): Promise<void> {
           const message = composeMessageForGitFailure(target, exitcode);
           console.error(message);
           await createComment(
-            { owner, repo, issue_number: pr.number, body: message },
+            { owner, repo, issue_number: mainpr.number, body: message },
             token
           );
           continue;
         }
 
         console.info(`Create PR for ${branchname}`);
-        const { title, body } = composePRContent(target, pr.title, pr.number);
+        const { title, body } = composePRContent(
+          target,
+          mainpr.title,
+          mainpr.number
+        );
         const new_pr_response = await createPR(
           {
             owner,
@@ -117,7 +120,7 @@ async function run(): Promise<void> {
           console.error(JSON.stringify(new_pr_response));
           const message = composeMessageForCreatePRFailed(new_pr_response);
           await createComment(
-            { owner, repo, issue_number: pr.number, body: message },
+            { owner, repo, issue_number: mainpr.number, body: message },
             token
           );
           continue;
@@ -135,7 +138,7 @@ async function run(): Promise<void> {
             target
           );
           await createComment(
-            { owner, repo, issue_number: pr.number, body: message },
+            { owner, repo, issue_number: mainpr.number, body: message },
             token
           );
           continue;
@@ -143,13 +146,18 @@ async function run(): Promise<void> {
 
         const message = composeMessageForSuccess(new_pr.number, target);
         await createComment(
-          { owner, repo, issue_number: pr.number, body: message },
+          { owner, repo, issue_number: mainpr.number, body: message },
           token
         );
       } catch (error) {
         console.error(error.message);
         await createComment(
-          { owner, repo, issue_number: pr.number, body: error.message },
+          {
+            owner,
+            repo,
+            issue_number: mainpr.number,
+            body: error.message,
+          },
           token
         );
       }

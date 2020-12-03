@@ -1386,6 +1386,7 @@ const github = __importStar(__webpack_require__(438));
 const dedent_1 = __importDefault(__webpack_require__(281));
 const labelRegExp = /^backport ([^ ]+)?$/;
 function run() {
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const token = core.getInput("github_token", { required: true });
@@ -1395,11 +1396,11 @@ function run() {
                 .payload;
             const owner = github.context.repo.owner;
             const repo = payload.repository.name;
-            const pr = payload.pull_request;
-            const headref = pr.head.sha;
-            const baseref = pr.base.sha;
-            const labels = pr.labels;
-            const reviewers = pr.requested_reviewers.map((r) => r.login);
+            const mainpr = payload.pull_request;
+            const headref = mainpr.head.sha;
+            const baseref = mainpr.base.sha;
+            const labels = mainpr.labels;
+            const reviewers = (_b = (_a = mainpr.requested_reviewers) === null || _a === void 0 ? void 0 : _a.map((r) => r.login)) !== null && _b !== void 0 ? _b : [];
             console.log(`Detected labels on PR: ${labels.map((label) => label.name)}`);
             for (const label of labels) {
                 console.log(`Working on label ${label.name}`);
@@ -1413,17 +1414,17 @@ function run() {
                 const target = match[1];
                 console.log(`Found target in label: ${target}`);
                 try {
-                    const branchname = `backport-${pr.number}-to-${target}`;
+                    const branchname = `backport-${mainpr.number}-to-${target}`;
                     console.log(`Start backport to ${branchname}`);
                     const exitcode = yield callBackportScript(pwd, headref, baseref, target, branchname, version);
                     if (exitcode != 0) {
                         const message = composeMessageForGitFailure(target, exitcode);
                         console.error(message);
-                        yield createComment({ owner, repo, issue_number: pr.number, body: message }, token);
+                        yield createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
                         continue;
                     }
                     console.info(`Create PR for ${branchname}`);
-                    const { title, body } = composePRContent(target, pr.title, pr.number);
+                    const { title, body } = composePRContent(target, mainpr.title, mainpr.number);
                     const new_pr_response = yield createPR({
                         owner,
                         repo,
@@ -1436,7 +1437,7 @@ function run() {
                     if (new_pr_response.status != 201) {
                         console.error(JSON.stringify(new_pr_response));
                         const message = composeMessageForCreatePRFailed(new_pr_response);
-                        yield createComment({ owner, repo, issue_number: pr.number, body: message }, token);
+                        yield createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
                         continue;
                     }
                     const new_pr = new_pr_response.data;
@@ -1444,15 +1445,20 @@ function run() {
                     if (review_response.status != 201) {
                         console.error(JSON.stringify(review_response));
                         const message = composeMessageForRequestReviewersFailed(review_response, target);
-                        yield createComment({ owner, repo, issue_number: pr.number, body: message }, token);
+                        yield createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
                         continue;
                     }
                     const message = composeMessageForSuccess(new_pr.number, target);
-                    yield createComment({ owner, repo, issue_number: pr.number, body: message }, token);
+                    yield createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
                 }
                 catch (error) {
                     console.error(error.message);
-                    yield createComment({ owner, repo, issue_number: pr.number, body: error.message }, token);
+                    yield createComment({
+                        owner,
+                        repo,
+                        issue_number: mainpr.number,
+                        body: error.message,
+                    }, token);
                 }
             }
         }
