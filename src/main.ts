@@ -1,13 +1,13 @@
 import * as core from "@actions/core";
 import { exec } from "@actions/exec";
-import * as github from "@actions/github";
-import { EventPayloads } from "@octokit/webhooks";
 import {
   OctokitResponse,
   PullsCreateResponseData,
   PullsRequestReviewersResponseData,
 } from "@octokit/types";
 import dedent from "dedent";
+
+import * as github from "./github";
 
 const labelRegExp = /^backport ([^ ]+)?$/;
 
@@ -45,10 +45,9 @@ async function run(): Promise<void> {
     const token = core.getInput("github_token", { required: true });
     const pwd = core.getInput("github_workspace", { required: true });
     const version = core.getInput("version", { required: true });
-    const payload = github.context
-      .payload as EventPayloads.WebhookPayloadPullRequest;
+    const payload = github.getPayload();
 
-    const owner = github.context.repo.owner;
+    const owner = github.getContext().repo.owner;
     const repo = payload.repository.name;
 
     const mainpr = payload.pull_request;

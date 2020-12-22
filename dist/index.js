@@ -1382,8 +1382,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(186));
 const exec_1 = __webpack_require__(514);
-const github = __importStar(__webpack_require__(438));
 const dedent_1 = __importDefault(__webpack_require__(281));
+const github = __importStar(__webpack_require__(928));
 const labelRegExp = /^backport ([^ ]+)?$/;
 function run() {
     var _a, _b;
@@ -1392,9 +1392,8 @@ function run() {
             const token = core.getInput("github_token", { required: true });
             const pwd = core.getInput("github_workspace", { required: true });
             const version = core.getInput("version", { required: true });
-            const payload = github.context
-                .payload;
-            const owner = github.context.repo.owner;
+            const payload = github.getPayload();
+            const owner = github.getContext().repo.owner;
             const repo = payload.repository.name;
             const mainpr = payload.pull_request;
             const headref = mainpr.head.sha;
@@ -7077,6 +7076,56 @@ class HttpClient {
     }
 }
 exports.HttpClient = HttpClient;
+
+
+/***/ }),
+
+/***/ 928:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * Github module
+ *
+ * Used to isolate the boundary between the code of this project and the github
+ * actions api. Handy during testing, because we can easily mock this module's
+ * functions. Properties are harder to mock, so this module just offers
+ * functions to retrieve those properties.
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getPayload = exports.getOctokit = exports.getContext = void 0;
+const github = __importStar(__webpack_require__(438));
+const getOctokit = github.getOctokit;
+exports.getOctokit = getOctokit;
+const context = github.context;
+function getContext() {
+    return context;
+}
+exports.getContext = getContext;
+function getPayload() {
+    return context.payload;
+}
+exports.getPayload = getPayload;
 
 
 /***/ }),
