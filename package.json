@@ -6,11 +6,11 @@
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
-    "format": "prettier --write **/*.ts",
-    "format-check": "prettier --check **/*.ts",
+    "format": "prettier --write src/",
+    "format-check": "prettier --check src/",
     "package": "ncc build --source-map --license licenses.txt",
-    "test": "jest",
-    "all": "npm run build && npm run format && npm run package && npm test"
+    "test": "jest --silent",
+    "all": "npm run format && npm run build && npm run package && npm test"
   },
   "repository": {
     "type": "git",
@@ -34,11 +34,11 @@
     "@types/jest": "~26.0.10",
     "@types/node": "~14.10.0",
     "@vercel/ncc": "~0.23.0",
-    "jest": "~24.9.0",
+    "jest": "^26.0.0",
     "jest-circus": "~26.4.2",
     "js-yaml": "~3.14.0",
     "prettier": "2.1.1",
-    "ts-jest": "~24.3.0",
+    "ts-jest": "^26.0.0",
     "typescript": "~4.0.2"
   }
 }

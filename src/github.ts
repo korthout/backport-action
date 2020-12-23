@@ -9,16 +9,72 @@
 
 import * as github from "@actions/github";
 import { EventPayloads } from "@octokit/webhooks";
+import {
+  OctokitResponse,
+  PullsCreateResponseData,
+  PullsRequestReviewersResponseData,
+} from "@octokit/types";
 
-const getOctokit = github.getOctokit;
-const context = github.context;
+export type PullRequestPayload = EventPayloads.WebhookPayloadPullRequest;
+export type PullRequest = EventPayloads.WebhookPayloadPullRequestPullRequest;
+export type Label = EventPayloads.WebhookPayloadPullRequestLabel;
+export type CreatePullRequestResponse = {
+  status: number;
+  data: {
+    number: number;
+  };
+};
+export type RequestReviewersResponse = CreatePullRequestResponse;
 
-function getContext() {
-  return context;
+export function getRepo() {
+  return github.context.repo;
 }
 
-function getPayload() {
-  return context.payload as EventPayloads.WebhookPayloadPullRequest;
+export function getPayload() {
+  return github.context.payload as PullRequestPayload;
 }
 
-export { getContext, getOctokit, getPayload };
+export async function createComment(comment: Comment, token: string) {
+  console.log(`Create comment: ${comment.body}`);
+  return github.getOctokit(token).issues.createComment(comment);
+}
+
+export async function createPR(
+  pr: PR,
+  token: string
+): Promise<CreatePullRequestResponse> {
+  console.log(`Create PR: ${pr.body}`);
+  return github.getOctokit(token).pulls.create(pr);
+}
+
+export async function requestReviewers(
+  request: ReviewRequest,
+  token: string
+): Promise<RequestReviewersResponse> {
+  console.log(`Request reviewers: ${request.reviewers}`);
+  return github.getOctokit(token).pulls.requestReviewers(request);
+}
+
+type Comment = {
+  owner: string;
+  repo: string;
+  issue_number: number;
+  body: string;
+};
+
+type PR = {
+  owner: string;
+  repo: string;
+  title: string;
+  body: string;
+  head: string;
+  base: string;
+  maintainer_can_modify: boolean;
+};
+
+type ReviewRequest = {
+  owner: string;
+  repo: string;
+  pull_number: number;
+  reviewers: string[];
+};

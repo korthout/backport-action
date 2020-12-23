@@ -1376,149 +1376,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const core = __importStar(__webpack_require__(186));
-const exec_1 = __webpack_require__(514);
-const dedent_1 = __importDefault(__webpack_require__(281));
-const github = __importStar(__webpack_require__(928));
-const labelRegExp = /^backport ([^ ]+)?$/;
+const backport = __importStar(__webpack_require__(859));
+/**
+ * Called from the action.yml.
+ *
+ * Is separated from backport for testing purposes
+ */
 function run() {
-    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const token = core.getInput("github_token", { required: true });
-            const pwd = core.getInput("github_workspace", { required: true });
-            const version = core.getInput("version", { required: true });
-            const payload = github.getPayload();
-            const owner = github.getContext().repo.owner;
-            const repo = payload.repository.name;
-            const mainpr = payload.pull_request;
-            const headref = mainpr.head.sha;
-            const baseref = mainpr.base.sha;
-            const labels = mainpr.labels;
-            const reviewers = (_b = (_a = mainpr.requested_reviewers) === null || _a === void 0 ? void 0 : _a.map((r) => r.login)) !== null && _b !== void 0 ? _b : [];
-            console.log(`Detected labels on PR: ${labels.map((label) => label.name)}`);
-            for (const label of labels) {
-                console.log(`Working on label ${label.name}`);
-                // we are looking for labels like "backport stable/0.24"
-                const match = labelRegExp.exec(label.name);
-                if (!match) {
-                    console.log("Doesn't match expected prefix");
-                    continue;
-                }
-                //extract the target branch (e.g. "stable/0.24")
-                const target = match[1];
-                console.log(`Found target in label: ${target}`);
-                try {
-                    const branchname = `backport-${mainpr.number}-to-${target}`;
-                    console.log(`Start backport to ${branchname}`);
-                    const exitcode = yield callBackportScript(pwd, headref, baseref, target, branchname, version);
-                    if (exitcode != 0) {
-                        const message = composeMessageForGitFailure(target, exitcode);
-                        console.error(message);
-                        yield createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
-                        continue;
-                    }
-                    console.info(`Create PR for ${branchname}`);
-                    const { title, body } = composePRContent(target, mainpr.title, mainpr.number);
-                    const new_pr_response = yield createPR({
-                        owner,
-                        repo,
-                        title,
-                        body,
-                        head: branchname,
-                        base: target,
-                        maintainer_can_modify: true,
-                    }, token);
-                    if (new_pr_response.status != 201) {
-                        console.error(JSON.stringify(new_pr_response));
-                        const message = composeMessageForCreatePRFailed(new_pr_response);
-                        yield createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
-                        continue;
-                    }
-                    const new_pr = new_pr_response.data;
-                    const review_response = yield requestReviewers({ owner, repo, pull_number: new_pr.number, reviewers }, token);
-                    if (review_response.status != 201) {
-                        console.error(JSON.stringify(review_response));
-                        const message = composeMessageForRequestReviewersFailed(review_response, target);
-                        yield createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
-                        continue;
-                    }
-                    const message = composeMessageForSuccess(new_pr.number, target);
-                    yield createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
-                }
-                catch (error) {
-                    console.error(error.message);
-                    yield createComment({
-                        owner,
-                        repo,
-                        issue_number: mainpr.number,
-                        body: error.message,
-                    }, token);
-                }
-            }
-        }
-        catch (error) {
-            console.error(error.message);
-            core.setFailed(error.message);
-        }
+        return backport.run();
     });
 }
-function callBackportScript(pwd, headref, baseref, target, branchname, version) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return exec_1.exec(`/home/runner/work/_actions/zeebe-io/backport-action/${version}/backport.sh`, [pwd, headref, baseref, target, branchname], {
-            listeners: {
-                stdout: (data) => console.log(data.toString()),
-            },
-        });
-    });
-}
-function createComment(comment, token) {
-    return __awaiter(this, void 0, void 0, function* () {
-        console.log(`Create comment: ${comment.body}`);
-        return github.getOctokit(token).issues.createComment(comment);
-    });
-}
-function createPR(pr, token) {
-    return __awaiter(this, void 0, void 0, function* () {
-        console.log(`Create PR: ${pr.body}`);
-        return github.getOctokit(token).pulls.create(pr);
-    });
-}
-function composePRContent(target, issue_title, issue_number) {
-    const title = `[Backport ${target}] ${issue_title}`;
-    const body = dedent_1.default `# Description
-                      Backport of #${issue_number} to \`${target}\`.`;
-    return { title, body };
-}
-function requestReviewers(request, token) {
-    return __awaiter(this, void 0, void 0, function* () {
-        console.log(`Request reviewers: ${request.reviewers}`);
-        return github.getOctokit(token).pulls.requestReviewers(request);
-    });
-}
-function composeMessageForGitFailure(target, exitcode) {
-    //TODO better error messages depending on exit code
-    return dedent_1.default `Backport failed for ${target} with exitcode ${exitcode}`;
-}
-function composeMessageForCreatePRFailed(response) {
-    return dedent_1.default `Backport branch created but failed to create PR. 
-                Request to create PR rejected with status ${response.status}.
-
-                (see action log for full response)`;
-}
-function composeMessageForRequestReviewersFailed(response, target) {
-    return dedent_1.default `${composeMessageForSuccess(response.data.number, target)}
-                But, request reviewers was rejected with status ${response.status}.
-
-                (see action log for full response)`;
-}
-function composeMessageForSuccess(pr_number, target) {
-    return dedent_1.default `Successfully created backport PR #${pr_number} for \`${target}\`.`;
-}
+// this would be executed on import in a test file
 run();
 
 
@@ -6257,6 +6127,37 @@ module.exports = require("fs");
 
 /***/ }),
 
+/***/ 757:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.callBackportScript = void 0;
+const exec_1 = __webpack_require__(514);
+function callBackportScript(pwd, headref, baseref, target, branchname, version) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return exec_1.exec(`/home/runner/work/_actions/zeebe-io/backport-action/${version}/backport.sh`, [pwd, headref, baseref, target, branchname], {
+            listeners: {
+                stdout: (data) => console.log(data.toString()),
+            },
+        });
+    });
+}
+exports.callBackportScript = callBackportScript;
+
+
+/***/ }),
+
 /***/ 761:
 /***/ (function(module) {
 
@@ -6476,6 +6377,161 @@ function removeHook (state, name, method) {
 /***/ (function(module) {
 
 module.exports = require("url");
+
+/***/ }),
+
+/***/ 859:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.run = void 0;
+const core = __importStar(__webpack_require__(186));
+const dedent_1 = __importDefault(__webpack_require__(281));
+const github = __importStar(__webpack_require__(928));
+const exec = __importStar(__webpack_require__(757));
+const labelRegExp = /^backport ([^ ]+)?$/;
+function run() {
+    var _a, _b;
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const token = core.getInput("github_token", { required: true });
+            const pwd = core.getInput("github_workspace", { required: true });
+            const version = core.getInput("version", { required: true });
+            const payload = github.getPayload();
+            const owner = github.getRepo().owner;
+            const repo = payload.repository.name;
+            const mainpr = payload.pull_request;
+            const headref = mainpr.head.sha;
+            const baseref = mainpr.base.sha;
+            const labels = mainpr.labels;
+            const reviewers = (_b = (_a = mainpr.requested_reviewers) === null || _a === void 0 ? void 0 : _a.map((r) => r.login)) !== null && _b !== void 0 ? _b : [];
+            console.log(`Detected labels on PR: ${labels.map((label) => label.name)}`);
+            for (const label of labels) {
+                console.log(`Working on label ${label.name}`);
+                // we are looking for labels like "backport stable/0.24"
+                const match = labelRegExp.exec(label.name);
+                if (!match) {
+                    console.log("Doesn't match expected prefix");
+                    continue;
+                }
+                //extract the target branch (e.g. "stable/0.24")
+                const target = match[1];
+                console.log(`Found target in label: ${target}`);
+                try {
+                    const branchname = `backport-${mainpr.number}-to-${target}`;
+                    console.log(`Start backport to ${branchname}`);
+                    const exitcode = yield exec.callBackportScript(pwd, headref, baseref, target, branchname, version);
+                    if (exitcode != 0) {
+                        const message = composeMessageForGitFailure(target, exitcode);
+                        console.error(message);
+                        yield github.createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
+                        continue;
+                    }
+                    console.info(`Create PR for ${branchname}`);
+                    const { title, body } = composePRContent(target, mainpr.title, mainpr.number);
+                    const new_pr_response = yield github.createPR({
+                        owner,
+                        repo,
+                        title,
+                        body,
+                        head: branchname,
+                        base: target,
+                        maintainer_can_modify: true,
+                    }, token);
+                    if (new_pr_response.status != 201) {
+                        console.error(JSON.stringify(new_pr_response));
+                        const message = composeMessageForCreatePRFailed(new_pr_response);
+                        yield github.createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
+                        continue;
+                    }
+                    const new_pr = new_pr_response.data;
+                    const review_response = yield github.requestReviewers({ owner, repo, pull_number: new_pr.number, reviewers }, token);
+                    if (review_response.status != 201) {
+                        console.error(JSON.stringify(review_response));
+                        const message = composeMessageForRequestReviewersFailed(review_response, target);
+                        yield github.createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
+                        continue;
+                    }
+                    const message = composeMessageForSuccess(new_pr.number, target);
+                    yield github.createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
+                }
+                catch (error) {
+                    console.error(error.message);
+                    yield github.createComment({
+                        owner,
+                        repo,
+                        issue_number: mainpr.number,
+                        body: error.message,
+                    }, token);
+                }
+            }
+        }
+        catch (error) {
+            console.error(error.message);
+            core.setFailed(error.message);
+        }
+    });
+}
+exports.run = run;
+function composePRContent(target, issue_title, issue_number) {
+    const title = `[Backport ${target}] ${issue_title}`;
+    const body = dedent_1.default `# Description
+                      Backport of #${issue_number} to \`${target}\`.`;
+    return { title, body };
+}
+function composeMessageForGitFailure(target, exitcode) {
+    //TODO better error messages depending on exit code
+    return dedent_1.default `Backport failed for ${target} with exitcode ${exitcode}`;
+}
+function composeMessageForCreatePRFailed(response) {
+    return dedent_1.default `Backport branch created but failed to create PR. 
+                Request to create PR rejected with status ${response.status}.
+
+                (see action log for full response)`;
+}
+function composeMessageForRequestReviewersFailed(response, target) {
+    return dedent_1.default `${composeMessageForSuccess(response.data.number, target)}
+                But, request reviewers was rejected with status ${response.status}.
+
+                (see action log for full response)`;
+}
+function composeMessageForSuccess(pr_number, target) {
+    return dedent_1.default `Successfully created backport PR #${pr_number} for \`${target}\`.`;
+}
+
 
 /***/ }),
 
@@ -7112,20 +7168,47 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPayload = exports.getOctokit = exports.getContext = void 0;
+exports.requestReviewers = exports.createPR = exports.createComment = exports.getPayload = exports.getRepo = void 0;
 const github = __importStar(__webpack_require__(438));
-const getOctokit = github.getOctokit;
-exports.getOctokit = getOctokit;
-const context = github.context;
-function getContext() {
-    return context;
+function getRepo() {
+    return github.context.repo;
 }
-exports.getContext = getContext;
+exports.getRepo = getRepo;
 function getPayload() {
-    return context.payload;
+    return github.context.payload;
 }
 exports.getPayload = getPayload;
+function createComment(comment, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log(`Create comment: ${comment.body}`);
+        return github.getOctokit(token).issues.createComment(comment);
+    });
+}
+exports.createComment = createComment;
+function createPR(pr, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log(`Create PR: ${pr.body}`);
+        return github.getOctokit(token).pulls.create(pr);
+    });
+}
+exports.createPR = createPR;
+function requestReviewers(request, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log(`Request reviewers: ${request.reviewers}`);
+        return github.getOctokit(token).pulls.requestReviewers(request);
+    });
+}
+exports.requestReviewers = requestReviewers;
 
 
 /***/ }),
