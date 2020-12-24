@@ -39,7 +39,6 @@
     "@types/node": "~14.10.0",
     "@vercel/ncc": "~0.23.0",
     "bats": "~1.2.1",
-    "bats-assert": "~2.0.0",
     "jest": "^26.0.0",
     "jest-circus": "~26.4.2",
     "js-yaml": "~3.14.0",

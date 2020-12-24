@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
-load './node_modules/bats-support/load'
-load './node_modules/bats-assert/load'
+load '.bats/bats-support/load'
+load '.bats/bats-assert/load'
 
 @test "shows usage when run without args" {
     run ./backport.sh
