@@ -27,3 +27,5 @@ jobs:
       run: npm test
       env:
         CI: true
+    - name: Check source has been packaged
+      run: npm run package && git diff --quiet

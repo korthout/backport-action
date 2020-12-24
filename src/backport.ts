@@ -12,6 +12,9 @@ type PRContent = {
   body: string;
 };
 
+// todo remove after CI package verification finished
+console.log("Test source package verification");
+
 export async function run(): Promise<void> {
   try {
     const token = core.getInput("github_token", { required: true });
