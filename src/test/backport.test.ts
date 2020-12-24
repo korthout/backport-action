@@ -6,6 +6,7 @@ import * as backport from "../backport";
 import * as exec from "../exec";
 
 import * as golden from "./constants";
+import dedent from "dedent";
 
 jest.mock("@actions/core");
 jest.mock("../github");
@@ -14,11 +15,12 @@ const mockedCore = mocked(core, true);
 const mockedGithub = mocked(github, true);
 const mockedExec = mocked(exec, true);
 
+const token = "EB6B2C67-6298-4857-9792-280F293CAAE0";
+const pwd = "./test/project";
+const version = "0.0.2";
+
 describe("the backport action", () => {
   beforeEach(() => {
-    const token = "EB6B2C67-6298-4857-9792-280F293CAAE0";
-    const pwd = "./test/project";
-    const version = "0.0.2";
     mockedCore.getInput
       .mockReturnValueOnce(token)
       .mockReturnValueOnce(pwd)
@@ -26,17 +28,17 @@ describe("the backport action", () => {
     mockedGithub.getRepo.mockReturnValue(golden.repo);
   });
 
-  describe("given a payload without backport label", () => {
+  describe("given a payload for a PR without backport label", () => {
     beforeEach(() => {
       mockedGithub.getPayload.mockReturnValue(golden.payloads.default);
     });
     it("can be run without impact", async () => {
       await backport.run();
-      expect(mockedGithub.createComment.mock.calls.length).toEqual(0);
+      expect(mockedGithub.createComment).toHaveBeenCalledTimes(0);
     });
   });
 
-  describe("given a payload for a pull request with backport label", () => {
+  describe("given a payload for a PR with backport label", () => {
     beforeEach(() => {
       mockedGithub.getPayload.mockReturnValue(
         golden.payloads.with_backport_label
@@ -49,7 +51,15 @@ describe("the backport action", () => {
       });
       it("comments on failure", async () => {
         await backport.run();
-        expect(mockedGithub.createComment.mock.calls.length).toEqual(1);
+        expect(mockedGithub.createComment).toHaveBeenCalledWith(
+          {
+            owner: "octocat",
+            repo: "Hello-World",
+            issue_number: 1347,
+            body: "Backport failed for stable/0.25 with exitcode 1",
+          },
+          token
+        );
       });
     });
 
@@ -60,15 +70,35 @@ describe("the backport action", () => {
       it("creates a pull request and requests reviewers", async () => {
         mockedGithub.createPR.mockResolvedValue({
           status: 201,
-          data: golden.pulls.backport_to_stable_0_25,
+          data: { ...golden.pulls.backport_to_stable_0_25(), number: 9000 },
         });
         mockedGithub.requestReviewers.mockResolvedValue({
           status: 201,
-          data: golden.pulls.backport_to_stable_0_25,
+          data: { ...golden.pulls.backport_to_stable_0_25(), number: 9000 },
         });
         await backport.run();
-        expect(mockedGithub.createPR.mock.calls.length).toEqual(1);
-        expect(mockedGithub.requestReviewers.mock.calls.length).toEqual(1);
+        expect(mockedGithub.createPR).toHaveBeenCalledWith(
+          {
+            owner: "octocat",
+            repo: "Hello-World",
+            base: "stable/0.25",
+            head: "backport-1347-to-stable/0.25",
+            title: "[Backport stable/0.25] Amazing new feature",
+            body: dedent`# Description
+                  Backport of #1347 to \`stable/0.25\`.`,
+            maintainer_can_modify: true,
+          },
+          token
+        );
+        expect(mockedGithub.requestReviewers).toHaveBeenCalledWith(
+          {
+            owner: "octocat",
+            repo: "Hello-World",
+            pull_number: 9000,
+            reviewers: ["other_user"],
+          },
+          token
+        );
       });
     });
   });

@@ -210,351 +210,248 @@ const repo_helloworld = {
 };
 
 // PULLS
-type PullRequests = { [key: string]: PullRequest };
-const pulls: PullRequests = {
-  default: {
-    url: "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
-    id: 1,
-    node_id: "MDExOlB1bGxSZXF1ZXN0MQ==",
-    html_url: "https://github.com/octocat/Hello-World/pull/1347",
-    diff_url: "https://github.com/octocat/Hello-World/pull/1347.diff",
-    patch_url: "https://github.com/octocat/Hello-World/pull/1347.patch",
-    issue_url: "https://api.github.com/repos/octocat/Hello-World/issues/1347",
-    commits_url:
-      "https://api.github.com/repos/octocat/Hello-World/pulls/1347/commits",
-    review_comments_url:
-      "https://api.github.com/repos/octocat/Hello-World/pulls/1347/comments",
-    review_comment_url:
-      "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
-    comments_url:
-      "https://api.github.com/repos/octocat/Hello-World/issues/1347/comments",
-    statuses_url:
-      "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
-    number: 1347,
-    state: "open",
-    locked: true,
-    title: "Amazing new feature",
-    user: user_octocat,
-    body: "Please pull these awesome changes in!",
-    labels: [label_bug],
-    milestone: {
-      url: "https://api.github.com/repos/octocat/Hello-World/milestones/1",
-      html_url: "https://github.com/octocat/Hello-World/milestones/v1.0",
-      labels_url:
-        "https://api.github.com/repos/octocat/Hello-World/milestones/1/labels",
-      id: 1002604,
-      node_id: "MDk6TWlsZXN0b25lMTAwMjYwNA==",
-      number: 1,
+class PullRequestFactory {
+  public default(): PullRequest {
+    return {
+      url: "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
+      id: 1,
+      node_id: "MDExOlB1bGxSZXF1ZXN0MQ==",
+      html_url: "https://github.com/octocat/Hello-World/pull/1347",
+      diff_url: "https://github.com/octocat/Hello-World/pull/1347.diff",
+      patch_url: "https://github.com/octocat/Hello-World/pull/1347.patch",
+      issue_url: "https://api.github.com/repos/octocat/Hello-World/issues/1347",
+      commits_url:
+        "https://api.github.com/repos/octocat/Hello-World/pulls/1347/commits",
+      review_comments_url:
+        "https://api.github.com/repos/octocat/Hello-World/pulls/1347/comments",
+      review_comment_url:
+        "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
+      comments_url:
+        "https://api.github.com/repos/octocat/Hello-World/issues/1347/comments",
+      statuses_url:
+        "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
+      number: 1347,
       state: "open",
-      title: "v1.0",
-      description: "Tracking milestone for version 1.0",
-      creator: user_octocat,
-      open_issues: 4,
-      closed_issues: 8,
-      created_at: "2011-04-10T20:09:31Z",
-      updated_at: "2014-03-03T18:58:10Z",
-      closed_at: "2013-02-12T13:22:01Z",
-      due_on: "2012-10-09T23:39:01Z",
-    },
-    // active_lock_reason: "too heated",
-    created_at: "2011-01-26T19:01:12Z",
-    updated_at: "2011-01-26T19:01:12Z",
-    closed_at: "2011-01-26T19:01:12Z",
-    merged_at: null,
-    merge_commit_sha: "e5bd3914e2e596debea16f433f57875b5b90bcd6",
-    assignee: user_octocat,
-    assignees: [user_octocat, user_hubot],
-    requested_reviewers: [user_other],
-    requested_teams: [],
-    head: {
-      label: "octocat:new-topic",
-      ref: "new-topic",
-      sha: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+      locked: true,
+      title: "Amazing new feature",
       user: user_octocat,
-      repo: repo_helloworld,
-    },
-    base: {
-      label: "octocat:master",
-      ref: "master",
-      sha: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
-      user: user_octocat,
-      repo: repo_helloworld,
-    },
-    _links: {
-      self: {
-        href: "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
+      body: "Please pull these awesome changes in!",
+      labels: [label_bug],
+      milestone: {
+        url: "https://api.github.com/repos/octocat/Hello-World/milestones/1",
+        html_url: "https://github.com/octocat/Hello-World/milestones/v1.0",
+        labels_url:
+          "https://api.github.com/repos/octocat/Hello-World/milestones/1/labels",
+        id: 1002604,
+        node_id: "MDk6TWlsZXN0b25lMTAwMjYwNA==",
+        number: 1,
+        state: "open",
+        title: "v1.0",
+        description: "Tracking milestone for version 1.0",
+        creator: user_octocat,
+        open_issues: 4,
+        closed_issues: 8,
+        created_at: "2011-04-10T20:09:31Z",
+        updated_at: "2014-03-03T18:58:10Z",
+        closed_at: "2013-02-12T13:22:01Z",
+        due_on: "2012-10-09T23:39:01Z",
       },
-      html: {
-        href: "https://github.com/octocat/Hello-World/pull/1347",
+      // active_lock_reason: "too heated",
+      created_at: "2011-01-26T19:01:12Z",
+      updated_at: "2011-01-26T19:01:12Z",
+      closed_at: "2011-01-26T19:01:12Z",
+      merged_at: null,
+      merge_commit_sha: "e5bd3914e2e596debea16f433f57875b5b90bcd6",
+      assignee: user_octocat,
+      assignees: [user_octocat, user_hubot],
+      requested_reviewers: [user_other],
+      requested_teams: [],
+      head: {
+        label: "octocat:new-topic",
+        ref: "new-topic",
+        sha: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+        user: user_octocat,
+        repo: repo_helloworld,
       },
-      issue: {
-        href: "https://api.github.com/repos/octocat/Hello-World/issues/1347",
+      base: {
+        label: "octocat:master",
+        ref: "master",
+        sha: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+        user: user_octocat,
+        repo: repo_helloworld,
       },
-      comments: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/issues/1347/comments",
+      _links: {
+        self: {
+          href: "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
+        },
+        html: {
+          href: "https://github.com/octocat/Hello-World/pull/1347",
+        },
+        issue: {
+          href: "https://api.github.com/repos/octocat/Hello-World/issues/1347",
+        },
+        comments: {
+          href:
+            "https://api.github.com/repos/octocat/Hello-World/issues/1347/comments",
+        },
+        review_comments: {
+          href:
+            "https://api.github.com/repos/octocat/Hello-World/pulls/1347/comments",
+        },
+        review_comment: {
+          href:
+            "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
+        },
+        commits: {
+          href:
+            "https://api.github.com/repos/octocat/Hello-World/pulls/1347/commits",
+        },
+        statuses: {
+          href:
+            "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
+        },
       },
-      review_comments: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/pulls/1347/comments",
-      },
-      review_comment: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
-      },
-      commits: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/pulls/1347/commits",
-      },
-      statuses: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
-      },
-    },
-    author_association: "OWNER",
-    draft: false,
-    merged: false,
-    mergeable: true,
-    rebaseable: true,
-    mergeable_state: "clean",
-    merged_by: null,
-    comments: 10,
-    review_comments: 0,
-    maintainer_can_modify: true,
-    commits: 3,
-    additions: 100,
-    deletions: 3,
-    changed_files: 5,
-  },
-  with_backport_label: {
-    url: "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
-    id: 1,
-    node_id: "MDExOlB1bGxSZXF1ZXN0MQ==",
-    html_url: "https://github.com/octocat/Hello-World/pull/1347",
-    diff_url: "https://github.com/octocat/Hello-World/pull/1347.diff",
-    patch_url: "https://github.com/octocat/Hello-World/pull/1347.patch",
-    issue_url: "https://api.github.com/repos/octocat/Hello-World/issues/1347",
-    commits_url:
-      "https://api.github.com/repos/octocat/Hello-World/pulls/1347/commits",
-    review_comments_url:
-      "https://api.github.com/repos/octocat/Hello-World/pulls/1347/comments",
-    review_comment_url:
-      "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
-    comments_url:
-      "https://api.github.com/repos/octocat/Hello-World/issues/1347/comments",
-    statuses_url:
-      "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
-    number: 1347,
-    state: "open",
-    locked: true,
-    title: "Amazing new feature",
-    user: user_octocat,
-    body: "Please pull these awesome changes in!",
-    labels: [label_backport_stable_0_25, label_bug],
-    milestone: {
-      url: "https://api.github.com/repos/octocat/Hello-World/milestones/1",
-      html_url: "https://github.com/octocat/Hello-World/milestones/v1.0",
-      labels_url:
-        "https://api.github.com/repos/octocat/Hello-World/milestones/1/labels",
-      id: 1002604,
-      node_id: "MDk6TWlsZXN0b25lMTAwMjYwNA==",
-      number: 1,
+      author_association: "OWNER",
+      draft: false,
+      merged: false,
+      mergeable: true,
+      rebaseable: true,
+      mergeable_state: "clean",
+      merged_by: null,
+      comments: 10,
+      review_comments: 0,
+      maintainer_can_modify: true,
+      commits: 3,
+      additions: 100,
+      deletions: 3,
+      changed_files: 5,
+    };
+  }
+  public default_with_backport_label(): PullRequest {
+    return {
+      ...this.default(),
+      labels: [label_backport_stable_0_25, label_bug],
+    };
+  }
+  public backport_to_stable_0_25(): PullRequest {
+    return {
+      url: "https://api.github.com/repos/octocat/Hello-World/pulls/9001",
+      id: 1,
+      node_id: "MDExOlB1bGxSZXF1ZXN0MQ==",
+      html_url: "https://github.com/octocat/Hello-World/pull/9001",
+      diff_url: "https://github.com/octocat/Hello-World/pull/9001.diff",
+      patch_url: "https://github.com/octocat/Hello-World/pull/9001.patch",
+      issue_url: "https://api.github.com/repos/octocat/Hello-World/issues/9001",
+      commits_url:
+        "https://api.github.com/repos/octocat/Hello-World/pulls/9001/commits",
+      review_comments_url:
+        "https://api.github.com/repos/octocat/Hello-World/pulls/9001/comments",
+      review_comment_url:
+        "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
+      comments_url:
+        "https://api.github.com/repos/octocat/Hello-World/issues/9001/comments",
+      statuses_url:
+        "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
+      number: 9001,
       state: "open",
-      title: "v1.0",
-      description: "Tracking milestone for version 1.0",
-      creator: user_octocat,
-      open_issues: 4,
-      closed_issues: 8,
-      created_at: "2011-04-10T20:09:31Z",
-      updated_at: "2014-03-03T18:58:10Z",
-      closed_at: "2013-02-12T13:22:01Z",
-      due_on: "2012-10-09T23:39:01Z",
-    },
-    // active_lock_reason: "too heated",
-    created_at: "2011-01-26T19:01:12Z",
-    updated_at: "2011-01-26T19:01:12Z",
-    closed_at: "2011-01-26T19:01:12Z",
-    merged_at: null,
-    merge_commit_sha: "e5bd3914e2e596debea16f433f57875b5b90bcd6",
-    assignee: user_octocat,
-    assignees: [user_octocat, user_hubot],
-    requested_reviewers: [user_other],
-    requested_teams: [],
-    head: {
-      label: "octocat:new-topic",
-      ref: "new-topic",
-      sha: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+      locked: true,
+      title: "[Backport stable/0.25] Amazing new feature",
       user: user_octocat,
-      repo: repo_helloworld,
-    },
-    base: {
-      label: "octocat:master",
-      ref: "master",
-      sha: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
-      user: user_octocat,
-      repo: repo_helloworld,
-    },
-    _links: {
-      self: {
-        href: "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
+      body: "Backport of #1347",
+      labels: [],
+      milestone: {
+        url: "https://api.github.com/repos/octocat/Hello-World/milestones/1",
+        html_url: "https://github.com/octocat/Hello-World/milestones/v1.0",
+        labels_url:
+          "https://api.github.com/repos/octocat/Hello-World/milestones/1/labels",
+        id: 1002604,
+        node_id: "MDk6TWlsZXN0b25lMTAwMjYwNA==",
+        number: 1,
+        state: "open",
+        title: "v1.0",
+        description: "Tracking milestone for version 1.0",
+        creator: user_octocat,
+        open_issues: 4,
+        closed_issues: 8,
+        created_at: "2011-04-10T20:09:31Z",
+        updated_at: "2014-03-03T18:58:10Z",
+        closed_at: "2013-02-12T13:22:01Z",
+        due_on: "2012-10-09T23:39:01Z",
       },
-      html: {
-        href: "https://github.com/octocat/Hello-World/pull/1347",
+      // active_lock_reason: "too heated",
+      created_at: "2011-01-26T19:01:12Z",
+      updated_at: "2011-01-26T19:01:12Z",
+      closed_at: null,
+      merged_at: null,
+      merge_commit_sha: "e5bd3914e2e596debea16f433f57875b5b90bcd6",
+      assignee: user_octocat,
+      assignees: [user_octocat, user_hubot], // todo check whether a newly created pr has assignees
+      requested_reviewers: [],
+      requested_teams: [],
+      head: {
+        label: "octocat:backport-stable/0.25",
+        ref: "backport-stable/0.25",
+        sha: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+        user: user_octocat,
+        repo: repo_helloworld,
       },
-      issue: {
-        href: "https://api.github.com/repos/octocat/Hello-World/issues/1347",
+      base: {
+        label: "octocat:stable/0.25",
+        ref: "stable/0.25",
+        sha: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+        user: user_octocat,
+        repo: repo_helloworld,
       },
-      comments: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/issues/1347/comments",
+      _links: {
+        self: {
+          href: "https://api.github.com/repos/octocat/Hello-World/pulls/9001",
+        },
+        html: {
+          href: "https://github.com/octocat/Hello-World/pull/9001",
+        },
+        issue: {
+          href: "https://api.github.com/repos/octocat/Hello-World/issues/9001",
+        },
+        comments: {
+          href:
+            "https://api.github.com/repos/octocat/Hello-World/issues/9001/comments",
+        },
+        review_comments: {
+          href:
+            "https://api.github.com/repos/octocat/Hello-World/pulls/9001/comments",
+        },
+        review_comment: {
+          href:
+            "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
+        },
+        commits: {
+          href:
+            "https://api.github.com/repos/octocat/Hello-World/pulls/9001/commits",
+        },
+        statuses: {
+          href:
+            "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
+        },
       },
-      review_comments: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/pulls/1347/comments",
-      },
-      review_comment: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
-      },
-      commits: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/pulls/1347/commits",
-      },
-      statuses: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
-      },
-    },
-    author_association: "OWNER",
-    draft: false,
-    merged: false,
-    mergeable: true,
-    rebaseable: true,
-    mergeable_state: "clean",
-    merged_by: null,
-    comments: 10,
-    review_comments: 0,
-    maintainer_can_modify: true,
-    commits: 3,
-    additions: 100,
-    deletions: 3,
-    changed_files: 5,
-  },
-  backport_to_stable_0_25: {
-    url: "https://api.github.com/repos/octocat/Hello-World/pulls/9001",
-    id: 1,
-    node_id: "MDExOlB1bGxSZXF1ZXN0MQ==",
-    html_url: "https://github.com/octocat/Hello-World/pull/9001",
-    diff_url: "https://github.com/octocat/Hello-World/pull/9001.diff",
-    patch_url: "https://github.com/octocat/Hello-World/pull/9001.patch",
-    issue_url: "https://api.github.com/repos/octocat/Hello-World/issues/9001",
-    commits_url:
-      "https://api.github.com/repos/octocat/Hello-World/pulls/9001/commits",
-    review_comments_url:
-      "https://api.github.com/repos/octocat/Hello-World/pulls/9001/comments",
-    review_comment_url:
-      "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
-    comments_url:
-      "https://api.github.com/repos/octocat/Hello-World/issues/9001/comments",
-    statuses_url:
-      "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
-    number: 9001,
-    state: "open",
-    locked: true,
-    title: "[Backport stable/0.25] Amazing new feature",
-    user: user_octocat,
-    body: "Backport of #1347",
-    labels: [],
-    milestone: {
-      url: "https://api.github.com/repos/octocat/Hello-World/milestones/1",
-      html_url: "https://github.com/octocat/Hello-World/milestones/v1.0",
-      labels_url:
-        "https://api.github.com/repos/octocat/Hello-World/milestones/1/labels",
-      id: 1002604,
-      node_id: "MDk6TWlsZXN0b25lMTAwMjYwNA==",
-      number: 1,
-      state: "open",
-      title: "v1.0",
-      description: "Tracking milestone for version 1.0",
-      creator: user_octocat,
-      open_issues: 4,
-      closed_issues: 8,
-      created_at: "2011-04-10T20:09:31Z",
-      updated_at: "2014-03-03T18:58:10Z",
-      closed_at: "2013-02-12T13:22:01Z",
-      due_on: "2012-10-09T23:39:01Z",
-    },
-    // active_lock_reason: "too heated",
-    created_at: "2011-01-26T19:01:12Z",
-    updated_at: "2011-01-26T19:01:12Z",
-    closed_at: null,
-    merged_at: null,
-    merge_commit_sha: "e5bd3914e2e596debea16f433f57875b5b90bcd6",
-    assignee: user_octocat,
-    assignees: [user_octocat, user_hubot],
-    requested_reviewers: [user_other],
-    requested_teams: [],
-    head: {
-      label: "octocat:backport-stable/0.25",
-      ref: "backport-stable/0.25",
-      sha: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
-      user: user_octocat,
-      repo: repo_helloworld,
-    },
-    base: {
-      label: "octocat:stable/0.25",
-      ref: "stable/0.25",
-      sha: "6dcb09b5b57875f334f61aebed695e2e4193db5e",
-      user: user_octocat,
-      repo: repo_helloworld,
-    },
-    _links: {
-      self: {
-        href: "https://api.github.com/repos/octocat/Hello-World/pulls/9001",
-      },
-      html: {
-        href: "https://github.com/octocat/Hello-World/pull/9001",
-      },
-      issue: {
-        href: "https://api.github.com/repos/octocat/Hello-World/issues/9001",
-      },
-      comments: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/issues/9001/comments",
-      },
-      review_comments: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/pulls/9001/comments",
-      },
-      review_comment: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
-      },
-      commits: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/pulls/9001/commits",
-      },
-      statuses: {
-        href:
-          "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
-      },
-    },
-    author_association: "OWNER",
-    draft: false,
-    merged: false,
-    mergeable: true,
-    rebaseable: true,
-    mergeable_state: "clean",
-    merged_by: null,
-    comments: 10,
-    review_comments: 0,
-    maintainer_can_modify: true,
-    commits: 3,
-    additions: 100,
-    deletions: 3,
-    changed_files: 5,
-  },
-};
+      author_association: "OWNER",
+      draft: false,
+      merged: false,
+      mergeable: true,
+      rebaseable: true,
+      mergeable_state: "clean",
+      merged_by: null,
+      comments: 0,
+      review_comments: 0,
+      maintainer_can_modify: true,
+      commits: 3,
+      additions: 100,
+      deletions: 3,
+      changed_files: 5,
+    };
+  }
+}
+
+const pulls = new PullRequestFactory();
 
 // PAYLOADS
 type Payloads = { [key: string]: PullRequestPayload };
@@ -562,7 +459,7 @@ const payloads: Payloads = {
   default: {
     action: "action",
     number: 1,
-    pull_request: pulls.default,
+    pull_request: pulls.default(),
     repository: repo_helloworld,
     sender: user_octocat,
     // assignee?: WebhookPayloadPullRequestAssignee;
@@ -573,7 +470,7 @@ const payloads: Payloads = {
   with_backport_label: {
     action: "action",
     number: 1,
-    pull_request: pulls.with_backport_label,
+    pull_request: pulls.default_with_backport_label(),
     repository: repo_helloworld,
     sender: user_octocat,
   },

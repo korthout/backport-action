@@ -22,6 +22,7 @@ export type CreatePullRequestResponse = {
   status: number;
   data: {
     number: number;
+    requested_reviewers?: { login: string }[];
   };
 };
 export type RequestReviewersResponse = CreatePullRequestResponse;
