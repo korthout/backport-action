@@ -9,8 +9,11 @@
     "format": "prettier --write src/",
     "format-check": "prettier --check src/",
     "package": "ncc build --source-map --license licenses.txt",
-    "test": "jest --silent",
-    "test-verbose": "jest",
+    "jest": "jest --silent",
+    "jest-verbose": "jest",
+    "bats": "bats backport.bats",
+    "test": "npm run jest && npm run bats",
+    "test-verbose": "npm run jest-verbose && npm run bats",
     "all": "npm run format && npm run build && npm run package && npm test"
   },
   "repository": {
@@ -35,6 +38,8 @@
     "@types/jest": "~26.0.10",
     "@types/node": "~14.10.0",
     "@vercel/ncc": "~0.23.0",
+    "bats": "~1.2.1",
+    "bats-assert": "~2.0.0",
     "jest": "^26.0.0",
     "jest-circus": "~26.4.2",
     "js-yaml": "~3.14.0",

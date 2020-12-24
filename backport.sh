@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Make sure the process exits on any failure and output commands
-set -ex
+# Make sure the process exits on any failure
+set -e
 
 # Check usage
 if [ -z "$1" ] | [ -z "$2" ] | [ -z "$3" ] | [ -z "$4" ] | [ -z "$5" ]
