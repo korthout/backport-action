@@ -10,6 +10,7 @@
     "format-check": "prettier --check src/",
     "package": "ncc build --source-map --license licenses.txt",
     "test": "jest --silent",
+    "test-verbose": "jest",
     "all": "npm run format && npm run build && npm run package && npm test"
   },
   "repository": {
