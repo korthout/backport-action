@@ -58,3 +58,13 @@ Build the typescript and package it for distribution
 ```bash
 npm run format && npm run build && npm run package
 ```
+
+Run the tests
+```bash
+npm test
+```
+
+Run the tests with additional console output
+```bash
+npm run test-verbose
+```
