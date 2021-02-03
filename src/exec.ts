@@ -18,3 +18,7 @@ export async function callBackportScript(
     }
   );
 }
+
+export async function call(command: string): Promise<number> {
+  return exec(command);
+}

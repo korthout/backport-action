@@ -19,8 +19,7 @@ then
     1: incorrect usage / this message
     2: unable to access worktree directory
     3: unable to create new branch
-    4: unable to cherry-pick commit
-    5: unable to push changes"
+    4: unable to cherry-pick commit"
   exit 1
 fi
 
@@ -57,10 +56,5 @@ git switch --create "$branchname" || exit 3
 
 echo "Cherry pick commits between $ancref and $headref to $target"
 echo "$diffrefs" | xargs git cherry-pick  -x || exit 4
-
-git remote get-url origin
-
-echo "Push results to $branchname"
-git push --set-upstream origin "$branchname" || exit 5
 
 exit 0

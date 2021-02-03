@@ -57,6 +57,7 @@ cleanup () {
 };
 
 setup () {
+    echo "setup"
     mkdir $REPOSITORY_NAME
     cd $REPOSITORY_NAME
     git init
