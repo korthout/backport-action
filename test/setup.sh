@@ -60,6 +60,7 @@ setup () {
     echo "setup"
     mkdir $REPOSITORY_NAME
     cd $REPOSITORY_NAME
+
     git init
 
     git config --local user.email "test-setup[bot]@users.noreply.github.com"
