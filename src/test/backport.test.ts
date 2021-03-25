@@ -67,7 +67,15 @@ describe("the backport action", () => {
       beforeEach(() => {
         mockedExec.callBackportScript.mockResolvedValue(0);
       });
+      it("pushes the commits to origin", async () => {
+        mockedExec.call.mockResolvedValue(0);
+        await backport.run();
+        expect(mockedExec.call).toHaveBeenLastCalledWith(
+          "git push --set-upstream origin backport-1347-to-stable/0.25"
+        );
+      });
       it("creates a pull request and requests reviewers", async () => {
+        mockedExec.call.mockResolvedValue(0);
         mockedGithub.createPR.mockResolvedValue({
           status: 201,
           data: { ...golden.pulls.backport_to_stable_0_25(), number: 9000 },

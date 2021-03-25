@@ -6142,7 +6142,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.callBackportScript = void 0;
+exports.call = exports.callBackportScript = void 0;
 const exec_1 = __webpack_require__(514);
 function callBackportScript(pwd, headref, baseref, target, branchname, version) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -6154,6 +6154,12 @@ function callBackportScript(pwd, headref, baseref, target, branchname, version) 
     });
 }
 exports.callBackportScript = callBackportScript;
+function call(command) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return exec_1.exec(command);
+    });
+}
+exports.call = call;
 
 
 /***/ }),
@@ -6453,9 +6459,17 @@ function run() {
                 try {
                     const branchname = `backport-${mainpr.number}-to-${target}`;
                     console.log(`Start backport to ${branchname}`);
-                    const exitcode = yield exec.callBackportScript(pwd, headref, baseref, target, branchname, version);
-                    if (exitcode != 0) {
-                        const message = composeMessageForGitFailure(target, exitcode);
+                    const scriptExitCode = yield exec.callBackportScript(pwd, headref, baseref, target, branchname, version);
+                    if (scriptExitCode != 0) {
+                        const message = composeMessageForBackportScriptFailure(target, scriptExitCode);
+                        console.error(message);
+                        yield github.createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
+                        continue;
+                    }
+                    console.info(`Push branch to origin`);
+                    const pushExitCode = yield exec.call(`git push --set-upstream origin ${branchname}`);
+                    if (pushExitCode != 0) {
+                        const message = composeMessageForGitPushFailure(target, pushExitCode);
                         console.error(message);
                         yield github.createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
                         continue;
@@ -6512,9 +6526,13 @@ function composePRContent(target, issue_title, issue_number) {
                       Backport of #${issue_number} to \`${target}\`.`;
     return { title, body };
 }
-function composeMessageForGitFailure(target, exitcode) {
+function composeMessageForBackportScriptFailure(target, exitcode) {
     //TODO better error messages depending on exit code
     return dedent_1.default `Backport failed for ${target} with exitcode ${exitcode}`;
+}
+function composeMessageForGitPushFailure(target, exitcode) {
+    //TODO better error messages depending on exit code
+    return dedent_1.default `Git push to origin failed for ${target} with exitcode ${exitcode}`;
 }
 function composeMessageForCreatePRFailed(response) {
     return dedent_1.default `Backport branch created but failed to create PR. 

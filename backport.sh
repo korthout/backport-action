@@ -19,8 +19,7 @@ then
     1: incorrect usage / this message
     2: unable to access worktree directory
     3: unable to create new branch
-    4: unable to cherry-pick commit
-    5: unable to push changes"
+    4: unable to cherry-pick commit"
   exit 1
 fi
 
@@ -33,9 +32,6 @@ worktree=".worktree/backport-$branchname"
 
 cd "${root}"
 
-git config --global user.email "github-actions[bot]@users.noreply.github.com"
-git config --global user.name "github-actions[bot]"
-
 # Check that checkout location is available
 if [ -d "$worktree" ]
 then
@@ -43,6 +39,17 @@ then
   please remove it 'git worktree remove $worktree' and try again"
   exit 2
 fi
+
+# Change the git user name/email and reset on EXIT
+user_email=$(git config --get user.email)
+user_name=$(git config --get user.name)
+resetUser () {
+  git config user.email "$user_email"
+  git config user.name "$user_name"
+}
+trap 'resetUser' EXIT
+git config user.email "github-actions[bot]@users.noreply.github.com"
+git config user.name "github-actions[bot]"
 
 echo "Find common ancestor between $baseref and $headref"
 ancref=$(git merge-base "$baseref" "$headref")
@@ -56,11 +63,6 @@ cd "$worktree" || exit 2
 git switch --create "$branchname" || exit 3
 
 echo "Cherry pick commits between $ancref and $headref to $target"
-echo "$diffrefs" | xargs git cherry-pick  -x || exit 4
-
-git remote get-url origin
-
-echo "Push results to $branchname"
-git push --set-upstream origin "$branchname" || exit 5
+echo "$diffrefs" | xargs git cherry-pick -x || exit 4
 
 exit 0

@@ -49,7 +49,7 @@ export async function run(): Promise<void> {
         const branchname = `backport-${mainpr.number}-to-${target}`;
 
         console.log(`Start backport to ${branchname}`);
-        const exitcode = await exec.callBackportScript(
+        const scriptExitCode = await exec.callBackportScript(
           pwd,
           headref,
           baseref,
@@ -58,8 +58,25 @@ export async function run(): Promise<void> {
           version
         );
 
-        if (exitcode != 0) {
-          const message = composeMessageForGitFailure(target, exitcode);
+        if (scriptExitCode != 0) {
+          const message = composeMessageForBackportScriptFailure(
+            target,
+            scriptExitCode
+          );
+          console.error(message);
+          await github.createComment(
+            { owner, repo, issue_number: mainpr.number, body: message },
+            token
+          );
+          continue;
+        }
+
+        console.info(`Push branch to origin`);
+        const pushExitCode = await exec.call(
+          `git push --set-upstream origin ${branchname}`
+        );
+        if (pushExitCode != 0) {
+          const message = composeMessageForGitPushFailure(target, pushExitCode);
           console.error(message);
           await github.createComment(
             { owner, repo, issue_number: mainpr.number, body: message },
@@ -150,9 +167,20 @@ function composePRContent(
   return { title, body };
 }
 
-function composeMessageForGitFailure(target: string, exitcode: number): string {
+function composeMessageForBackportScriptFailure(
+  target: string,
+  exitcode: number
+): string {
   //TODO better error messages depending on exit code
   return dedent`Backport failed for ${target} with exitcode ${exitcode}`;
+}
+
+function composeMessageForGitPushFailure(
+  target: string,
+  exitcode: number
+): string {
+  //TODO better error messages depending on exit code
+  return dedent`Git push to origin failed for ${target} with exitcode ${exitcode}`;
 }
 
 function composeMessageForCreatePRFailed(
