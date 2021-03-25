@@ -1,6 +1,6 @@
 #!/bin/bash
 # ------------------------------------------------------------------
-# [korthout] Setup test repo to be used to test the backport action
+# Setup test repo to be used to test the backport action
 #
 # Produces a dir "repo" with history like:
 # 
