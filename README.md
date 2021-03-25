@@ -59,12 +59,16 @@ Build the typescript and package it for distribution
 npm run format && npm run build && npm run package
 ```
 
-Run the tests
+## Testing
+
+Tests are located in both src (unit tests) and in [test](test) (integration-style tests).
+
+Run all tests
 ```bash
 npm test
 ```
 
-Run the tests with additional console output
+Run all tests with additional console output
 ```bash
 npm run test-verbose
 ```
