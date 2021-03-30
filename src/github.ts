@@ -35,6 +35,10 @@ export function getPayload() {
   return github.context.payload as PullRequestPayload;
 }
 
+export function getPullNumber() {
+  return getPayload().pull_request.number;
+}
+
 export async function createComment(comment: Comment, token: string) {
   console.log(`Create comment: ${comment.body}`);
   return github.getOctokit(token).issues.createComment(comment);

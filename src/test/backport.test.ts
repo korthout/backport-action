@@ -30,6 +30,9 @@ describe("the backport action", () => {
 
   describe("given a payload for a PR without backport label", () => {
     beforeEach(() => {
+      mockedGithub.getPullNumber.mockReturnValueOnce(
+        golden.payloads.default.pull_request.number
+      );
       mockedGithub.getPayload.mockReturnValue(golden.payloads.default);
     });
     it("can be run without impact", async () => {
@@ -40,6 +43,9 @@ describe("the backport action", () => {
 
   describe("given a payload for a PR with backport label", () => {
     beforeEach(() => {
+      mockedGithub.getPullNumber.mockReturnValueOnce(
+        golden.payloads.with_backport_label.pull_request.number
+      );
       mockedGithub.getPayload.mockReturnValue(
         golden.payloads.with_backport_label
       );
