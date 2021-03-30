@@ -50,6 +50,10 @@ export async function createComment(comment: Comment, token: string) {
   return github.getOctokit(token).issues.createComment(comment);
 }
 
+export function getPullRequest() {
+  return getPayload().pull_request;
+}
+
 export async function createPR(
   pr: PR,
   token: string

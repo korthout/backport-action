@@ -34,6 +34,9 @@ describe("the backport action", () => {
         golden.payloads.default.pull_request.number
       );
       mockedGithub.getPayload.mockReturnValue(golden.payloads.default);
+      mockedGithub.getPullRequest.mockReturnValueOnce(
+        golden.payloads.default.pull_request
+      );
     });
     it("can be run without impact", async () => {
       await backport.run();
@@ -48,6 +51,9 @@ describe("the backport action", () => {
       );
       mockedGithub.getPayload.mockReturnValue(
         golden.payloads.with_backport_label
+      );
+      mockedGithub.getPullRequest.mockReturnValueOnce(
+        golden.payloads.with_backport_label.pull_request
       );
     });
 
