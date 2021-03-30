@@ -35,8 +35,14 @@ export function getPayload() {
   return github.context.payload as PullRequestPayload;
 }
 
-export function getPullNumber() {
-  return getPayload().pull_request.number;
+export function getPullNumber(): number {
+  if (github.context.payload.pull_request) {
+    return github.context.payload.pull_request.number;
+  }
+
+  // if the pr is not part of the payload
+  // the number can be taken from the issue
+  return github.context.issue.number;
 }
 
 export async function createComment(comment: Comment, token: string) {
