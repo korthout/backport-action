@@ -40,16 +40,11 @@ then
   exit 2
 fi
 
-# Change the git user name/email and reset on EXIT
-user_email=$(git config --get user.email)
-user_name=$(git config --get user.name)
-resetUser () {
-  git config user.email "$user_email"
-  git config user.name "$user_name"
-}
-trap 'resetUser' EXIT
-git config user.email "github-actions[bot]@users.noreply.github.com"
-git config user.name "github-actions[bot]"
+user_name="github-actions[bot]"
+export GIT_COMMITTER_NAME=${GIT_COMMITTER_NAME:-"$user_name"}
+
+user_email="github-actions[bot]@users.noreply.github.com"
+export GIT_COMMITTER_EMAIL=${GIT_COMMITTER_EMAIL:-"$user_email"}
 
 echo "Find common ancestor between $baseref and $headref"
 ancref=$(git merge-base "$baseref" "$headref")
