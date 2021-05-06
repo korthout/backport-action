@@ -63,8 +63,13 @@ setup () {
 
     git init
 
-    git config --local user.email "test-setup[bot]@users.noreply.github.com"
-    git config --local user.name "test-setup[bot]"
+    name="test-setup[bot]"
+    export GIT_AUTHOR_NAME="$name"
+    export GIT_COMMITTER_NAME="$name"
+
+    email="test-setup[bot]@users.noreply.github.com"
+    export GIT_AUTHOR_EMAIL="$email"
+    export GIT_COMMITTER_EMAIL="$email"
 
     printf "%q" "# Test repository
 
