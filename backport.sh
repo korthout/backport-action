@@ -41,10 +41,10 @@ then
 fi
 
 user_name="github-actions[bot]"
-export GIT_COMMITTER_NAME=${GIT_COMMITTER_NAME:-"$user_name"}
+export GIT_COMMITTER_NAME="$user_name"
 
 user_email="github-actions[bot]@users.noreply.github.com"
-export GIT_COMMITTER_EMAIL=${GIT_COMMITTER_EMAIL:-"$user_email"}
+export GIT_COMMITTER_EMAIL="$user_email"
 
 echo "Find common ancestor between $baseref and $headref"
 ancref=$(git merge-base "$baseref" "$headref")
