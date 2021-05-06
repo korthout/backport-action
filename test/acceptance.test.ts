@@ -63,6 +63,23 @@ describe("given a git repository with a merged pr", () => {
         .map((commit) => commit.split(" ")[0])
         .forEach((sha) => expect(backportLog.stdout).toContain(sha));
     });
+
+    test("then it cherry-picked all commits from the PR with the right committer", async () => {
+      const log = await exec({
+        command:
+          'git log master..backport-b-to-1 --pretty=full | grep "Commit: "',
+        options: { cwd: "test/repo" },
+      });
+      log.stdout
+        .split("\n")
+        .filter((line) => line !== "")
+        .map((commit) => commit.split(": ")[1])
+        .forEach((committer) =>
+          expect(committer).toEqual(
+            "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          )
+        );
+    });
   });
 
   afterEach(async () => {
