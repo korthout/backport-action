@@ -23,7 +23,7 @@ export async function run(): Promise<void> {
     const repo = payload.repository.name;
     const pull_number = github.getPullNumber();
 
-    const mainpr = github.getPullRequest();
+    const mainpr = await github.getPullRequest(pull_number, token);
     const headref = mainpr.head.sha;
     const baseref = mainpr.base.sha;
     const labels = mainpr.labels;

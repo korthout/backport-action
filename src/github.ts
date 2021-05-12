@@ -13,10 +13,12 @@ import {
   OctokitResponse,
   PullsCreateResponseData,
   PullsRequestReviewersResponseData,
+  PullsGetResponseData,
 } from "@octokit/types";
 
 export type PullRequestPayload = EventPayloads.WebhookPayloadPullRequest;
-export type PullRequest = EventPayloads.WebhookPayloadPullRequestPullRequest;
+export type PullRequestPayloadPullRequest = EventPayloads.WebhookPayloadPullRequestPullRequest;
+export type PullRequest = PullsGetResponseData;
 export type Label = EventPayloads.WebhookPayloadPullRequestLabel;
 export type CreatePullRequestResponse = {
   status: number;
@@ -50,8 +52,18 @@ export async function createComment(comment: Comment, token: string) {
   return github.getOctokit(token).issues.createComment(comment);
 }
 
-export function getPullRequest() {
-  return getPayload().pull_request;
+export async function getPullRequest(
+  pull_number: number,
+  token: string
+): Promise<PullRequest> {
+  console.log(`Retrieve pull request data for #${pull_number}`);
+  return github
+    .getOctokit(token)
+    .pulls.get({
+      ...getRepo(),
+      pull_number,
+    })
+    .then((response) => response.data);
 }
 
 export async function createPR(
