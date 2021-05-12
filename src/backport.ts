@@ -21,8 +21,18 @@ export async function run(): Promise<void> {
 
     const owner = github.getRepo().owner;
     const repo = payload.repository.name;
+    const pull_number = github.getPullNumber();
+    const mainpr = await github.getPullRequest(pull_number, token);
 
-    const mainpr = payload.pull_request;
+    if (!(await github.isMerged(mainpr, token))) {
+      const message = "Only merged pull requests can be backported.";
+      github.createComment(
+        { owner, repo, issue_number: pull_number, body: message },
+        token
+      );
+      return;
+    }
+
     const headref = mainpr.head.sha;
     const baseref = mainpr.base.sha;
     const labels = mainpr.labels;
@@ -46,7 +56,7 @@ export async function run(): Promise<void> {
       console.log(`Found target in label: ${target}`);
 
       try {
-        const branchname = `backport-${mainpr.number}-to-${target}`;
+        const branchname = `backport-${pull_number}-to-${target}`;
 
         console.log(`Start backport to ${branchname}`);
         const scriptExitCode = await exec.callBackportScript(
@@ -65,7 +75,7 @@ export async function run(): Promise<void> {
           );
           console.error(message);
           await github.createComment(
-            { owner, repo, issue_number: mainpr.number, body: message },
+            { owner, repo, issue_number: pull_number, body: message },
             token
           );
           continue;
@@ -79,7 +89,7 @@ export async function run(): Promise<void> {
           const message = composeMessageForGitPushFailure(target, pushExitCode);
           console.error(message);
           await github.createComment(
-            { owner, repo, issue_number: mainpr.number, body: message },
+            { owner, repo, issue_number: pull_number, body: message },
             token
           );
           continue;
@@ -89,7 +99,7 @@ export async function run(): Promise<void> {
         const { title, body } = composePRContent(
           target,
           mainpr.title,
-          mainpr.number
+          pull_number
         );
         const new_pr_response = await github.createPR(
           {
@@ -108,7 +118,7 @@ export async function run(): Promise<void> {
           console.error(JSON.stringify(new_pr_response));
           const message = composeMessageForCreatePRFailed(new_pr_response);
           await github.createComment(
-            { owner, repo, issue_number: mainpr.number, body: message },
+            { owner, repo, issue_number: pull_number, body: message },
             token
           );
           continue;
@@ -126,7 +136,7 @@ export async function run(): Promise<void> {
             target
           );
           await github.createComment(
-            { owner, repo, issue_number: mainpr.number, body: message },
+            { owner, repo, issue_number: pull_number, body: message },
             token
           );
           continue;
@@ -134,7 +144,7 @@ export async function run(): Promise<void> {
 
         const message = composeMessageForSuccess(new_pr.number, target);
         await github.createComment(
-          { owner, repo, issue_number: mainpr.number, body: message },
+          { owner, repo, issue_number: pull_number, body: message },
           token
         );
       } catch (error) {
@@ -143,7 +153,7 @@ export async function run(): Promise<void> {
           {
             owner,
             repo,
-            issue_number: mainpr.number,
+            issue_number: pull_number,
             body: error.message,
           },
           token

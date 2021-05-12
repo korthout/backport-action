@@ -4,15 +4,18 @@ This folder contains integration-style tests.
 They are run against an actual git repository.
 
 ## Tests
+
 At this time the `acceptance.test.ts` contain the only integration-style tests.
 It runs the `backport.sh` script against the test git repository and verifies that the correct commits are cherry picked to the backport branch.
 
 ## Setup
+
 The git repository is created using a `setup.sh` script.
 Running it will create a new directory named `repo` containing a git history that is useful for the tests.
 
 First run: `./setup.sh`, and then: `(cd repo; git log --graph --oneline)`.
 The created repo then looks like this:
+
 ```
 *-.   9eb963e (HEAD -> master, release-2) Merge branches 'feature-b' and 'feature-c'
 |\ \
@@ -32,6 +35,6 @@ The created repo then looks like this:
 ```
 
 ## Cleanup
+
 You can clean up the test git repository using `(cd test; ./cleanup.sh)`.
 This cleanup script is also used in the automated acceptance tests.
-

@@ -30,7 +30,12 @@ describe("the backport action", () => {
 
   describe("given a payload for a PR without backport label", () => {
     beforeEach(() => {
+      mockedGithub.getPullNumber.mockReturnValueOnce(
+        golden.payloads.default.pull_request.number
+      );
       mockedGithub.getPayload.mockReturnValue(golden.payloads.default);
+      mockedGithub.getPullRequest.mockResolvedValue(golden.pulls.default());
+      mockedGithub.isMerged.mockResolvedValue(true);
     });
     it("can be run without impact", async () => {
       await backport.run();
@@ -40,9 +45,16 @@ describe("the backport action", () => {
 
   describe("given a payload for a PR with backport label", () => {
     beforeEach(() => {
+      mockedGithub.getPullNumber.mockReturnValueOnce(
+        golden.payloads.with_backport_label.pull_request.number
+      );
       mockedGithub.getPayload.mockReturnValue(
         golden.payloads.with_backport_label
       );
+      mockedGithub.getPullRequest.mockResolvedValue(
+        golden.pulls.default_with_backport_label()
+      );
+      mockedGithub.isMerged.mockResolvedValue(true);
     });
 
     describe("and backport.sh returns exit code 1", () => {
@@ -78,11 +90,17 @@ describe("the backport action", () => {
         mockedExec.call.mockResolvedValue(0);
         mockedGithub.createPR.mockResolvedValue({
           status: 201,
-          data: { ...golden.pulls.backport_to_stable_0_25(), number: 9000 },
+          data: {
+            ...golden.pullPayloads.backport_to_stable_0_25(),
+            number: 9000,
+          },
         });
         mockedGithub.requestReviewers.mockResolvedValue({
           status: 201,
-          data: { ...golden.pulls.backport_to_stable_0_25(), number: 9000 },
+          data: {
+            ...golden.pullPayloads.backport_to_stable_0_25(),
+            number: 9000,
+          },
         });
         await backport.run();
         expect(mockedGithub.createPR).toHaveBeenCalledWith(
