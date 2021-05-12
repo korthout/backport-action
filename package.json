@@ -37,7 +37,7 @@
     "@vercel/ncc": "~0.23.0",
     "exec-sh": "~0.3.4",
     "jest": "^26.0.0",
-    "jest-circus": "~26.4.2",
+    "jest-circus": "~26.6.3",
     "js-yaml": "~4.1.0",
     "prettier": "2.1.1",
     "ts-jest": "^26.0.0",
