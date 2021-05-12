@@ -6439,7 +6439,13 @@ function run() {
             const payload = github.getPayload();
             const owner = github.getRepo().owner;
             const repo = payload.repository.name;
-            const mainpr = payload.pull_request;
+            const pull_number = github.getPullNumber();
+            const mainpr = yield github.getPullRequest(pull_number, token);
+            if (!(yield github.isMerged(mainpr, token))) {
+                const message = "Only merged pull requests can be backported.";
+                github.createComment({ owner, repo, issue_number: pull_number, body: message }, token);
+                return;
+            }
             const headref = mainpr.head.sha;
             const baseref = mainpr.base.sha;
             const labels = mainpr.labels;
@@ -6457,13 +6463,13 @@ function run() {
                 const target = match[1];
                 console.log(`Found target in label: ${target}`);
                 try {
-                    const branchname = `backport-${mainpr.number}-to-${target}`;
+                    const branchname = `backport-${pull_number}-to-${target}`;
                     console.log(`Start backport to ${branchname}`);
                     const scriptExitCode = yield exec.callBackportScript(pwd, headref, baseref, target, branchname, version);
                     if (scriptExitCode != 0) {
                         const message = composeMessageForBackportScriptFailure(target, scriptExitCode);
                         console.error(message);
-                        yield github.createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
+                        yield github.createComment({ owner, repo, issue_number: pull_number, body: message }, token);
                         continue;
                     }
                     console.info(`Push branch to origin`);
@@ -6471,11 +6477,11 @@ function run() {
                     if (pushExitCode != 0) {
                         const message = composeMessageForGitPushFailure(target, pushExitCode);
                         console.error(message);
-                        yield github.createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
+                        yield github.createComment({ owner, repo, issue_number: pull_number, body: message }, token);
                         continue;
                     }
                     console.info(`Create PR for ${branchname}`);
-                    const { title, body } = composePRContent(target, mainpr.title, mainpr.number);
+                    const { title, body } = composePRContent(target, mainpr.title, pull_number);
                     const new_pr_response = yield github.createPR({
                         owner,
                         repo,
@@ -6488,7 +6494,7 @@ function run() {
                     if (new_pr_response.status != 201) {
                         console.error(JSON.stringify(new_pr_response));
                         const message = composeMessageForCreatePRFailed(new_pr_response);
-                        yield github.createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
+                        yield github.createComment({ owner, repo, issue_number: pull_number, body: message }, token);
                         continue;
                     }
                     const new_pr = new_pr_response.data;
@@ -6496,18 +6502,18 @@ function run() {
                     if (review_response.status != 201) {
                         console.error(JSON.stringify(review_response));
                         const message = composeMessageForRequestReviewersFailed(review_response, target);
-                        yield github.createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
+                        yield github.createComment({ owner, repo, issue_number: pull_number, body: message }, token);
                         continue;
                     }
                     const message = composeMessageForSuccess(new_pr.number, target);
-                    yield github.createComment({ owner, repo, issue_number: mainpr.number, body: message }, token);
+                    yield github.createComment({ owner, repo, issue_number: pull_number, body: message }, token);
                 }
                 catch (error) {
                     console.error(error.message);
                     yield github.createComment({
                         owner,
                         repo,
-                        issue_number: mainpr.number,
+                        issue_number: pull_number,
                         body: error.message,
                     }, token);
                 }
@@ -7196,7 +7202,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requestReviewers = exports.createPR = exports.createComment = exports.getPayload = exports.getRepo = void 0;
+exports.requestReviewers = exports.createPR = exports.isMerged = exports.getPullRequest = exports.createComment = exports.getPullNumber = exports.getPayload = exports.getRepo = void 0;
 const github = __importStar(__webpack_require__(438));
 function getRepo() {
     return github.context.repo;
@@ -7206,6 +7212,15 @@ function getPayload() {
     return github.context.payload;
 }
 exports.getPayload = getPayload;
+function getPullNumber() {
+    if (github.context.payload.pull_request) {
+        return github.context.payload.pull_request.number;
+    }
+    // if the pr is not part of the payload
+    // the number can be taken from the issue
+    return github.context.issue.number;
+}
+exports.getPullNumber = getPullNumber;
 function createComment(comment, token) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log(`Create comment: ${comment.body}`);
@@ -7213,6 +7228,41 @@ function createComment(comment, token) {
     });
 }
 exports.createComment = createComment;
+function getPullRequest(pull_number, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log(`Retrieve pull request data for #${pull_number}`);
+        return github
+            .getOctokit(token)
+            .pulls.get(Object.assign(Object.assign({}, getRepo()), { pull_number }))
+            .then((response) => response.data);
+    });
+}
+exports.getPullRequest = getPullRequest;
+function isMerged(pull, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log(`Check whether pull request ${pull.number} is merged`);
+        return github
+            .getOctokit(token)
+            .pulls.checkIfMerged(Object.assign(Object.assign({}, getRepo()), { pull_number: pull.number }))
+            .then((response) => {
+            switch (response.status) {
+                case 204:
+                    return true;
+                case 404:
+                    return false;
+                default:
+                    throw new Error(`Unexpected response status: ${response.status}`);
+            }
+        })
+            .catch((error) => {
+            if ((error === null || error === void 0 ? void 0 : error.status) == 404)
+                return false;
+            else
+                throw error;
+        });
+    });
+}
+exports.isMerged = isMerged;
 function createPR(pr, token) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log(`Create PR: ${pr.body}`);
