@@ -4,7 +4,6 @@ import {
   PullRequest,
   Label,
 } from "@octokit/webhooks-types";
-import { PullsGetResponseData } from "@octokit/types";
 
 /**
  * Constructed in parts (and slightly modified to fit the type definitions) from
@@ -479,7 +478,7 @@ const payloads: Payloads = {
 
 // PULL REQUESTS
 class PullRequestFactory {
-  public default(): PullsGetResponseData {
+  public default() {
     return {
       url: "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
       id: 1,
@@ -1084,13 +1083,13 @@ class PullRequestFactory {
       additions: 100,
       deletions: 3,
       changed_files: 5,
-    } as unknown as PullsGetResponseData;
+    };
   }
   public default_with_backport_label() {
     return {
       ...this.default(),
       labels: [label_backport_stable_0_25, label_bug],
-    } as unknown as PullsGetResponseData;
+    };
   }
 }
 
