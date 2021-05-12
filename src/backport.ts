@@ -22,8 +22,17 @@ export async function run(): Promise<void> {
     const owner = github.getRepo().owner;
     const repo = payload.repository.name;
     const pull_number = github.getPullNumber();
-
     const mainpr = await github.getPullRequest(pull_number, token);
+
+    if (!(await github.isMerged(mainpr, token))) {
+      const message = "Only merged pull requests can be backported.";
+      github.createComment(
+        { owner, repo, issue_number: pull_number, body: message },
+        token
+      );
+      return;
+    }
+
     const headref = mainpr.head.sha;
     const baseref = mainpr.base.sha;
     const labels = mainpr.labels;

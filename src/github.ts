@@ -14,6 +14,7 @@ import {
   PullsCreateResponseData,
   PullsRequestReviewersResponseData,
   PullsGetResponseData,
+  RequestError,
 } from "@octokit/types";
 
 export type PullRequestPayload = EventPayloads.WebhookPayloadPullRequest;
@@ -64,6 +65,30 @@ export async function getPullRequest(
       pull_number,
     })
     .then((response) => response.data);
+}
+
+export async function isMerged(
+  pull: PullRequest,
+  token: string
+): Promise<boolean> {
+  console.log(`Check whether pull request ${pull.number} is merged`);
+  return github
+    .getOctokit(token)
+    .pulls.checkIfMerged({ ...getRepo(), pull_number: pull.number })
+    .then((response) => {
+      switch (response.status) {
+        case 204:
+          return true;
+        case 404:
+          return false;
+        default:
+          throw new Error(`Unexpected response status: ${response.status}`);
+      }
+    })
+    .catch((error) => {
+      if (error?.status == 404) return false;
+      else throw error;
+    });
 }
 
 export async function createPR(
