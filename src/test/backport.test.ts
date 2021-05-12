@@ -35,6 +35,7 @@ describe("the backport action", () => {
       );
       mockedGithub.getPayload.mockReturnValue(golden.payloads.default);
       mockedGithub.getPullRequest.mockResolvedValue(golden.pulls.default());
+      mockedGithub.isMerged.mockResolvedValue(true);
     });
     it("can be run without impact", async () => {
       await backport.run();
@@ -53,6 +54,7 @@ describe("the backport action", () => {
       mockedGithub.getPullRequest.mockResolvedValue(
         golden.pulls.default_with_backport_label()
       );
+      mockedGithub.isMerged.mockResolvedValue(true);
     });
 
     describe("and backport.sh returns exit code 1", () => {
