@@ -35,7 +35,7 @@
     "@octokit/webhooks-schemas": "^3.74.0",
     "@types/jest": "^26.0.10",
     "@types/node": "^15.0.2",
-    "@vercel/ncc": "^0.23.0",
+    "@vercel/ncc": "^0.28.5",
     "exec-sh": "^0.3.4",
     "jest": "^26.0.0",
     "jest-circus": "^26.6.3",
