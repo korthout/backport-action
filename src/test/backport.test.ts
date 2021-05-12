@@ -34,9 +34,7 @@ describe("the backport action", () => {
         golden.payloads.default.pull_request.number
       );
       mockedGithub.getPayload.mockReturnValue(golden.payloads.default);
-      mockedGithub.getPullRequest.mockReturnValueOnce(
-        golden.payloads.default.pull_request
-      );
+      mockedGithub.getPullRequest.mockResolvedValue(golden.pulls.default());
     });
     it("can be run without impact", async () => {
       await backport.run();
@@ -52,8 +50,8 @@ describe("the backport action", () => {
       mockedGithub.getPayload.mockReturnValue(
         golden.payloads.with_backport_label
       );
-      mockedGithub.getPullRequest.mockReturnValueOnce(
-        golden.payloads.with_backport_label.pull_request
+      mockedGithub.getPullRequest.mockResolvedValue(
+        golden.pulls.default_with_backport_label()
       );
     });
 
@@ -90,11 +88,17 @@ describe("the backport action", () => {
         mockedExec.call.mockResolvedValue(0);
         mockedGithub.createPR.mockResolvedValue({
           status: 201,
-          data: { ...golden.pulls.backport_to_stable_0_25(), number: 9000 },
+          data: {
+            ...golden.pullPayloads.backport_to_stable_0_25(),
+            number: 9000,
+          },
         });
         mockedGithub.requestReviewers.mockResolvedValue({
           status: 201,
-          data: { ...golden.pulls.backport_to_stable_0_25(), number: 9000 },
+          data: {
+            ...golden.pullPayloads.backport_to_stable_0_25(),
+            number: 9000,
+          },
         });
         await backport.run();
         expect(mockedGithub.createPR).toHaveBeenCalledWith(
