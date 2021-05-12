@@ -1,8 +1,18 @@
 # Backport action
 
-> This project is still in a very early development stage
+> This project is still in an early development stage
 
-This is a GitHub action to backport a pull request (PR) after merging it onto branches that are specified using labels.
+This is a GitHub action to backport merged pull requests (PR) onto branches.
+For example, to patch an older version with changes that you're merging into your main branch, without the manual labor of cherry-picking the individual commits.
+
+A backport consists of creating a new branch, cherry-picking the changes of the original PR and creating a new PR to merge them.
+
+This backport action is able to deal with so called `octopus` merges (i.e. merges of multiple branches with a single commit).
+Therefore, this action is compatible with [Bors](https://bors.tech/) and similar tools.
+
+## Usage
+
+Simply mark a PR with backport labels: `backport <branchname>`.
 
 For example, a PR with labels
 
@@ -11,20 +21,20 @@ backport stable/0.24
 backport release-0.23
 ```
 
-will be backported on branches `stable/0.24` and `release-0.23`.
-
-A backport consists of creating a branch with the changes of the original PR and creating a new PR to merge them.
+will be backported to branches `stable/0.24` and `release-0.23` when merged.
 
 If something goes wrong, the bot will comment on your PR.
 It will also comment after successfully backporting.
 Links are created between the original and the new PRs.
 
-## Usage
+It's also possible to configure the bot to trigger a backport using a comment on a PR.
+
+## Installation
 
 Add the following workflow configuration to your repository's `.github/workflows` folder.
 
 ```yaml
-name: Backport labeled PRs after merge
+name: Backport labeled PRs
 on:
   pull_request:
     types: [closed]
@@ -47,7 +57,37 @@ jobs:
 
 > `version:` must refer to the same version as the `uses`
 
-## Code in Main
+
+### Trigger using a comment
+The backport action can also be triggered by writing a `/backport` comment on a merged pull request.
+To enable this, add the following workflow configuration to your repository's `.github/workflows` folder.
+
+```yaml
+name: Backport labeled PRs triggered by comment
+on:
+  issue_comment:
+    types: [created, edited]
+jobs:
+  build:
+    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '/backport') }}
+    name: Create backport PRs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # required to find all branches
+          fetch-depth: 0
+      - name: Create backport PRs
+        uses: zeebe-io/backport-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_workspace: ${{ github.workspace }}
+          version: master
+```
+
+> `version:` must refer to the same version as the `uses`
+
+## Local compilation
 
 Install the dependencies  
 ```bash
@@ -72,3 +112,8 @@ Run all tests with additional console output
 ```bash
 npm run test-verbose
 ```
+
+## Releases
+
+The distribution is hosted in this repository under `dist`.
+Simply build and package the distribution and commit the changes to release a new version.
