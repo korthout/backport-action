@@ -1,8 +1,10 @@
 import {
-  PullRequestPayload,
-  PullRequestPayloadPullRequest,
+  PullRequestClosedEvent,
+  User,
   PullRequest,
-} from "../github";
+  Label,
+} from "@octokit/webhooks-types";
+import { PullsGetResponseData } from "@octokit/types";
 
 /**
  * Constructed in parts (and slightly modified to fit the type definitions) from
@@ -12,7 +14,7 @@ import {
  */
 
 // USERS
-const user_octocat = {
+const user_octocat: User = {
   login: "octocat",
   id: 1,
   node_id: "MDQ6VXNlcjE=",
@@ -32,7 +34,7 @@ const user_octocat = {
   type: "User",
   site_admin: false,
 };
-const user_hubot = {
+const user_hubot: User = {
   login: "hubot",
   id: 1,
   node_id: "MDQ6VXNlcjE=",
@@ -52,7 +54,7 @@ const user_hubot = {
   type: "User",
   site_admin: true,
 };
-const user_other = {
+const user_other: User = {
   login: "other_user",
   id: 1,
   node_id: "MDQ6VXNlcjE=",
@@ -76,22 +78,22 @@ const user_other = {
 };
 
 // LABELS
-const label_bug = {
+const label_bug: Label = {
   id: 208045946,
   node_id: "MDU6TGFiZWwyMDgwNDU5NDY=",
   url: "https://api.github.com/repos/octocat/Hello-World/labels/bug",
   name: "bug",
-  // description: "Something isn't working",
+  description: "Something isn't working",
   color: "f29513",
   default: true,
 };
-const label_backport_stable_0_25 = {
+const label_backport_stable_0_25: Label = {
   id: 208045947,
   node_id: "YmFja3BvcnQgc3RhYmxlLzAuMjU=",
   url:
     "https://api.github.com/repos/octocat/Hello-World/labels/backport-stable-0-25",
   name: "backport stable/0.25",
-  // description: "Backport to stable/0.25 branch",
+  description: "Backport to stable/0.25 branch",
   color: "f29513",
   default: true,
 };
@@ -215,7 +217,11 @@ const repo_helloworld = {
 
 // PULLS
 class PullRequestPayloadFactory {
-  public default(): PullRequestPayloadPullRequest {
+  public default(): PullRequest & {
+    state: "closed";
+    closed_at: string;
+    merged: boolean;
+  } {
     return {
       url: "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
       id: 1,
@@ -235,7 +241,7 @@ class PullRequestPayloadFactory {
       statuses_url:
         "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
       number: 1347,
-      state: "open",
+      state: "closed",
       locked: true,
       title: "Amazing new feature",
       user: user_octocat,
@@ -329,15 +335,17 @@ class PullRequestPayloadFactory {
       additions: 100,
       deletions: 3,
       changed_files: 5,
+      auto_merge: null,
+      active_lock_reason: null,
     };
   }
-  public default_with_backport_label(): PullRequestPayloadPullRequest {
+  public default_with_backport_label() {
     return {
       ...this.default(),
       labels: [label_backport_stable_0_25, label_bug],
     };
   }
-  public backport_to_stable_0_25(): PullRequestPayloadPullRequest {
+  public backport_to_stable_0_25() {
     return {
       url: "https://api.github.com/repos/octocat/Hello-World/pulls/9001",
       id: 1,
@@ -357,7 +365,7 @@ class PullRequestPayloadFactory {
       statuses_url:
         "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
       number: 9001,
-      state: "open",
+      state: "closed",
       locked: true,
       title: "[Backport stable/0.25] Amazing new feature",
       user: user_octocat,
@@ -458,10 +466,10 @@ class PullRequestPayloadFactory {
 const pullPayloads = new PullRequestPayloadFactory();
 
 // PAYLOADS
-type Payloads = { [key: string]: PullRequestPayload };
+type Payloads = { [key: string]: PullRequestClosedEvent };
 const payloads: Payloads = {
   default: {
-    action: "action",
+    action: "closed",
     number: 1,
     pull_request: pullPayloads.default(),
     repository: repo_helloworld,
@@ -472,7 +480,7 @@ const payloads: Payloads = {
     // label?: WebhookPayloadPullRequestLabel;
   },
   with_backport_label: {
-    action: "action",
+    action: "closed",
     number: 1,
     pull_request: pullPayloads.default_with_backport_label(),
     repository: repo_helloworld,
@@ -482,7 +490,7 @@ const payloads: Payloads = {
 
 // PULL REQUESTS
 class PullRequestFactory {
-  public default() {
+  public default(): PullsGetResponseData {
     return ({
       url: "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
       id: 1,
@@ -1092,13 +1100,13 @@ class PullRequestFactory {
       additions: 100,
       deletions: 3,
       changed_files: 5,
-    } as unknown) as PullRequest;
+    } as unknown) as PullsGetResponseData;
   }
   public default_with_backport_label() {
     return ({
       ...this.default(),
       labels: [label_backport_stable_0_25, label_bug],
-    } as unknown) as PullRequest;
+    } as unknown) as PullsGetResponseData;
   }
 }
 

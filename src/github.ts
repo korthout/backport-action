@@ -8,19 +8,9 @@
  */
 
 import * as github from "@actions/github";
-import { EventPayloads } from "@octokit/webhooks";
-import {
-  OctokitResponse,
-  PullsCreateResponseData,
-  PullsRequestReviewersResponseData,
-  PullsGetResponseData,
-  RequestError,
-} from "@octokit/types";
+import { PullsGetResponseData } from "@octokit/types";
 
-export type PullRequestPayload = EventPayloads.WebhookPayloadPullRequest;
-export type PullRequestPayloadPullRequest = EventPayloads.WebhookPayloadPullRequestPullRequest;
 export type PullRequest = PullsGetResponseData;
-export type Label = EventPayloads.WebhookPayloadPullRequestLabel;
 export type CreatePullRequestResponse = {
   status: number;
   data: {
@@ -35,7 +25,7 @@ export function getRepo() {
 }
 
 export function getPayload() {
-  return github.context.payload as PullRequestPayload;
+  return github.context.payload;
 }
 
 export function getPullNumber(): number {

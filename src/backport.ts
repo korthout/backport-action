@@ -20,7 +20,7 @@ export async function run(): Promise<void> {
     const payload = github.getPayload();
 
     const owner = github.getRepo().owner;
-    const repo = payload.repository.name;
+    const repo = payload.repository?.name ?? github.getRepo().repo;
     const pull_number = github.getPullNumber();
     const mainpr = await github.getPullRequest(pull_number, token);
 

@@ -6430,7 +6430,7 @@ const github = __importStar(__webpack_require__(928));
 const exec = __importStar(__webpack_require__(757));
 const labelRegExp = /^backport ([^ ]+)?$/;
 function run() {
-    var _a, _b;
+    var _a, _b, _c, _d;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const token = core.getInput("github_token", { required: true });
@@ -6438,7 +6438,7 @@ function run() {
             const version = core.getInput("version", { required: true });
             const payload = github.getPayload();
             const owner = github.getRepo().owner;
-            const repo = payload.repository.name;
+            const repo = (_b = (_a = payload.repository) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : github.getRepo().repo;
             const pull_number = github.getPullNumber();
             const mainpr = yield github.getPullRequest(pull_number, token);
             if (!(yield github.isMerged(mainpr, token))) {
@@ -6449,7 +6449,7 @@ function run() {
             const headref = mainpr.head.sha;
             const baseref = mainpr.base.sha;
             const labels = mainpr.labels;
-            const reviewers = (_b = (_a = mainpr.requested_reviewers) === null || _a === void 0 ? void 0 : _a.map((r) => r.login)) !== null && _b !== void 0 ? _b : [];
+            const reviewers = (_d = (_c = mainpr.requested_reviewers) === null || _c === void 0 ? void 0 : _c.map((r) => r.login)) !== null && _d !== void 0 ? _d : [];
             console.log(`Detected labels on PR: ${labels.map((label) => label.name)}`);
             for (const label of labels) {
                 console.log(`Working on label ${label.name}`);
