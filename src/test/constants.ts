@@ -90,8 +90,7 @@ const label_bug: Label = {
 const label_backport_stable_0_25: Label = {
   id: 208045947,
   node_id: "YmFja3BvcnQgc3RhYmxlLzAuMjU=",
-  url:
-    "https://api.github.com/repos/octocat/Hello-World/labels/backport-stable-0-25",
+  url: "https://api.github.com/repos/octocat/Hello-World/labels/backport-stable-0-25",
   name: "backport stable/0.25",
   description: "Backport to stable/0.25 branch",
   color: "f29513",
@@ -301,24 +300,19 @@ class PullRequestPayloadFactory {
           href: "https://api.github.com/repos/octocat/Hello-World/issues/1347",
         },
         comments: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/issues/1347/comments",
+          href: "https://api.github.com/repos/octocat/Hello-World/issues/1347/comments",
         },
         review_comments: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/pulls/1347/comments",
+          href: "https://api.github.com/repos/octocat/Hello-World/pulls/1347/comments",
         },
         review_comment: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
+          href: "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
         },
         commits: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/pulls/1347/commits",
+          href: "https://api.github.com/repos/octocat/Hello-World/pulls/1347/commits",
         },
         statuses: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
+          href: "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
         },
       },
       author_association: "OWNER",
@@ -425,24 +419,19 @@ class PullRequestPayloadFactory {
           href: "https://api.github.com/repos/octocat/Hello-World/issues/9001",
         },
         comments: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/issues/9001/comments",
+          href: "https://api.github.com/repos/octocat/Hello-World/issues/9001/comments",
         },
         review_comments: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/pulls/9001/comments",
+          href: "https://api.github.com/repos/octocat/Hello-World/pulls/9001/comments",
         },
         review_comment: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
+          href: "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
         },
         commits: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/pulls/9001/commits",
+          href: "https://api.github.com/repos/octocat/Hello-World/pulls/9001/commits",
         },
         statuses: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
+          href: "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
         },
       },
       author_association: "OWNER",
@@ -491,7 +480,7 @@ const payloads: Payloads = {
 // PULL REQUESTS
 class PullRequestFactory {
   public default(): PullsGetResponseData {
-    return ({
+    return {
       url: "https://api.github.com/repos/octocat/Hello-World/pulls/1347",
       id: 1,
       node_id: "MDExOlB1bGxSZXF1ZXN0MQ==",
@@ -1043,24 +1032,19 @@ class PullRequestFactory {
           href: "https://api.github.com/repos/octocat/Hello-World/issues/1347",
         },
         comments: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/issues/1347/comments",
+          href: "https://api.github.com/repos/octocat/Hello-World/issues/1347/comments",
         },
         review_comments: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/pulls/1347/comments",
+          href: "https://api.github.com/repos/octocat/Hello-World/pulls/1347/comments",
         },
         review_comment: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
+          href: "https://api.github.com/repos/octocat/Hello-World/pulls/comments{/number}",
         },
         commits: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/pulls/1347/commits",
+          href: "https://api.github.com/repos/octocat/Hello-World/pulls/1347/commits",
         },
         statuses: {
-          href:
-            "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
+          href: "https://api.github.com/repos/octocat/Hello-World/statuses/6dcb09b5b57875f334f61aebed695e2e4193db5e",
         },
       },
       author_association: "OWNER",
@@ -1100,13 +1084,13 @@ class PullRequestFactory {
       additions: 100,
       deletions: 3,
       changed_files: 5,
-    } as unknown) as PullsGetResponseData;
+    } as unknown as PullsGetResponseData;
   }
   public default_with_backport_label() {
-    return ({
+    return {
       ...this.default(),
       labels: [label_backport_stable_0_25, label_bug],
-    } as unknown) as PullsGetResponseData;
+    } as unknown as PullsGetResponseData;
   }
 }
 
