@@ -27,13 +27,11 @@
     "@actions/core": "^1.2.7",
     "@actions/exec": "^1.0.4",
     "@actions/github": "^4.0.0",
-    "@octokit/webhooks": "^9.6.0",
     "@types/dedent": "^0.7.0",
     "dedent": "^0.7.0"
   },
   "devDependencies": {
-    "@octokit/rest": "^18.5.3",
-    "@octokit/webhooks-schemas": "^3.74.0",
+    "@octokit/webhooks-types": "^3.74.0",
     "@types/jest": "^26.0.10",
     "@types/node": "^15.0.2",
     "@vercel/ncc": "^0.28.5",
