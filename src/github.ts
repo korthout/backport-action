@@ -2,109 +2,122 @@
  * Github module
  *
  * Used to isolate the boundary between the code of this project and the github
- * actions api. Handy during testing, because we can easily mock this module's
- * functions. Properties are harder to mock, so this module just offers
- * functions to retrieve those properties.
+ * api. Handy during testing, because we can easily mock this module's functions.
+ * Properties are harder to mock, so this module just offers functions to retrieve
+ * those properties.
  */
 
 import * as github from "@actions/github";
-import { PullsGetResponseData } from "@octokit/types";
+import { WebhookPayload } from "@actions/github/lib/interfaces";
 
-export type PullRequest = PullsGetResponseData;
+export interface GithubApi {
+  getRepo(): { owner: string; repo: string };
+  getPayload(): Payload;
+  getPullNumber(): number;
+  createComment(comment: Comment): Promise<{}>;
+  getPullRequest(pull_number: number): Promise<PullRequest>;
+  isMerged(pull: PullRequest): Promise<boolean>;
+  createPR(pr: CreatePullRequest): Promise<CreatePullRequestResponse>;
+  requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
+}
+
+export class Github implements GithubApi {
+  #octokit;
+  #context;
+
+  constructor(token: string) {
+    this.#octokit = github.getOctokit(token);
+    this.#context = github.context;
+  }
+
+  public getRepo() {
+    return this.#context.repo;
+  }
+
+  public getPayload() {
+    return this.#context.payload;
+  }
+
+  public getPullNumber() {
+    if (this.#context.payload.pull_request) {
+      return this.#context.payload.pull_request.number;
+    }
+
+    // if the pr is not part of the payload
+    // the number can be taken from the issue
+    return this.#context.issue.number;
+  }
+
+  public async createComment(comment: Comment) {
+    console.log(`Create comment: ${comment.body}`);
+    return this.#octokit.issues.createComment(comment);
+  }
+
+  public async getPullRequest(pull_number: number) {
+    console.log(`Retrieve pull request data for #${pull_number}`);
+    return this.#octokit.pulls
+      .get({
+        ...this.getRepo(),
+        pull_number,
+      })
+      .then((response) => response.data as PullRequest);
+  }
+
+  public async isMerged(pull: PullRequest) {
+    console.log(`Check whether pull request ${pull.number} is merged`);
+    return this.#octokit.pulls
+      .checkIfMerged({ ...this.getRepo(), pull_number: pull.number })
+      .then(() => true /* status is always 204 */)
+      .catch((error) => {
+        if (error?.status == 404) return false;
+        else throw error;
+      });
+  }
+
+  public async createPR(pr: CreatePullRequest) {
+    console.log(`Create PR: ${pr.body}`);
+    return this.#octokit.pulls.create(pr);
+  }
+
+  public async requestReviewers(request: ReviewRequest) {
+    console.log(`Request reviewers: ${request.reviewers}`);
+    return this.#octokit.pulls.requestReviewers(request);
+  }
+}
+
+export type PullRequest = {
+  number: number;
+  title: string;
+  head: {
+    sha: string;
+  };
+  base: {
+    sha: string;
+  };
+  labels: {
+    name: string;
+  }[];
+  requested_reviewers: {
+    login: string;
+  }[];
+};
 export type CreatePullRequestResponse = {
   status: number;
   data: {
     number: number;
-    requested_reviewers?: { login: string }[];
+    requested_reviewers?: ({ login: string } | null)[] | null;
   };
 };
 export type RequestReviewersResponse = CreatePullRequestResponse;
 
-export function getRepo() {
-  return github.context.repo;
-}
-
-export function getPayload() {
-  return github.context.payload;
-}
-
-export function getPullNumber(): number {
-  if (github.context.payload.pull_request) {
-    return github.context.payload.pull_request.number;
-  }
-
-  // if the pr is not part of the payload
-  // the number can be taken from the issue
-  return github.context.issue.number;
-}
-
-export async function createComment(comment: Comment, token: string) {
-  console.log(`Create comment: ${comment.body}`);
-  return github.getOctokit(token).issues.createComment(comment);
-}
-
-export async function getPullRequest(
-  pull_number: number,
-  token: string
-): Promise<PullRequest> {
-  console.log(`Retrieve pull request data for #${pull_number}`);
-  return github
-    .getOctokit(token)
-    .pulls.get({
-      ...getRepo(),
-      pull_number,
-    })
-    .then((response) => response.data);
-}
-
-export async function isMerged(
-  pull: PullRequest,
-  token: string
-): Promise<boolean> {
-  console.log(`Check whether pull request ${pull.number} is merged`);
-  return github
-    .getOctokit(token)
-    .pulls.checkIfMerged({ ...getRepo(), pull_number: pull.number })
-    .then((response) => {
-      switch (response.status) {
-        case 204:
-          return true;
-        case 404:
-          return false;
-        default:
-          throw new Error(`Unexpected response status: ${response.status}`);
-      }
-    })
-    .catch((error) => {
-      if (error?.status == 404) return false;
-      else throw error;
-    });
-}
-
-export async function createPR(
-  pr: PR,
-  token: string
-): Promise<CreatePullRequestResponse> {
-  console.log(`Create PR: ${pr.body}`);
-  return github.getOctokit(token).pulls.create(pr);
-}
-
-export async function requestReviewers(
-  request: ReviewRequest,
-  token: string
-): Promise<RequestReviewersResponse> {
-  console.log(`Request reviewers: ${request.reviewers}`);
-  return github.getOctokit(token).pulls.requestReviewers(request);
-}
-
-type Comment = {
+export type Comment = {
   owner: string;
   repo: string;
   issue_number: number;
   body: string;
 };
 
-type PR = {
+export type CreatePullRequest = {
   owner: string;
   repo: string;
   title: string;
@@ -114,9 +127,11 @@ type PR = {
   maintainer_can_modify: boolean;
 };
 
-type ReviewRequest = {
+export type ReviewRequest = {
   owner: string;
   repo: string;
   pull_number: number;
   reviewers: string[];
 };
+
+type Payload = WebhookPayload;

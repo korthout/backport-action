@@ -1,4 +1,6 @@
-import * as backport from "./backport";
+import * as core from "@actions/core";
+import { Backport } from "./backport";
+import { Github } from "./github";
 
 /**
  * Called from the action.yml.
@@ -6,6 +8,13 @@ import * as backport from "./backport";
  * Is separated from backport for testing purposes
  */
 async function run(): Promise<void> {
+  const token = core.getInput("github_token", { required: true });
+  const pwd = core.getInput("github_workspace", { required: true });
+  const version = core.getInput("version", { required: true });
+
+  const github = new Github(token);
+  const backport = new Backport(github, pwd, version);
+
   return backport.run();
 }
 
