@@ -67,16 +67,7 @@ export class Github implements GithubApi {
     console.log(`Check whether pull request ${pull.number} is merged`);
     return this.#octokit.pulls
       .checkIfMerged({ ...this.getRepo(), pull_number: pull.number })
-      .then((response) => {
-        switch (response.status) {
-          case 204:
-            return true;
-          case 404:
-            return false;
-          default:
-            throw new Error(`Unexpected response status: ${response.status}`);
-        }
-      })
+      .then(() => true /* status is always 204 */)
       .catch((error) => {
         if (error?.status == 404) return false;
         else throw error;
@@ -114,7 +105,7 @@ export type CreatePullRequestResponse = {
   status: number;
   data: {
     number: number;
-    requested_reviewers?: { login: string }[];
+    requested_reviewers?: ({ login: string } | null)[] | null;
   };
 };
 export type RequestReviewersResponse = CreatePullRequestResponse;
