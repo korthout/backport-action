@@ -89,8 +89,8 @@ class Backport {
                         console.log(`Start backport to ${branchname}`);
                         const scriptExitCode = yield exec.callBackportScript(this.pwd, headref, baseref, target, branchname, this.version);
                         if (scriptExitCode != 0) {
-                            const message = this.composeMessageForBackportScriptFailure(target, scriptExitCode);
-                            console.error(message);
+                            const message = this.composeMessageForBackportScriptFailure(target, scriptExitCode, baseref, headref, branchname);
+                            console.error(`exitcode(${scriptExitCode}): ${message}`);
                             yield this.github.createComment({
                                 owner,
                                 repo,
@@ -183,9 +183,26 @@ class Backport {
                       Backport of #${issue_number} to \`${target}\`.`;
         return { title, body };
     }
-    composeMessageForBackportScriptFailure(target, exitcode) {
-        //TODO better error messages depending on exit code
-        return dedent_1.default `Backport failed for ${target} with exitcode ${exitcode}`;
+    composeMessageForBackportScriptFailure(target, exitcode, baseref, headref, branchname) {
+        var _a;
+        const reasons = {
+            1: "due to an unknown script error",
+            2: "because it was unable to create/access the git worktree directory",
+            3: "because it was unable to create a new branch",
+            4: "because it was unable to cherry-pick the commit(s)",
+        };
+        const reason = (_a = reasons[exitcode]) !== null && _a !== void 0 ? _a : "due to an unknown script error";
+        return dedent_1.default `Backport failed for \`${target}\`, ${reason}.
+
+                  Please cherry-pick the changes locally:
+                  \`\`\`bash
+                  git fetch
+                  git worktree add .worktree/${branchname} ${target}
+                  cd .worktree/${branchname}
+                  git checkout -b ${branchname}
+                  ancref=$(git merge-base ${baseref} ${headref})
+                  git cherry-pick -x $ancref..${headref}
+                  \`\`\``;
     }
     composeMessageForGitPushFailure(target, exitcode) {
         //TODO better error messages depending on exit code
@@ -235,6 +252,7 @@ function callBackportScript(pwd, headref, baseref, target, branchname, version) 
             listeners: {
                 stdout: (data) => console.log(data.toString()),
             },
+            ignoreReturnCode: true,
         });
     });
 }

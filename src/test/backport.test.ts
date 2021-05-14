@@ -50,7 +50,17 @@ describe("the backport action", () => {
           owner: "octocat",
           repo: "Hello-World",
           issue_number: 1347,
-          body: "Backport failed for stable/0.25 with exitcode 1",
+          body: dedent`Backport failed for \`stable/0.25\`, due to an unknown script error.
+
+                      Please cherry-pick the changes locally:
+                      \`\`\`bash
+                      git fetch
+                      git worktree add .worktree/backport-1347-to-stable/0.25 stable/0.25
+                      cd .worktree/backport-1347-to-stable/0.25
+                      git checkout -b backport-1347-to-stable/0.25
+                      ancref=$(git merge-base 6dcb09b5b57875f334f61aebed695e2e4193db5e 6dcb09b5b57875f334f61aebed695e2e4193db5e)
+                      git cherry-pick -x $ancref..6dcb09b5b57875f334f61aebed695e2e4193db5e
+                      \`\`\``,
         });
       });
     });

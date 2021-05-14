@@ -15,6 +15,7 @@ export async function callBackportScript(
       listeners: {
         stdout: (data) => console.log(data.toString()),
       },
+      ignoreReturnCode: true,
     }
   );
 }
