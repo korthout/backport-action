@@ -82,9 +82,12 @@ export class Backport {
           if (scriptExitCode != 0) {
             const message = this.composeMessageForBackportScriptFailure(
               target,
-              scriptExitCode
+              scriptExitCode,
+              baseref,
+              headref,
+              branchname
             );
-            console.error(message);
+            console.error(`exitcode(${scriptExitCode}): ${message}`);
             await this.github.createComment({
               owner,
               repo,
@@ -200,10 +203,29 @@ export class Backport {
 
   private composeMessageForBackportScriptFailure(
     target: string,
-    exitcode: number
+    exitcode: number,
+    baseref: string,
+    headref: string,
+    branchname: string
   ): string {
-    //TODO better error messages depending on exit code
-    return dedent`Backport failed for ${target} with exitcode ${exitcode}`;
+    const reasons: { [key: number]: string } = {
+      1: "due to an unknown script error",
+      2: "because it was unable to create/access the git worktree directory",
+      3: "because it was unable to create a new branch",
+      4: "because it was unable to cherry-pick the commit(s)",
+    };
+    const reason = reasons[exitcode] ?? "due to an unknown script error";
+    return dedent`Backport failed for \`${target}\`, ${reason}.
+
+                  Please cherry-pick the changes locally:
+                  \`\`\`bash
+                  git fetch
+                  git worktree add .worktree/${branchname} ${target}
+                  cd .worktree/${branchname}
+                  git checkout -b ${branchname}
+                  ancref=$(git merge-base ${baseref} ${headref})
+                  git cherry-pick -x $ancref..${headref}
+                  \`\`\``;
   }
 
   private composeMessageForGitPushFailure(
