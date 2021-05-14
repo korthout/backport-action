@@ -73,14 +73,12 @@ jobs:
   build:
     name: Create backport PRs
     if: >
-      ${{
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'issue_comment' &&
-          github.event.issue.pull_request &&
-          contains(github.event.comment.body, '/backport')
-        )
-      }}
+      github.event_name == 'pull_request' ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        contains(github.event.comment.body, '/backport')
+      )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
