@@ -34,7 +34,7 @@ It's also possible to configure the bot to trigger a backport using a comment on
 Add the following workflow configuration to your repository's `.github/workflows` folder.
 
 ```yaml
-name: Backport labeled PRs
+name: Backport labeled merged pull requests
 on:
   pull_request:
     types: [closed]
@@ -55,22 +55,24 @@ jobs:
           version: master
 ```
 
-> `version:` must refer to the same version as the `uses`
-
+> `version:` must refer to the same version as the `uses`.
+> We recommend using `master` or the latest tag.
 
 ### Trigger using a comment
-The backport action can also be triggered by writing a `/backport` comment on a merged pull request.
+The backport action can also be triggered by writing a comment containing `/backport` on a merged pull request.
 To enable this, add the following workflow configuration to your repository's `.github/workflows` folder.
 
 ```yaml
-name: Backport labeled PRs triggered by comment
+name: Backport labeled merged pull requests
 on:
+  pull_request:
+    types: [ closed ]
   issue_comment:
-    types: [created, edited]
+    types: [ created ]
 jobs:
   build:
-    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '/backport') }}
     name: Create backport PRs
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '/backport')) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -85,7 +87,8 @@ jobs:
           version: master
 ```
 
-> `version:` must refer to the same version as the `uses`
+> `version:` must refer to the same version as the `uses`.
+> We recommend using `master` or the latest tag.
 
 ## Local compilation
 
