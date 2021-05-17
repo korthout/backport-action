@@ -54,8 +54,8 @@ describe("the backport action", () => {
 
                       Please cherry-pick the changes locally:
                       \`\`\`bash
-                      git fetch
-                      git worktree add .worktree/backport-1347-to-stable/0.25 stable/0.25
+                      git fetch origin stable/0.25
+                      git worktree add -d .worktree/backport-1347-to-stable/0.25 origin/stable/0.25
                       cd .worktree/backport-1347-to-stable/0.25
                       git checkout -b backport-1347-to-stable/0.25
                       ancref=$(git merge-base 6dcb09b5b57875f334f61aebed695e2e4193db5e 6dcb09b5b57875f334f61aebed695e2e4193db5e)
