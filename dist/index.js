@@ -42,6 +42,7 @@ exports.Backport = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const dedent_1 = __importDefault(__nccwpck_require__(5281));
 const exec = __importStar(__nccwpck_require__(7757));
+const os_1 = __nccwpck_require__(2087);
 const labelRegExp = /^backport ([^ ]+)?$/;
 class Backport {
     constructor(github, pwd, version) {
@@ -113,7 +114,7 @@ class Backport {
                             continue;
                         }
                         console.info(`Create PR for ${branchname}`);
-                        const { title, body } = this.composePRContent(target, mainpr.title, pull_number);
+                        const { title, body } = yield this.composePRContent(target, mainpr.title, pull_number);
                         const new_pr_response = yield this.github.createPR({
                             owner,
                             repo,
@@ -178,10 +179,16 @@ class Backport {
         });
     }
     composePRContent(target, issue_title, issue_number) {
-        const title = `[Backport ${target}] ${issue_title}`;
-        const body = dedent_1.default `# Description
+        return __awaiter(this, void 0, void 0, function* () {
+            const links = yield this.github.getLinkedIssues(issue_number);
+            const title = `[Backport ${target}] ${issue_title}`;
+            let body = dedent_1.default `# Description
                       Backport of #${issue_number} to \`${target}\`.`;
-        return { title, body };
+            if (links.length > 0) {
+                body = body.concat(os_1.EOL, os_1.EOL, links.map((link) => `relates to ${link}`).join(os_1.EOL));
+            }
+            return { title, body };
+        });
     }
     composeMessageForBackportScriptFailure(target, exitcode, baseref, headref, branchname) {
         var _a;
@@ -372,6 +379,15 @@ class Github {
                 else
                     throw error;
             });
+        });
+    }
+    getLinkedIssues(pull_number) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return __classPrivateFieldGet(this, _octokit).issues
+                .listEvents(Object.assign(Object.assign({}, this.getRepo()), { issue_number: pull_number }))
+                .then((response) => response.data
+                .filter((x) => x.event == `connected`)
+                .map((x) => x.issue_url));
         });
     }
     createPR(pr) {

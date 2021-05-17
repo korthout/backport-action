@@ -88,7 +88,10 @@ describe("the backport action", () => {
           head: "backport-1347-to-stable/0.25",
           title: "[Backport stable/0.25] Amazing new feature",
           body: dedent`# Description
-                  Backport of #1347 to \`stable/0.25\`.`,
+                  Backport of #1347 to \`stable/0.25\`.
+                  
+                  relates to issue#101
+                  relates to issue#345`,
           maintainer_can_modify: true,
         });
         expect(
@@ -117,6 +120,7 @@ function mockedGithubFactory({
   inner.getPullNumber.mockReturnValue(event.pull_request.number);
   inner.getPullRequest.mockResolvedValue(pull);
   inner.isMerged.mockResolvedValue(true);
+  inner.getLinkedIssues.mockResolvedValue(["issue#101", "issue#345"]);
   inner.createComment.mockResolvedValue({ status: 201 });
   inner.createPR.mockResolvedValue({
     status: 201,

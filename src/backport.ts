@@ -4,6 +4,7 @@ import dedent from "dedent";
 import { CreatePullRequestResponse, RequestReviewersResponse } from "./github";
 import { GithubApi } from "./github";
 import * as exec from "./exec";
+import { EOL } from "os";
 
 const labelRegExp = /^backport ([^ ]+)?$/;
 
@@ -117,7 +118,7 @@ export class Backport {
           }
 
           console.info(`Create PR for ${branchname}`);
-          const { title, body } = this.composePRContent(
+          const { title, body } = await this.composePRContent(
             target,
             mainpr.title,
             pull_number
@@ -190,14 +191,22 @@ export class Backport {
     }
   }
 
-  private composePRContent(
+  private async composePRContent(
     target: string,
     issue_title: string,
     issue_number: number
-  ): PRContent {
+  ): Promise<PRContent> {
+    const links = await this.github.getLinkedIssues(issue_number);
     const title = `[Backport ${target}] ${issue_title}`;
-    const body = dedent`# Description
+    let body = dedent`# Description
                       Backport of #${issue_number} to \`${target}\`.`;
+    if (links.length > 0) {
+      body = body.concat(
+        EOL,
+        EOL,
+        links.map((link) => `relates to ${link}`).join(EOL)
+      );
+    }
     return { title, body };
   }
 

@@ -17,6 +17,7 @@ export interface GithubApi {
   createComment(comment: Comment): Promise<{}>;
   getPullRequest(pull_number: number): Promise<PullRequest>;
   isMerged(pull: PullRequest): Promise<boolean>;
+  getLinkedIssues(pull_number: number): Promise<string[]>;
   createPR(pr: CreatePullRequest): Promise<CreatePullRequestResponse>;
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
 }
@@ -72,6 +73,16 @@ export class Github implements GithubApi {
         if (error?.status == 404) return false;
         else throw error;
       });
+  }
+
+  public async getLinkedIssues(pull_number: number) {
+    return this.#octokit.issues
+      .listEvents({ ...this.getRepo(), issue_number: pull_number })
+      .then((response) =>
+        response.data
+          .filter((x) => x.event == `connected`)
+          .map((x) => x.issue_url)
+      );
   }
 
   public async createPR(pr: CreatePullRequest) {
