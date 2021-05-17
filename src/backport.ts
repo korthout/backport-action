@@ -219,8 +219,8 @@ export class Backport {
 
                   Please cherry-pick the changes locally:
                   \`\`\`bash
-                  git fetch
-                  git worktree add .worktree/${branchname} ${target}
+                  git fetch origin ${target}
+                  git worktree add -d .worktree/${branchname} origin/${target}
                   cd .worktree/${branchname}
                   git checkout -b ${branchname}
                   ancref=$(git merge-base ${baseref} ${headref})
