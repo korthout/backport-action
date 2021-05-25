@@ -11,9 +11,10 @@ async function run(): Promise<void> {
   const token = core.getInput("github_token", { required: true });
   const pwd = core.getInput("github_workspace", { required: true });
   const version = core.getInput("version", { required: true });
+  const pattern = new RegExp(core.getInput("label_pattern"));
 
   const github = new Github(token);
-  const backport = new Backport(github, pwd, version);
+  const backport = new Backport(github, { version, pwd, labels: { pattern } });
 
   return backport.run();
 }

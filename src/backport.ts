@@ -5,22 +5,26 @@ import { CreatePullRequestResponse, RequestReviewersResponse } from "./github";
 import { GithubApi } from "./github";
 import * as exec from "./exec";
 
-const labelRegExp = /^backport ([^ ]+)?$/;
-
 type PRContent = {
   title: string;
   body: string;
 };
 
+type Config = {
+  version: string;
+  pwd: string;
+  labels: {
+    pattern: RegExp;
+  };
+};
+
 export class Backport {
   private github;
-  private pwd;
-  private version;
+  private config;
 
-  constructor(github: GithubApi, pwd: string, version: string) {
+  constructor(github: GithubApi, config: Config) {
     this.github = github;
-    this.pwd = pwd;
-    this.version = version;
+    this.config = config;
   }
 
   async run(): Promise<void> {
@@ -55,10 +59,19 @@ export class Backport {
         console.log(`Working on label ${label.name}`);
 
         // we are looking for labels like "backport stable/0.24"
-        const match = labelRegExp.exec(label.name);
+        const match = this.config.labels.pattern.exec(label.name);
 
         if (!match) {
           console.log("Doesn't match expected prefix");
+          continue;
+        }
+        if (match.length < 2) {
+          console.error(
+            dedent`\`label_pattern\` '${this.config.labels.pattern.source}' \
+            matched "${label.name}", but did not capture any branchname. \
+            Please make sure to provide a regex with a capture group as \
+            \`label_pattern\`.`
+          );
           continue;
         }
 
@@ -71,12 +84,12 @@ export class Backport {
 
           console.log(`Start backport to ${branchname}`);
           const scriptExitCode = await exec.callBackportScript(
-            this.pwd,
+            this.config.pwd,
             headref,
             baseref,
             target,
             branchname,
-            this.version
+            this.config.version
           );
 
           if (scriptExitCode != 0) {
