@@ -42,6 +42,8 @@ jobs:
   build:
     name: Create backport PRs
     runs-on: ubuntu-latest
+    # don't run on closed unmerged pull requests
+    if: github.event.pull_request.merged
     steps:
       - uses: actions/checkout@v2
         with:
@@ -72,14 +74,16 @@ on:
 jobs:
   build:
     name: Create backport PRs
+    runs-on: ubuntu-latest
     if: >
-      github.event_name == 'pull_request' ||
       (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.merged
+      ) || (
         github.event_name == 'issue_comment' &&
         github.event.issue.pull_request &&
         contains(github.event.comment.body, '/backport')
       )
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
