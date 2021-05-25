@@ -2,7 +2,7 @@
 
 > This project is still in an early development stage
 
-This is a GitHub action to backport merged pull requests (PR) onto branches.
+This is a GitHub action to backport merged pull requests (PR) to branches.
 For example, to patch an older version with changes that you're merging into your main branch, without the manual labor of cherry-picking the individual commits.
 
 A backport consists of creating a new branch, cherry-picking the changes of the original PR and creating a new PR to merge them.
@@ -42,39 +42,58 @@ jobs:
   build:
     name: Create backport PRs
     runs-on: ubuntu-latest
-    # don't run on closed unmerged pull requests
+    # Don't run on closed unmerged pull requests
     if: github.event.pull_request.merged
     steps:
       - uses: actions/checkout@v2
         with:
-          # required to find all branches
+          # Required to find all branches
           fetch-depth: 0
       - name: Create backport PRs
+        # Should be kept in sync with `version`
         uses: zeebe-io/backport-action@master
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          github_workspace: ${{ github.workspace }}
+          # Required
+          # Version of the backport-action
+          # Must equal the version in `uses`
+          # Recommended: latest tag or `master`
           version: master
+
+          # Required
+          # Token to authenticate requests to GitHub
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Required
+          # Working directory for the backport script
+          github_workspace: ${{ github.workspace }}
+
+          # Optional
+          # Regex pattern to match github labels
+          # Must contain a capture group for target branchname
+          # label_pattern: ^backport ([^ ]+)$
 ```
 
-> `version:` must refer to the same version as the `uses`.
-> We recommend using `master` or the latest tag.
-
 ### Trigger using a comment
-The backport action can also be triggered by writing a comment containing `/backport` on a merged pull request.
+
+You can also trigger the backport action by writing a comment containing `/backport` on a merged pull request.
 To enable this, add the following workflow configuration to your repository's `.github/workflows` folder.
+
+<details><summary>Trigger backport action using a comment</summary>
+ <p>
 
 ```yaml
 name: Backport labeled merged pull requests
 on:
   pull_request:
-    types: [ closed ]
+    types: [closed]
   issue_comment:
-    types: [ created ]
+    types: [created]
 jobs:
   build:
     name: Create backport PRs
     runs-on: ubuntu-latest
+    # Only run when pull request is merged
+    # or when a comment containing `/backport` is created
     if: >
       (
         github.event_name == 'pull_request' &&
@@ -87,28 +106,46 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          # required to find all branches
+          # Required to find all branches
           fetch-depth: 0
       - name: Create backport PRs
+        # Should be kept in sync with `version`
         uses: zeebe-io/backport-action@master
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          github_workspace: ${{ github.workspace }}
+          # Required
+          # Version of the backport-action
+          # Must equal the version in `uses`
+          # Recommended: latest tag or `master`
           version: master
+
+          # Required
+          # Token to authenticate requests to GitHub
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Required
+          # Working directory for the backport script
+          github_workspace: ${{ github.workspace }}
+
+          # Optional
+          # Regex pattern to match github labels
+          # Must contain a capture group for target branchname
+          # label_pattern: ^backport ([^ ]+)$
 ```
 
-> `version:` must refer to the same version as the `uses`.
-> We recommend using `master` or the latest tag.
+</p>
+</details>
 
 ## Local compilation
 
-Install the dependencies  
-```bash
+Install the dependencies
+
+```
 npm install
 ```
 
 Build the typescript and package it for distribution
-```bash
+
+```
 npm run format && npm run build && npm run package
 ```
 
@@ -117,13 +154,21 @@ npm run format && npm run build && npm run package
 Tests are located in both src (unit tests) and in [test](test) (integration-style tests).
 
 Run all tests
-```bash
+
+```
 npm test
 ```
 
 Run all tests with additional console output
-```bash
+
+```
 npm run test-verbose
+```
+
+Shorthand for format, build, package and test
+
+```
+npm run all
 ```
 
 ## Releases
