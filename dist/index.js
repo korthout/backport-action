@@ -42,12 +42,10 @@ exports.Backport = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const dedent_1 = __importDefault(__nccwpck_require__(5281));
 const exec = __importStar(__nccwpck_require__(7757));
-const labelRegExp = /^backport ([^ ]+)?$/;
 class Backport {
-    constructor(github, pwd, version) {
+    constructor(github, config) {
         this.github = github;
-        this.pwd = pwd;
-        this.version = version;
+        this.config = config;
     }
     run() {
         var _a, _b, _c, _d;
@@ -76,9 +74,16 @@ class Backport {
                 for (const label of labels) {
                     console.log(`Working on label ${label.name}`);
                     // we are looking for labels like "backport stable/0.24"
-                    const match = labelRegExp.exec(label.name);
+                    const match = this.config.labels.pattern.exec(label.name);
                     if (!match) {
                         console.log("Doesn't match expected prefix");
+                        continue;
+                    }
+                    if (match.length < 2) {
+                        console.error(dedent_1.default `\`label_pattern\` '${this.config.labels.pattern.source}' \
+            matched "${label.name}", but did not capture any branchname. \
+            Please make sure to provide a regex with a capture group as \
+            \`label_pattern\`.`);
                         continue;
                     }
                     //extract the target branch (e.g. "stable/0.24")
@@ -87,7 +92,7 @@ class Backport {
                     try {
                         const branchname = `backport-${pull_number}-to-${target}`;
                         console.log(`Start backport to ${branchname}`);
-                        const scriptExitCode = yield exec.callBackportScript(this.pwd, headref, baseref, target, branchname, this.version);
+                        const scriptExitCode = yield exec.callBackportScript(this.config.pwd, headref, baseref, target, branchname, this.config.version);
                         if (scriptExitCode != 0) {
                             const message = this.composeMessageForBackportScriptFailure(target, scriptExitCode, baseref, headref, branchname);
                             console.error(`exitcode(${scriptExitCode}): ${message}`);
@@ -446,8 +451,9 @@ function run() {
         const token = core.getInput("github_token", { required: true });
         const pwd = core.getInput("github_workspace", { required: true });
         const version = core.getInput("version", { required: true });
+        const pattern = new RegExp(core.getInput("label_pattern"));
         const github = new github_1.Github(token);
-        const backport = new backport_1.Backport(github, pwd, version);
+        const backport = new backport_1.Backport(github, { version, pwd, labels: { pattern } });
         return backport.run();
     });
 }
