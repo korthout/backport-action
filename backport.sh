@@ -19,7 +19,9 @@ then
     1: incorrect usage / this message
     2: unable to access worktree directory
     3: unable to create new branch
-    4: unable to cherry-pick commit"
+    4: unable to cherry-pick commit
+    5: headref not found
+    6: baseref not found"
   exit 1
 fi
 
@@ -45,6 +47,9 @@ export GIT_COMMITTER_NAME="$user_name"
 
 user_email="github-actions[bot]@users.noreply.github.com"
 export GIT_COMMITTER_EMAIL="$user_email"
+
+git cat-file -t "$headref" || exit 5
+git cat-file -t "$baseref" || exit 6
 
 echo "Find common ancestor between $baseref and $headref"
 ancref=$(git merge-base "$baseref" "$headref")
