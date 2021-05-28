@@ -63,6 +63,9 @@ setup () {
 
     git init
 
+    echo "[commit]" >> .git/config
+    echo "	gpgsign = false" >> .git/config
+
     name="test-setup[bot]"
     export GIT_AUTHOR_NAME="$name"
     export GIT_COMMITTER_NAME="$name"

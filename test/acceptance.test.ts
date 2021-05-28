@@ -6,23 +6,31 @@ async function exec({
   command,
   args = [],
   options = { cwd: "test" },
+  quiet = true,
+  verbose = false,
 }: Command): Promise<Output> {
   const fullCommand = `${command} ${args?.join(" ")}`;
   const execution = execPromised(fullCommand, options);
-  execution.then((ps) => {
-    console.log(fullCommand);
-    if (ps.stdout) console.log(ps.stdout);
-    if (ps.stderr) console.log(ps.stderr);
-  });
-  execution.catch(console.error);
+  if (!quiet) {
+    execution.then((ps) => {
+      console.log(fullCommand);
+      if (verbose) {
+        if (ps.stdout) console.log(ps.stdout);
+        if (ps.stderr) console.log(ps.stderr);
+      }
+    });
+    if (verbose) {
+      execution.catch(console.error);
+    }
+  }
   return execution;
 }
 
 describe("given a git repository with a merged pr", () => {
-  beforeEach(async () => {
+  beforeAll(async () => {
     await exec({ command: "./setup.sh" });
 
-    // print and check the history graph
+    // check the history graph
     const { stdout } = await exec({
       command: "git log --graph --oneline --decorate",
       options: {
@@ -34,8 +42,19 @@ describe("given a git repository with a merged pr", () => {
     );
   });
 
+  describe("when backport.sh script is executed with unavailable headref", () => {
+    test("then it returns exit code 5", () => {
+      // promisedExec's error is unhandled when exit code is non-zero, use child.exec instead
+      child
+        .exec(
+          "./backport.sh test/repo abcdef123456 master^ release-1 backport-b-to-1"
+        )
+        .on("exit", (code) => expect(code).toBe(5));
+    });
+  });
+
   describe("when backport.sh script is executed", () => {
-    beforeEach(async () => {
+    beforeAll(async () => {
       await exec({
         command: "./backport.sh",
         args: [
@@ -46,6 +65,7 @@ describe("given a git repository with a merged pr", () => {
           "backport-b-to-1", // branchname (name of new backport branch)
         ],
         options: { cwd: "./" },
+        quiet: false,
       });
     });
 
@@ -82,7 +102,7 @@ describe("given a git repository with a merged pr", () => {
     });
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await exec({ command: "./cleanup.sh" });
   });
 });
@@ -91,5 +111,7 @@ type Command = {
   command: string;
   args?: string[];
   options?: child.ExecOptions;
+  quiet?: boolean;
+  verbose?: boolean;
 };
 type Output = { stdout: string; stderr: string };
