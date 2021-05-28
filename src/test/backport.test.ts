@@ -52,7 +52,7 @@ describe("the backport action", () => {
           issue_number: 1347,
           body: dedent`Backport failed for \`stable/0.25\`, due to an unknown script error.
 
-                      Please cherry-pick the changes locally:
+                      Please cherry-pick the changes locally.
                       \`\`\`bash
                       git fetch origin stable/0.25
                       git worktree add -d .worktree/backport-1347-to-stable/0.25 origin/stable/0.25
@@ -61,6 +61,27 @@ describe("the backport action", () => {
                       ancref=$(git merge-base 6dcb09b5b57875f334f61aebed695e2e4193db5e 6dcb09b5b57875f334f61aebed695e2e4193db5e)
                       git cherry-pick -x $ancref..6dcb09b5b57875f334f61aebed695e2e4193db5e
                       \`\`\``,
+        });
+      });
+    });
+
+    describe("and backport.sh returns exit code 5", () => {
+      beforeEach(() => {
+        mockedExec.callBackportScript.mockResolvedValue(5);
+      });
+      it("comments on failure", async () => {
+        await backport.run();
+        expect(
+          mockedDefaultGithubWithBackportLabel.createComment
+        ).toHaveBeenCalledWith({
+          owner: "octocat",
+          repo: "Hello-World",
+          issue_number: 1347,
+          body: dedent`Backport failed for \`stable/0.25\`, because 1 or more of the commits are not available.
+
+                Please cherry-pick the changes locally.
+                Note that rebase and squash merges are not supported at this time.
+                For more information see https://github.com/zeebe-io/backport-action/issues/46.`,
         });
       });
     });
