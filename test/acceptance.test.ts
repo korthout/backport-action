@@ -6,15 +6,23 @@ async function exec({
   command,
   args = [],
   options = { cwd: "test" },
+  quiet = true,
+  verbose = false,
 }: Command): Promise<Output> {
   const fullCommand = `${command} ${args?.join(" ")}`;
   const execution = execPromised(fullCommand, options);
-  execution.then((ps) => {
-    console.log(fullCommand);
-    if (ps.stdout) console.log(ps.stdout);
-    if (ps.stderr) console.log(ps.stderr);
-  });
-  execution.catch(console.error);
+  if (!quiet) {
+    execution.then((ps) => {
+      console.log(fullCommand);
+      if (verbose) {
+        if (ps.stdout) console.log(ps.stdout);
+        if (ps.stderr) console.log(ps.stderr);
+      }
+    });
+    if (verbose) {
+      execution.catch(console.error);
+    }
+  }
   return execution;
 }
 
@@ -22,7 +30,7 @@ describe("given a git repository with a merged pr", () => {
   beforeEach(async () => {
     await exec({ command: "./setup.sh" });
 
-    // print and check the history graph
+    // check the history graph
     const { stdout } = await exec({
       command: "git log --graph --oneline --decorate",
       options: {
@@ -46,6 +54,7 @@ describe("given a git repository with a merged pr", () => {
           "backport-b-to-1", // branchname (name of new backport branch)
         ],
         options: { cwd: "./" },
+        quiet: false,
       });
     });
 
@@ -91,5 +100,7 @@ type Command = {
   command: string;
   args?: string[];
   options?: child.ExecOptions;
+  quiet?: boolean;
+  verbose?: boolean;
 };
 type Output = { stdout: string; stderr: string };
