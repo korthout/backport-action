@@ -190,19 +190,25 @@ class Backport {
             2: "because it was unable to create/access the git worktree directory",
             3: "because it was unable to create a new branch",
             4: "because it was unable to cherry-pick the commit(s)",
+            5: "because 1 or more of the commits are not available",
+            6: "because 1 or more of the commits are not available",
         };
         const reason = (_a = reasons[exitcode]) !== null && _a !== void 0 ? _a : "due to an unknown script error";
+        const suggestion = exitcode <= 4
+            ? dedent_1.default `\`\`\`bash
+                git fetch origin ${target}
+                git worktree add -d .worktree/${branchname} origin/${target}
+                cd .worktree/${branchname}
+                git checkout -b ${branchname}
+                ancref=$(git merge-base ${baseref} ${headref})
+                git cherry-pick -x $ancref..${headref}
+                \`\`\``
+            : dedent_1.default `Note that rebase and squash merges are not supported at this time.
+                For more information see https://github.com/zeebe-io/backport-action/issues/46.`;
         return dedent_1.default `Backport failed for \`${target}\`, ${reason}.
 
-                  Please cherry-pick the changes locally:
-                  \`\`\`bash
-                  git fetch origin ${target}
-                  git worktree add -d .worktree/${branchname} origin/${target}
-                  cd .worktree/${branchname}
-                  git checkout -b ${branchname}
-                  ancref=$(git merge-base ${baseref} ${headref})
-                  git cherry-pick -x $ancref..${headref}
-                  \`\`\``;
+                  Please cherry-pick the changes locally.
+                  ${suggestion}`;
     }
     composeMessageForGitPushFailure(target, exitcode) {
         //TODO better error messages depending on exit code
