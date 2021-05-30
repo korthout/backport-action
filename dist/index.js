@@ -319,54 +319,52 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, privateMap, value) {
-    if (!privateMap.has(receiver)) {
-        throw new TypeError("attempted to set private field on non-instance");
-    }
-    privateMap.set(receiver, value);
-    return value;
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, privateMap) {
-    if (!privateMap.has(receiver)) {
-        throw new TypeError("attempted to get private field on non-instance");
-    }
-    return privateMap.get(receiver);
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
 };
-var _octokit, _context;
+var _Github_octokit, _Github_context;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Github = void 0;
 const github = __importStar(__nccwpck_require__(5438));
 class Github {
     constructor(token) {
-        _octokit.set(this, void 0);
-        _context.set(this, void 0);
-        __classPrivateFieldSet(this, _octokit, github.getOctokit(token));
-        __classPrivateFieldSet(this, _context, github.context);
+        _Github_octokit.set(this, void 0);
+        _Github_context.set(this, void 0);
+        __classPrivateFieldSet(this, _Github_octokit, github.getOctokit(token), "f");
+        __classPrivateFieldSet(this, _Github_context, github.context, "f");
     }
     getRepo() {
-        return __classPrivateFieldGet(this, _context).repo;
+        return __classPrivateFieldGet(this, _Github_context, "f").repo;
     }
     getPayload() {
-        return __classPrivateFieldGet(this, _context).payload;
+        return __classPrivateFieldGet(this, _Github_context, "f").payload;
     }
     getPullNumber() {
-        if (__classPrivateFieldGet(this, _context).payload.pull_request) {
-            return __classPrivateFieldGet(this, _context).payload.pull_request.number;
+        if (__classPrivateFieldGet(this, _Github_context, "f").payload.pull_request) {
+            return __classPrivateFieldGet(this, _Github_context, "f").payload.pull_request.number;
         }
         // if the pr is not part of the payload
         // the number can be taken from the issue
-        return __classPrivateFieldGet(this, _context).issue.number;
+        return __classPrivateFieldGet(this, _Github_context, "f").issue.number;
     }
     createComment(comment) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log(`Create comment: ${comment.body}`);
-            return __classPrivateFieldGet(this, _octokit).rest.issues.createComment(comment);
+            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.createComment(comment);
         });
     }
     getPullRequest(pull_number) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log(`Retrieve pull request data for #${pull_number}`);
-            return __classPrivateFieldGet(this, _octokit).rest.pulls
+            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls
                 .get(Object.assign(Object.assign({}, this.getRepo()), { pull_number }))
                 .then((response) => response.data);
         });
@@ -374,7 +372,7 @@ class Github {
     isMerged(pull) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log(`Check whether pull request ${pull.number} is merged`);
-            return __classPrivateFieldGet(this, _octokit).rest.pulls
+            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls
                 .checkIfMerged(Object.assign(Object.assign({}, this.getRepo()), { pull_number: pull.number }))
                 .then(() => true /* status is always 204 */)
                 .catch((error) => {
@@ -388,18 +386,18 @@ class Github {
     createPR(pr) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log(`Create PR: ${pr.body}`);
-            return __classPrivateFieldGet(this, _octokit).rest.pulls.create(pr);
+            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls.create(pr);
         });
     }
     requestReviewers(request) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log(`Request reviewers: ${request.reviewers}`);
-            return __classPrivateFieldGet(this, _octokit).rest.pulls.requestReviewers(request);
+            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls.requestReviewers(request);
         });
     }
 }
 exports.Github = Github;
-_octokit = new WeakMap(), _context = new WeakMap();
+_Github_octokit = new WeakMap(), _Github_context = new WeakMap();
 
 
 /***/ }),
