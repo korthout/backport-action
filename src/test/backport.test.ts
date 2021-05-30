@@ -11,8 +11,11 @@ import * as golden from "./constants";
 
 jest.mock("../github");
 jest.mock("../exec");
-const pwd = "./test/project";
-const version = "0.0.2";
+const config = {
+  pwd: "./test/project",
+  version: "0.0.2",
+  labels: { pattern: /^backport ([^ ]+)$/ },
+};
 const mockedExec = mocked(exec, true);
 
 describe("the backport action", () => {
@@ -20,7 +23,7 @@ describe("the backport action", () => {
 
   describe("given a payload for a PR without backport label", () => {
     beforeEach(() => {
-      backport = new Backport(mockedDefaultGithub, pwd, version);
+      backport = new Backport(mockedDefaultGithub, config);
     });
 
     it("can be run without impact", async () => {
@@ -31,11 +34,7 @@ describe("the backport action", () => {
 
   describe("given a payload for a PR with backport label", () => {
     beforeEach(() => {
-      backport = new Backport(
-        mockedDefaultGithubWithBackportLabel,
-        pwd,
-        version
-      );
+      backport = new Backport(mockedDefaultGithubWithBackportLabel, config);
     });
 
     describe("and backport.sh returns exit code 1", () => {
@@ -123,6 +122,25 @@ describe("the backport action", () => {
       });
     });
   });
+
+  describe("given a payload for a PR using a custom label pattern", () => {
+    beforeEach(() => {
+      config.labels.pattern = /^backport-to-([^ ]+)$/;
+      backport = new Backport(
+        mockedDefaultGithubWithCustomBackportLabel,
+        config
+      );
+    });
+    it("creates is able to match the custom label", async () => {
+      mockedExec.callBackportScript.mockResolvedValue(0);
+      await backport.run();
+      // this pr has 2 labels: 1 of those should match this custom pattern,
+      // but neither matches the default pattern
+      expect(
+        mockedDefaultGithubWithCustomBackportLabel.createPR
+      ).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 function mockedGithubFactory({
@@ -160,4 +178,8 @@ const mockedDefaultGithub = mockedGithubFactory({
 const mockedDefaultGithubWithBackportLabel = mockedGithubFactory({
   event: golden.payloads.with_backport_label,
   pull: golden.pulls.default_with_backport_label(),
+});
+const mockedDefaultGithubWithCustomBackportLabel = mockedGithubFactory({
+  event: golden.payloads.with_custom_backport_label,
+  pull: golden.pulls.default_with_custom_backport_label(),
 });

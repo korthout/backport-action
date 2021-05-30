@@ -11,6 +11,10 @@ inputs:
   version:
     description: The version of backport-action
     required: true
+  label_pattern:
+    description: A regex pattern to match the backport labels
+    required: false
+    default: ^backport ([^ ]+)$
 runs:
   using: "node12"
   main: "dist/index.js"

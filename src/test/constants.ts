@@ -95,6 +95,24 @@ const label_backport_stable_0_25: Label = {
   color: "f29513",
   default: true,
 };
+const label_backport_to_version_3: Label = {
+  id: 208045948,
+  node_id: "YmFja3BvcnQtdG8tdmVyc2lvbi0zCg==",
+  url: "https://api.github.com/repos/octocat/Hello-World/labels/backport-to-version-3",
+  name: "backport-to-version-3",
+  description: "Backport to version 3 branch",
+  color: "f29513",
+  default: true,
+};
+const label_backport_onto_version_3: Label = {
+  id: 208045948,
+  node_id: "YmFja3BvcnQtb250by12ZXJzaW9uLTMK",
+  url: "https://api.github.com/repos/octocat/Hello-World/labels/backport-onto-version-3",
+  name: "backport-onto-version-3",
+  description: "Backport onto version 3 branch",
+  color: "f29513",
+  default: true,
+};
 
 // REPO
 const repo = {
@@ -338,6 +356,12 @@ class PullRequestPayloadFactory {
       labels: [label_backport_stable_0_25, label_bug],
     };
   }
+  public default_with_custom_backport_label() {
+    return {
+      ...this.default(),
+      labels: [label_backport_to_version_3, label_backport_onto_version_3],
+    };
+  }
   public backport_to_stable_0_25() {
     return {
       url: "https://api.github.com/repos/octocat/Hello-World/pulls/9001",
@@ -471,6 +495,13 @@ const payloads: Payloads = {
     action: "closed",
     number: 1,
     pull_request: pullPayloads.default_with_backport_label(),
+    repository: repo_helloworld,
+    sender: user_octocat,
+  },
+  with_custom_backport_label: {
+    action: "closed",
+    number: 1,
+    pull_request: pullPayloads.default_with_custom_backport_label(),
     repository: repo_helloworld,
     sender: user_octocat,
   },
@@ -1089,6 +1120,12 @@ class PullRequestFactory {
     return {
       ...this.default(),
       labels: [label_backport_stable_0_25, label_bug],
+    };
+  }
+  public default_with_custom_backport_label() {
+    return {
+      ...this.default(),
+      labels: [label_backport_to_version_3, label_backport_onto_version_3],
     };
   }
 }
