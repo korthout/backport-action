@@ -8,7 +8,6 @@
  */
 
 import * as github from "@actions/github";
-import { WebhookPayload } from "@actions/github/lib/interfaces";
 
 export interface GithubApi {
   getRepo(): { owner: string; repo: string };
@@ -134,4 +133,8 @@ export type ReviewRequest = {
   reviewers: string[];
 };
 
-type Payload = WebhookPayload;
+type Payload = {
+  repository?: {
+    name: string;
+  };
+};

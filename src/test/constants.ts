@@ -1,8 +1,11 @@
 import {
-  PullRequestClosedEvent,
   User,
   PullRequest,
   Label,
+  Repository,
+  InstallationLite,
+  Organization,
+  PullRequestClosedEvent,
 } from "@octokit/webhooks-types";
 
 /**

@@ -1,5 +1,5 @@
 import { mocked } from "ts-jest/utils";
-import { PullRequestClosedEvent } from "@octokit/webhooks-types";
+// import { PullRequestClosedEvent } from "@octokit/webhooks-types";
 import dedent from "dedent";
 import { MockedObject } from "ts-jest/dist/utils/testing";
 
@@ -8,6 +8,13 @@ import { Backport } from "../backport";
 import * as exec from "../exec";
 
 import * as golden from "./constants";
+import {
+  InstallationLite,
+  Organization,
+  PullRequestClosedEvent,
+  Repository,
+  User,
+} from "@octokit/webhooks-types";
 
 jest.mock("../github");
 jest.mock("../exec");
@@ -143,13 +150,11 @@ describe("the backport action", () => {
   });
 });
 
-function mockedGithubFactory({
-  event,
-  pull,
-}: {
+function mockedGithubFactory(args: {
   event: PullRequestClosedEvent;
   pull: PullRequest;
 }): GithubApi {
+  const { event, pull } = args;
   const inner: MockedObject<GithubApi> = mocked(new Github(""));
   inner.getRepo.mockReturnValue(golden.repo);
   inner.getPayload.mockReturnValue(event);
