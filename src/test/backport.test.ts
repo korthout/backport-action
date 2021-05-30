@@ -20,7 +20,7 @@ jest.mock("../github");
 jest.mock("../exec");
 const config = {
   pwd: "./test/project",
-  version: "0.0.2",
+  version: "0.0.4",
   labels: { pattern: /^backport ([^ ]+)$/ },
 };
 const mockedExec = mocked(exec, true);
