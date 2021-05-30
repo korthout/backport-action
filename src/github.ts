@@ -50,12 +50,12 @@ export class Github implements GithubApi {
 
   public async createComment(comment: Comment) {
     console.log(`Create comment: ${comment.body}`);
-    return this.#octokit.issues.createComment(comment);
+    return this.#octokit.rest.issues.createComment(comment);
   }
 
   public async getPullRequest(pull_number: number) {
     console.log(`Retrieve pull request data for #${pull_number}`);
-    return this.#octokit.pulls
+    return this.#octokit.rest.pulls
       .get({
         ...this.getRepo(),
         pull_number,
@@ -65,7 +65,7 @@ export class Github implements GithubApi {
 
   public async isMerged(pull: PullRequest) {
     console.log(`Check whether pull request ${pull.number} is merged`);
-    return this.#octokit.pulls
+    return this.#octokit.rest.pulls
       .checkIfMerged({ ...this.getRepo(), pull_number: pull.number })
       .then(() => true /* status is always 204 */)
       .catch((error) => {
@@ -76,12 +76,12 @@ export class Github implements GithubApi {
 
   public async createPR(pr: CreatePullRequest) {
     console.log(`Create PR: ${pr.body}`);
-    return this.#octokit.pulls.create(pr);
+    return this.#octokit.rest.pulls.create(pr);
   }
 
   public async requestReviewers(request: ReviewRequest) {
     console.log(`Request reviewers: ${request.reviewers}`);
-    return this.#octokit.pulls.requestReviewers(request);
+    return this.#octokit.rest.pulls.requestReviewers(request);
   }
 }
 
