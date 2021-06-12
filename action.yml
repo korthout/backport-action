@@ -15,6 +15,16 @@ inputs:
     description: A regex pattern to match the backport labels
     required: false
     default: ^backport ([^ ]+)$
+  pull_description:
+    description: >
+      Template used as description in the pull requests created by this action.
+      Placeholders can be used to define variable values.
+      These are indicated by a dollar sign and curly braces (`${placeholder}`).
+      Please refer to this action's README for all available placeholders.
+    required: false
+    default: |-
+      # Description
+      Backport of #${pull_number} to `${target_branch}`.
 runs:
   using: "node12"
   main: "dist/index.js"

@@ -22,6 +22,7 @@ const config = {
   pwd: "./test/project",
   version: "0.0.4",
   labels: { pattern: /^backport ([^ ]+)$/ },
+  pull: { description: "Backport of #${pull_number} to `${target_branch}`." },
 };
 const mockedExec = mocked(exec, true);
 
@@ -114,8 +115,7 @@ describe("the backport action", () => {
           base: "stable/0.25",
           head: "backport-1347-to-stable/0.25",
           title: "[Backport stable/0.25] Amazing new feature",
-          body: dedent`# Description
-                  Backport of #1347 to \`stable/0.25\`.`,
+          body: `Backport of #1347 to \`stable/0.25\`.`,
           maintainer_can_modify: true,
         });
         expect(
