@@ -184,8 +184,9 @@ class Backport {
     }
     composePRContent(target, issue_title, issue_number) {
         const title = `[Backport ${target}] ${issue_title}`;
-        const body = dedent_1.default `# Description
-                      Backport of #${issue_number} to \`${target}\`.`;
+        const body = this.config.pull.description
+            .replace("${pull_number}", issue_number.toString())
+            .replace("${target_branch}", target);
         return { title, body };
     }
     composeMessageForBackportScriptFailure(target, exitcode, baseref, headref, branchname) {
@@ -450,8 +451,14 @@ function run() {
         const pwd = core.getInput("github_workspace", { required: true });
         const version = core.getInput("version", { required: true });
         const pattern = new RegExp(core.getInput("label_pattern"));
+        const description = core.getInput("pull_description");
         const github = new github_1.Github(token);
-        const backport = new backport_1.Backport(github, { version, pwd, labels: { pattern } });
+        const backport = new backport_1.Backport(github, {
+            version,
+            pwd,
+            labels: { pattern },
+            pull: { description },
+        });
         return backport.run();
     });
 }
