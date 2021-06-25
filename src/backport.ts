@@ -16,6 +16,9 @@ type Config = {
   labels: {
     pattern: RegExp;
   };
+  pull: {
+    description: string;
+  };
 };
 
 export class Backport {
@@ -209,8 +212,9 @@ export class Backport {
     issue_number: number
   ): PRContent {
     const title = `[Backport ${target}] ${issue_title}`;
-    const body = dedent`# Description
-                      Backport of #${issue_number} to \`${target}\`.`;
+    const body = this.config.pull.description
+      .replace("${pull_number}", issue_number.toString())
+      .replace("${target_branch}", target);
     return { title, body };
   }
 

@@ -69,8 +69,17 @@ jobs:
 
           # Optional
           # Regex pattern to match github labels
-          # Must contain a capture group for target branchname
+          # Must contain a capture group for the target branch
           # label_pattern: ^backport ([^ ]+)$
+
+          # Optional
+          # Template used as description in the pull requests created by this action.
+          # Placeholders can be used to define variable values.
+          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
+          # Please refer to this action's README for all available placeholders.
+          # pull_description: |-
+          #   # Description
+          #   Backport of #${pull_number} to `${target_branch}`.
 ```
 
 ### Trigger using a comment
@@ -128,12 +137,31 @@ jobs:
 
           # Optional
           # Regex pattern to match github labels
-          # Must contain a capture group for target branchname
+          # Must contain a capture group for the target branch
           # label_pattern: ^backport ([^ ]+)$
+
+          # Optional
+          # Template used as description in the pull requests created by this action.
+          # Placeholders can be used to define variable values.
+          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
+          # Please refer to this action's README for all available placeholders.
+          # pull_description: |-
+          #   # Description
+          #   Backport of #${pull_number} to `${target_branch}`.
 ```
 
 </p>
 </details>
+
+### Placeholders
+In the `pull_description` input placeholders can be used to define variable values.
+These are indicated by a dollar sign and curly braces (`${placeholder}`).
+The following placeholders are available and are replaced with:
+
+Placeholder | Replaced with
+------------|------------
+`pull_number` | The number of the original pull request that is backported, e.g. `123`
+`target_branch`| The branchname to which the pull request is backported, e.g. `release-0.23`
 
 ## Local compilation
 
