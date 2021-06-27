@@ -160,6 +160,7 @@ The following placeholders are available and are replaced with:
 
 Placeholder | Replaced with
 ------------|------------
+`issue_refs` | GitHub issue references to all issues mentioned in the original pull request description seperated by a space, e.g. `#123 #456 zeebe-io/backport-action#789`
 `pull_number` | The number of the original pull request that is backported, e.g. `123`
 `target_branch`| The branchname to which the pull request is backported, e.g. `release-0.23`
 
