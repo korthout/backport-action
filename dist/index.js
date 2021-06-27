@@ -42,6 +42,7 @@ exports.Backport = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const dedent_1 = __importDefault(__nccwpck_require__(5281));
 const exec = __importStar(__nccwpck_require__(7757));
+const utils = __importStar(__nccwpck_require__(918));
 class Backport {
     constructor(github, config) {
         this.github = github;
@@ -118,7 +119,7 @@ class Backport {
                             continue;
                         }
                         console.info(`Create PR for ${branchname}`);
-                        const { title, body } = this.composePRContent(target, mainpr.title, pull_number);
+                        const { title, body } = this.composePRContent(target, mainpr.title, pull_number, mainpr.body);
                         const new_pr_response = yield this.github.createPR({
                             owner,
                             repo,
@@ -182,11 +183,13 @@ class Backport {
             }
         });
     }
-    composePRContent(target, issue_title, issue_number) {
+    composePRContent(target, issue_title, issue_number, original_body) {
         const title = `[Backport ${target}] ${issue_title}`;
+        const issues = utils.getMentionedIssueRefs(original_body);
         const body = this.config.pull.description
             .replace("${pull_number}", issue_number.toString())
-            .replace("${target_branch}", target);
+            .replace("${target_branch}", target)
+            .replace("${issue_refs}", issues.join(" "));
         return { title, body };
     }
     composeMessageForBackportScriptFailure(target, exitcode, baseref, headref, branchname) {
@@ -464,6 +467,54 @@ function run() {
 }
 // this would be executed on import in a test file
 run();
+
+
+/***/ }),
+
+/***/ 918:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getMentionedIssueRefs = void 0;
+const patterns = {
+    // matches urls to github issues at start, middle, end of line as individual word
+    // may be lead and trailed by whitespace which should be trimmed
+    // captures the `org`, `repo` and `number` of the issue
+    // https://regex101.com/r/XKRl8q/5
+    url: {
+        global: /(?:^| )(?:(?:https:\/\/)?(?:www\.)?github\.com\/(?<org>[^ \/\n]+)\/(?<repo>[^ \/\n]+)\/issues\/(?<number>[0-9]+)(?:\/)?)(?: |$)/gm,
+        first: /(?:^| )(?:(?:https:\/\/)?(?:www\.)?github\.com\/(?<org>[^ \/\n]+)\/(?<repo>[^ \/\n]+)\/issues\/(?<number>[0-9]+)(?:\/)?)(?: |$)/m,
+    },
+    // matches `#123` at start, middle, end of line as individual word
+    // may be lead and trailed by whitespace which should be trimmed
+    // captures `number` of the issue (and optionally the `org` and `repo`)
+    // https://regex101.com/r/2gAB8O/2
+    ref: /(?:^| )((?<org>[^\n #\/]+)\/(?<repo>[^\n #\/]+))?#(?<number>[0-9]+)(?: |$)/gm,
+};
+/**
+ * @param body Text in which to search for mentioned issues
+ * @returns All found mentioned issues as GitHub issue references
+ */
+function getMentionedIssueRefs(body) {
+    var _a, _b, _c;
+    const issueUrls = (_b = (_a = body.match(patterns.url.global)) === null || _a === void 0 ? void 0 : _a.map((url) => toRef(url))) !== null && _b !== void 0 ? _b : [];
+    const issueRefs = (_c = body.match(patterns.ref)) !== null && _c !== void 0 ? _c : [];
+    return issueUrls.concat(issueRefs).map((ref) => ref.trim());
+}
+exports.getMentionedIssueRefs = getMentionedIssueRefs;
+const toRef = (url) => {
+    // matchAll is not yet available to directly access the captured groups of all matches
+    // so this maps the urls to GitHub refs by matching again without the global flag
+    const result = patterns.url.first.exec(url);
+    if (!result) {
+        console.error(`Expected to transform url (${url}) to GitHub reference, but it did not match pattern'`);
+        return "";
+    }
+    const [, org, repo, number] = result;
+    return `${org}/${repo}#${number}`;
+};
 
 
 /***/ }),

@@ -4,6 +4,7 @@ import dedent from "dedent";
 import { CreatePullRequestResponse, RequestReviewersResponse } from "./github";
 import { GithubApi } from "./github";
 import * as exec from "./exec";
+import * as utils from "./utils";
 
 type PRContent = {
   title: string;
@@ -136,7 +137,8 @@ export class Backport {
           const { title, body } = this.composePRContent(
             target,
             mainpr.title,
-            pull_number
+            pull_number,
+            mainpr.body
           );
           const new_pr_response = await this.github.createPR({
             owner,
@@ -209,12 +211,15 @@ export class Backport {
   private composePRContent(
     target: string,
     issue_title: string,
-    issue_number: number
+    issue_number: number,
+    original_body: string
   ): PRContent {
     const title = `[Backport ${target}] ${issue_title}`;
+    const issues = utils.getMentionedIssueRefs(original_body);
     const body = this.config.pull.description
       .replace("${pull_number}", issue_number.toString())
-      .replace("${target_branch}", target);
+      .replace("${target_branch}", target)
+      .replace("${issue_refs}", issues.join(" "));
     return { title, body };
   }
 
