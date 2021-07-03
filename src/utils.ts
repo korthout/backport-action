@@ -11,6 +11,7 @@ export function composeBody(
 ): string {
   const issues = getMentionedIssueRefs(main.body);
   return template
+    .replace("${pull_author}", main.user.login)
     .replace("${pull_number}", main.number.toString())
     .replace("${target_branch}", target)
     .replace("${issue_refs}", issues.join(" "));
@@ -19,6 +20,9 @@ export function composeBody(
 type PullRequest = {
   number: number;
   body: string;
+  user: {
+    login: string;
+  };
 };
 
 /**

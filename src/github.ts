@@ -94,6 +94,9 @@ export type PullRequest = {
   base: {
     sha: string;
   };
+  user: {
+    login: string;
+  };
   labels: {
     name: string;
   }[];

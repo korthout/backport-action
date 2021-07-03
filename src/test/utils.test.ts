@@ -134,6 +134,7 @@ describe("compose body", () => {
   const main_default = {
     number: 123,
     body: "foo-body",
+    user: { login: "foo-author" },
   };
   const target = "foo-target";
 
