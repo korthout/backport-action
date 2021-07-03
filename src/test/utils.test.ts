@@ -209,6 +209,13 @@ describe("compose body", () => {
         ).toEqual("Backport that refers to: #123 foo/bar#456");
       });
     });
+
+    it("for a template with pull_author placeholder", () => {
+      const template = "Backport of pull made by @${pull_author}";
+      expect(composeBody(template, main_default, target)).toEqual(
+        "Backport of pull made by @foo-author"
+      );
+    });
   });
 });
 
