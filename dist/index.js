@@ -119,7 +119,7 @@ class Backport {
                             continue;
                         }
                         console.info(`Create PR for ${branchname}`);
-                        const { title, body } = this.composePRContent(target, mainpr.title, pull_number, mainpr.body);
+                        const { title, body } = this.composePRContent(target, mainpr);
                         const new_pr_response = yield this.github.createPR({
                             owner,
                             repo,
@@ -183,13 +183,9 @@ class Backport {
             }
         });
     }
-    composePRContent(target, issue_title, issue_number, original_body) {
-        const title = `[Backport ${target}] ${issue_title}`;
-        const issues = utils.getMentionedIssueRefs(original_body);
-        const body = this.config.pull.description
-            .replace("${pull_number}", issue_number.toString())
-            .replace("${target_branch}", target)
-            .replace("${issue_refs}", issues.join(" "));
+    composePRContent(target, main) {
+        const title = `[Backport ${target}] ${main.title}`;
+        const body = utils.composeBody(this.config.pull.description, main, target);
         return { title, body };
     }
     composeMessageForBackportScriptFailure(target, exitcode, baseref, headref, branchname) {
@@ -477,7 +473,33 @@ run();
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getMentionedIssueRefs = void 0;
+exports.getMentionedIssueRefs = exports.composeBody = void 0;
+/**
+ * @param template The backport description template
+ * @param main The main pull request that is backported
+ * @param target The target branchname
+ * @returns Description that can be used as the backport pull request body
+ */
+function composeBody(template, main, target) {
+    const issues = getMentionedIssueRefs(main.body);
+    return template
+        .replace("${pull_author}", main.user.login)
+        .replace("${pull_number}", main.number.toString())
+        .replace("${target_branch}", target)
+        .replace("${issue_refs}", issues.join(" "));
+}
+exports.composeBody = composeBody;
+/**
+ * @param body Text in which to search for mentioned issues
+ * @returns All found mentioned issues as GitHub issue references
+ */
+function getMentionedIssueRefs(body) {
+    var _a, _b, _c;
+    const issueUrls = (_b = (_a = body.match(patterns.url.global)) === null || _a === void 0 ? void 0 : _a.map((url) => toRef(url))) !== null && _b !== void 0 ? _b : [];
+    const issueRefs = (_c = body.match(patterns.ref)) !== null && _c !== void 0 ? _c : [];
+    return issueUrls.concat(issueRefs).map((ref) => ref.trim());
+}
+exports.getMentionedIssueRefs = getMentionedIssueRefs;
 const patterns = {
     // matches urls to github issues at start, middle, end of line as individual word
     // may be lead and trailed by whitespace which should be trimmed
@@ -493,17 +515,6 @@ const patterns = {
     // https://regex101.com/r/2gAB8O/2
     ref: /(?:^| )((?<org>[^\n #\/]+)\/(?<repo>[^\n #\/]+))?#(?<number>[0-9]+)(?: |$)/gm,
 };
-/**
- * @param body Text in which to search for mentioned issues
- * @returns All found mentioned issues as GitHub issue references
- */
-function getMentionedIssueRefs(body) {
-    var _a, _b, _c;
-    const issueUrls = (_b = (_a = body.match(patterns.url.global)) === null || _a === void 0 ? void 0 : _a.map((url) => toRef(url))) !== null && _b !== void 0 ? _b : [];
-    const issueRefs = (_c = body.match(patterns.ref)) !== null && _c !== void 0 ? _c : [];
-    return issueUrls.concat(issueRefs).map((ref) => ref.trim());
-}
-exports.getMentionedIssueRefs = getMentionedIssueRefs;
 const toRef = (url) => {
     // matchAll is not yet available to directly access the captured groups of all matches
     // so this maps the urls to GitHub refs by matching again without the global flag
