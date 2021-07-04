@@ -1,3 +1,41 @@
+/**
+ * @param template The backport description template
+ * @param main The main pull request that is backported
+ * @param target The target branchname
+ * @returns Description that can be used as the backport pull request body
+ */
+export function composeBody(
+  template: string,
+  main: PullRequest,
+  target: string
+): string {
+  const issues = getMentionedIssueRefs(main.body);
+  return template
+    .replace("${pull_author}", main.user.login)
+    .replace("${pull_number}", main.number.toString())
+    .replace("${target_branch}", target)
+    .replace("${issue_refs}", issues.join(" "));
+}
+
+type PullRequest = {
+  number: number;
+  body: string;
+  user: {
+    login: string;
+  };
+};
+
+/**
+ * @param body Text in which to search for mentioned issues
+ * @returns All found mentioned issues as GitHub issue references
+ */
+export function getMentionedIssueRefs(body: string): string[] {
+  const issueUrls =
+    body.match(patterns.url.global)?.map((url) => toRef(url)) ?? [];
+  const issueRefs = body.match(patterns.ref) ?? [];
+  return issueUrls.concat(issueRefs).map((ref) => ref.trim());
+}
+
 const patterns = {
   // matches urls to github issues at start, middle, end of line as individual word
   // may be lead and trailed by whitespace which should be trimmed
@@ -16,17 +54,6 @@ const patterns = {
   // https://regex101.com/r/2gAB8O/2
   ref: /(?:^| )((?<org>[^\n #\/]+)\/(?<repo>[^\n #\/]+))?#(?<number>[0-9]+)(?: |$)/gm,
 };
-
-/**
- * @param body Text in which to search for mentioned issues
- * @returns All found mentioned issues as GitHub issue references
- */
-export function getMentionedIssueRefs(body: string): string[] {
-  const issueUrls =
-    body.match(patterns.url.global)?.map((url) => toRef(url)) ?? [];
-  const issueRefs = body.match(patterns.ref) ?? [];
-  return issueUrls.concat(issueRefs).map((ref) => ref.trim());
-}
 
 const toRef = (url: string) => {
   // matchAll is not yet available to directly access the captured groups of all matches
