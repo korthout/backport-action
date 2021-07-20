@@ -91,7 +91,7 @@ export class Backport {
           const branchname = `backport-${pull_number}-to-${target}`;
 
           console.log(`Start backport to ${branchname}`);
-          const scriptExitCode = await exec.callBackportScript(
+          const scriptExitCode = await exec.performBackport(
             this.config.pwd,
             headref,
             baseref,

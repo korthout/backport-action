@@ -47,7 +47,7 @@ describe("the backport action", () => {
 
     describe("and backport.sh returns exit code 1", () => {
       beforeEach(() => {
-        mockedExec.callBackportScript.mockResolvedValue(1);
+        mockedExec.performBackport.mockResolvedValue(1);
       });
       it("comments on failure", async () => {
         await backport.run();
@@ -74,7 +74,7 @@ describe("the backport action", () => {
 
     describe("and backport.sh returns exit code 5", () => {
       beforeEach(() => {
-        mockedExec.callBackportScript.mockResolvedValue(5);
+        mockedExec.performBackport.mockResolvedValue(5);
       });
       it("comments on failure", async () => {
         await backport.run();
@@ -95,7 +95,7 @@ describe("the backport action", () => {
 
     describe("and backport.sh returns exit code 0", () => {
       beforeEach(() => {
-        mockedExec.callBackportScript.mockResolvedValue(0);
+        mockedExec.performBackport.mockResolvedValue(0);
       });
       it("pushes the commits to origin", async () => {
         mockedExec.call.mockResolvedValue(0);
@@ -139,7 +139,7 @@ describe("the backport action", () => {
       );
     });
     it("creates is able to match the custom label", async () => {
-      mockedExec.callBackportScript.mockResolvedValue(0);
+      mockedExec.performBackport.mockResolvedValue(0);
       await backport.run();
       // this pr has 2 labels: 1 of those should match this custom pattern,
       // but neither matches the default pattern
