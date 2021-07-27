@@ -1,5 +1,6 @@
 import * as child from "child_process";
 import { promisify } from "util";
+import { getBackportScript } from "../src/exec";
 
 const execPromised = promisify(child.exec);
 async function exec({
@@ -42,12 +43,18 @@ describe("given a git repository with a merged pr", () => {
     );
   });
 
-  describe("when backport.sh script is executed with unavailable headref", () => {
-    test("then it returns exit code 5", () => {
+  describe("when backport is performed with unavailable headref", () => {
+    test("then it returns exit code 5", async () => {
       // promisedExec's error is unhandled when exit code is non-zero, use child.exec instead
       child
         .exec(
-          "./backport.sh test/repo abcdef123456 master^ release-1 backport-b-to-1"
+          getBackportScript(
+            "test/repo",
+            "abcdef123456",
+            "master^",
+            "release-1",
+            "backport-b-to-1"
+          )
         )
         .on("exit", (code) => expect(code).toBe(5));
     });
@@ -56,14 +63,13 @@ describe("given a git repository with a merged pr", () => {
   describe("when backport.sh script is executed", () => {
     beforeAll(async () => {
       await exec({
-        command: "./backport.sh",
-        args: [
+        command: getBackportScript(
           "test/repo", // directory (repo directory)
           "feature-b", //headref (pr head)
           "master^", // baseref (pr target)
           "release-1", // target (backport onto this)
           "backport-b-to-1", // branchname (name of new backport branch)
-        ],
+        ),
         options: { cwd: "./" },
         quiet: false,
       });
