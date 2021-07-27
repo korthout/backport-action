@@ -31,16 +31,16 @@
     "dedent": "^0.7.0"
   },
   "devDependencies": {
-    "@octokit/webhooks-types": "^4.1.0",
-    "@types/jest": "^26.0.10",
-    "@types/node": "^16.0.0",
-    "@vercel/ncc": "^0.28.6",
+    "@octokit/webhooks-types": "^4.2.1",
+    "@types/jest": "^26.0.24",
+    "@types/node": "^16.4.3",
+    "@vercel/ncc": "^0.29.0",
     "exec-sh": "^0.4.0",
     "jest": "^27.0.6",
     "jest-circus": "^27.0.5",
     "js-yaml": "^4.1.0",
     "prettier": "2.3.2",
-    "ts-jest": "^27.0.3",
+    "ts-jest": "^27.0.4",
     "typescript": "^4.3.5"
   }
 }
