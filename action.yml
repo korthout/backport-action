@@ -8,9 +8,6 @@ inputs:
   github_workspace:
     description: The GitHub workspace directory path
     required: true
-  version:
-    description: The version of backport-action
-    required: true
   label_pattern:
     description: A regex pattern to match the backport labels
     required: false
@@ -25,6 +22,11 @@ inputs:
     default: |-
       # Description
       Backport of #${pull_number} to `${target_branch}`.
+
+  # DEPRECATED
+  version:
+    description: The version of backport-action - deprecated
+    required: false
 runs:
   using: "node12"
   main: "dist/index.js"
