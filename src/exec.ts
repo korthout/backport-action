@@ -5,8 +5,7 @@ export async function performBackport(
   headref: string,
   baseref: string,
   target: string,
-  branchname: string,
-  version: string
+  branchname: string
 ) {
   return exec(
     getBackportScript(pwd, headref, baseref, target, branchname),

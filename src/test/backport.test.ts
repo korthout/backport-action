@@ -20,7 +20,6 @@ jest.mock("../github");
 jest.mock("../exec");
 const config = {
   pwd: "./test/project",
-  version: "0.0.4",
   labels: { pattern: /^backport ([^ ]+)$/ },
   pull: { description: "Backport of #${pull_number} to `${target_branch}`." },
 };

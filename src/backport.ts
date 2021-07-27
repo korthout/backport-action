@@ -16,7 +16,6 @@ type PRContent = {
 };
 
 type Config = {
-  version: string;
   pwd: string;
   labels: {
     pattern: RegExp;
@@ -96,8 +95,7 @@ export class Backport {
             headref,
             baseref,
             target,
-            branchname,
-            this.config.version
+            branchname
           );
 
           if (scriptExitCode != 0) {
