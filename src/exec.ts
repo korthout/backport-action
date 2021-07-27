@@ -11,6 +11,7 @@ export async function performBackport(
     getBackportScript(pwd, headref, baseref, target, branchname),
     [],
     {
+      cwd: pwd,
       listeners: {
         stdout: (data) => console.log(data.toString()),
       },
