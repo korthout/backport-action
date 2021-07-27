@@ -68,7 +68,7 @@ describe("given a git repository with a merged pr", () => {
           "feature-b", //headref (pr head)
           "master^", // baseref (pr target)
           "release-1", // target (backport onto this)
-          "backport-b-to-1", // branchname (name of new backport branch)
+          "backport-b-to-1" // branchname (name of new backport branch)
         ),
         options: { cwd: "./" },
         quiet: false,
