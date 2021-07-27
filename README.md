@@ -50,15 +50,8 @@ jobs:
           # Required to find all branches
           fetch-depth: 0
       - name: Create backport PRs
-        # Should be kept in sync with `version`
         uses: zeebe-io/backport-action@master
         with:
-          # Required
-          # Version of the backport-action
-          # Must equal the version in `uses`
-          # Recommended: latest tag or `master`
-          version: master
-
           # Required
           # Token to authenticate requests to GitHub
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -118,15 +111,8 @@ jobs:
           # Required to find all branches
           fetch-depth: 0
       - name: Create backport PRs
-        # Should be kept in sync with `version`
         uses: zeebe-io/backport-action@master
         with:
-          # Required
-          # Version of the backport-action
-          # Must equal the version in `uses`
-          # Recommended: latest tag or `master`
-          version: master
-
           # Required
           # Token to authenticate requests to GitHub
           github_token: ${{ secrets.GITHUB_TOKEN }}
