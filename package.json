@@ -31,7 +31,7 @@
     "dedent": "^0.7.0"
   },
   "devDependencies": {
-    "@octokit/webhooks-types": "^4.2.1",
+    "@octokit/webhooks-types": "^4.2.2",
     "@types/jest": "^26.0.24",
     "@types/node": "^16.4.6",
     "@vercel/ncc": "^0.29.0",
