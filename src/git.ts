@@ -11,8 +11,7 @@ import execa from "execa";
  * @returns a promise of the exit code:
  *   0: all good
  *   1: incorrect usage / unknown error
- *   2: unable to switch to target branch
- *   3: unable to create new branch
+ *   3: unable to switch to new branch
  *   4: unable to cherry-pick commit
  *   5: headref not found
  *   6: baseref not found"
@@ -37,13 +36,7 @@ export async function performBackport(
     const diffrefs = await findDiff(ancref, headref, pwd);
 
     try {
-      await checkout(target, false, pwd);
-    } catch (error) {
-      return 2;
-    }
-
-    try {
-      await checkout(branchname, true, pwd);
+      await checkout(branchname, target, pwd);
     } catch (error) {
       return 3;
     }
@@ -121,18 +114,11 @@ async function findDiff(ancref: string, headref: string, pwd: string) {
   return stdout.replace(new RegExp('"', "g"), "").split("\n");
 }
 
-async function checkout(branchname: string, create: boolean, pwd: string) {
-  let args = [];
-  if (create) {
-    args.push("--create");
-  }
-  args.push(branchname);
-  const { exitCode } = await git("switch", args, pwd);
+async function checkout(branch: string, start: string, pwd: string) {
+  const { exitCode } = await git("switch", ["-c", branch, start], pwd);
   if (exitCode !== 0) {
     throw new Error(
-      `'git switch ${
-        create ? "--create " : " "
-      }${branchname}' failed with exit code ${exitCode}`
+      `'git switch -c ${branch} ${start}' failed with exit code ${exitCode}`
     );
   }
 }

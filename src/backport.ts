@@ -94,7 +94,7 @@ export class Backport {
             this.config.pwd,
             headref,
             baseref,
-            target,
+            `origin/${target}`,
             branchname
           );
 
