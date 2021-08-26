@@ -1,29 +1,22 @@
 import { mocked } from "ts-jest/utils";
-// import { PullRequestClosedEvent } from "@octokit/webhooks-types";
 import dedent from "dedent";
 import { MockedObject } from "ts-jest/dist/utils/testing";
 
 import { Github, GithubApi, PullRequest } from "../github";
 import { Backport } from "../backport";
-import * as exec from "../exec";
+import * as git from "../git";
 
 import * as golden from "./constants";
-import {
-  InstallationLite,
-  Organization,
-  PullRequestClosedEvent,
-  Repository,
-  User,
-} from "@octokit/webhooks-types";
+import { PullRequestClosedEvent } from "@octokit/webhooks-types";
 
 jest.mock("../github");
-jest.mock("../exec");
+jest.mock("../git");
 const config = {
   pwd: "./test/project",
   labels: { pattern: /^backport ([^ ]+)$/ },
   pull: { description: "Backport of #${pull_number} to `${target_branch}`." },
 };
-const mockedExec = mocked(exec, true);
+const mockedGit = mocked(git, true);
 
 describe("the backport action", () => {
   let backport: Backport;
@@ -46,7 +39,7 @@ describe("the backport action", () => {
 
     describe("and backport.sh returns exit code 1", () => {
       beforeEach(() => {
-        mockedExec.performBackport.mockResolvedValue(1);
+        mockedGit.performBackport.mockResolvedValue(1);
       });
       it("comments on failure", async () => {
         await backport.run();
@@ -73,7 +66,7 @@ describe("the backport action", () => {
 
     describe("and backport.sh returns exit code 5", () => {
       beforeEach(() => {
-        mockedExec.performBackport.mockResolvedValue(5);
+        mockedGit.performBackport.mockResolvedValue(5);
       });
       it("comments on failure", async () => {
         await backport.run();
@@ -94,17 +87,18 @@ describe("the backport action", () => {
 
     describe("and backport.sh returns exit code 0", () => {
       beforeEach(() => {
-        mockedExec.performBackport.mockResolvedValue(0);
+        mockedGit.performBackport.mockResolvedValue(0);
       });
       it("pushes the commits to origin", async () => {
-        mockedExec.call.mockResolvedValue(0);
+        mockedGit.push.mockResolvedValue(0);
         await backport.run();
-        expect(mockedExec.call).toHaveBeenLastCalledWith(
-          "git push --set-upstream origin backport-1347-to-stable/0.25"
+        expect(mockedGit.push).toHaveBeenLastCalledWith(
+          "backport-1347-to-stable/0.25",
+          config.pwd
         );
       });
       it("creates a pull request and requests reviewers", async () => {
-        mockedExec.call.mockResolvedValue(0);
+        mockedGit.push.mockResolvedValue(0);
         await backport.run();
         expect(
           mockedDefaultGithubWithBackportLabel.createPR
@@ -138,7 +132,7 @@ describe("the backport action", () => {
       );
     });
     it("creates is able to match the custom label", async () => {
-      mockedExec.performBackport.mockResolvedValue(0);
+      mockedGit.performBackport.mockResolvedValue(0);
       await backport.run();
       // this pr has 2 labels: 1 of those should match this custom pattern,
       // but neither matches the default pattern

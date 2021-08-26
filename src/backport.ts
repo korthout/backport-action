@@ -7,7 +7,7 @@ import {
   PullRequest,
 } from "./github";
 import { GithubApi } from "./github";
-import * as exec from "./exec";
+import * as git from "./git";
 import * as utils from "./utils";
 
 type PRContent = {
@@ -90,7 +90,7 @@ export class Backport {
           const branchname = `backport-${pull_number}-to-${target}`;
 
           console.log(`Start backport to ${branchname}`);
-          const scriptExitCode = await exec.performBackport(
+          const scriptExitCode = await git.performBackport(
             this.config.pwd,
             headref,
             baseref,
@@ -117,9 +117,7 @@ export class Backport {
           }
 
           console.info(`Push branch to origin`);
-          const pushExitCode = await exec.call(
-            `git push --set-upstream origin ${branchname}`
-          );
+          const pushExitCode = await git.push(branchname, this.config.pwd);
           if (pushExitCode != 0) {
             const message = this.composeMessageForGitPushFailure(
               target,
