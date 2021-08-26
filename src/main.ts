@@ -10,13 +10,11 @@ import { Github } from "./github";
 async function run(): Promise<void> {
   const token = core.getInput("github_token", { required: true });
   const pwd = core.getInput("github_workspace", { required: true });
-  const version = core.getInput("version", { required: true });
   const pattern = new RegExp(core.getInput("label_pattern"));
   const description = core.getInput("pull_description");
 
   const github = new Github(token);
   const backport = new Backport(github, {
-    version,
     pwd,
     labels: { pattern },
     pull: { description },
