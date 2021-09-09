@@ -188,18 +188,29 @@ export class Backport {
             body: message,
           });
         } catch (error) {
-          console.error(error.message);
-          await this.github.createComment({
-            owner,
-            repo,
-            issue_number: pull_number,
-            body: error.message,
-          });
+          if (error instanceof Error) {
+            console.error(error.message);
+            await this.github.createComment({
+              owner,
+              repo,
+              issue_number: pull_number,
+              body: error.message,
+            });
+          } else {
+            throw error;
+          }
         }
       }
     } catch (error) {
-      console.error(error.message);
-      core.setFailed(error.message);
+      if (error instanceof Error) {
+        console.error(error.message);
+        core.setFailed(error.message);
+      } else {
+        console.error(`An unexpected error occurred: ${JSON.stringify(error)}`);
+        core.setFailed(
+          "An unexpected error occured. Please check the logs for details"
+        );
+      }
     }
   }
 
