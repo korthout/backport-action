@@ -81,7 +81,7 @@ class Backport {
                         continue;
                     }
                     if (match.length < 2) {
-                        console.error(dedent_1.default `\`label_pattern\` '${this.config.labels.pattern.source}' \
+                        console.error((0, dedent_1.default) `\`label_pattern\` '${this.config.labels.pattern.source}' \
             matched "${label.name}", but did not capture any branchname. \
             Please make sure to provide a regex with a capture group as \
             \`label_pattern\`.`);
@@ -167,19 +167,30 @@ class Backport {
                         });
                     }
                     catch (error) {
-                        console.error(error.message);
-                        yield this.github.createComment({
-                            owner,
-                            repo,
-                            issue_number: pull_number,
-                            body: error.message,
-                        });
+                        if (error instanceof Error) {
+                            console.error(error.message);
+                            yield this.github.createComment({
+                                owner,
+                                repo,
+                                issue_number: pull_number,
+                                body: error.message,
+                            });
+                        }
+                        else {
+                            throw error;
+                        }
                     }
                 }
             }
             catch (error) {
-                console.error(error.message);
-                core.setFailed(error.message);
+                if (error instanceof Error) {
+                    console.error(error.message);
+                    core.setFailed(error.message);
+                }
+                else {
+                    console.error(`An unexpected error occurred: ${JSON.stringify(error)}`);
+                    core.setFailed("An unexpected error occured. Please check the logs for details");
+                }
             }
         });
     }
@@ -200,7 +211,7 @@ class Backport {
         };
         const reason = (_a = reasons[exitcode]) !== null && _a !== void 0 ? _a : "due to an unknown script error";
         const suggestion = exitcode <= 4
-            ? dedent_1.default `\`\`\`bash
+            ? (0, dedent_1.default) `\`\`\`bash
                 git fetch origin ${target}
                 git worktree add -d .worktree/${branchname} origin/${target}
                 cd .worktree/${branchname}
@@ -208,31 +219,31 @@ class Backport {
                 ancref=$(git merge-base ${baseref} ${headref})
                 git cherry-pick -x $ancref..${headref}
                 \`\`\``
-            : dedent_1.default `Note that rebase and squash merges are not supported at this time.
+            : (0, dedent_1.default) `Note that rebase and squash merges are not supported at this time.
                 For more information see https://github.com/zeebe-io/backport-action/issues/46.`;
-        return dedent_1.default `Backport failed for \`${target}\`, ${reason}.
+        return (0, dedent_1.default) `Backport failed for \`${target}\`, ${reason}.
 
                   Please cherry-pick the changes locally.
                   ${suggestion}`;
     }
     composeMessageForGitPushFailure(target, exitcode) {
         //TODO better error messages depending on exit code
-        return dedent_1.default `Git push to origin failed for ${target} with exitcode ${exitcode}`;
+        return (0, dedent_1.default) `Git push to origin failed for ${target} with exitcode ${exitcode}`;
     }
     composeMessageForCreatePRFailed(response) {
-        return dedent_1.default `Backport branch created but failed to create PR. 
+        return (0, dedent_1.default) `Backport branch created but failed to create PR. 
                 Request to create PR rejected with status ${response.status}.
 
                 (see action log for full response)`;
     }
     composeMessageForRequestReviewersFailed(response, target) {
-        return dedent_1.default `${this.composeMessageForSuccess(response.data.number, target)}
+        return (0, dedent_1.default) `${this.composeMessageForSuccess(response.data.number, target)}
                 But, request reviewers was rejected with status ${response.status}.
 
                 (see action log for full response)`;
     }
     composeMessageForSuccess(pr_number, target) {
-        return dedent_1.default `Successfully created backport PR #${pr_number} for \`${target}\`.`;
+        return (0, dedent_1.default) `Successfully created backport PR #${pr_number} for \`${target}\`.`;
     }
 }
 exports.Backport = Backport;
@@ -321,7 +332,7 @@ exports.push = push;
 function git(command, args, pwd) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        const child = execa_1.default("git", [command, ...args], {
+        const child = (0, execa_1.default)("git", [command, ...args], {
             cwd: pwd,
             env: {
                 GIT_COMMITTER_NAME: "github-actions[bot]",
