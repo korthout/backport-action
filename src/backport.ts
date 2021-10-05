@@ -62,6 +62,15 @@ export class Backport {
         `Detected labels on PR: ${labels.map((label) => label.name)}`
       );
 
+      if (!someLabelIn(labels).matches(this.config.labels.pattern)) {
+        console.log(
+          `Nothing to backport: none of the labels match the backport pattern '${this.config.labels.pattern.source}'`
+        );
+        return; // nothing left to do here
+      }
+
+      await git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd);
+
       for (const label of labels) {
         console.log(`Working on label ${label.name}`);
 
@@ -85,6 +94,8 @@ export class Backport {
         //extract the target branch (e.g. "stable/0.24")
         const target = match[1];
         console.log(`Found target in label: ${target}`);
+
+        await git.fetch(target, this.config.pwd);
 
         try {
           const branchname = `backport-${pull_number}-to-${target}`;
@@ -288,4 +299,18 @@ export class Backport {
   private composeMessageForSuccess(pr_number: number, target: string) {
     return dedent`Successfully created backport PR #${pr_number} for \`${target}\`.`;
   }
+}
+
+/**
+ * Helper method for label arrays to check that it matches a particular pattern
+ *
+ * @param labels an array of labels
+ * @returns a 'curried' function to easily test for a matching a label
+ */
+function someLabelIn(labels: { name: string }[]): {
+  matches: (pattern: RegExp) => boolean;
+} {
+  return {
+    matches: (pattern) => labels.some((l) => pattern.test(l.name)),
+  };
 }
