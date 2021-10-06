@@ -30,6 +30,11 @@ describe("the backport action", () => {
       await backport.run();
       expect(mockedDefaultGithub.createComment).toHaveBeenCalledTimes(0);
     });
+
+    it("does not fetch the pull request's head", async () => {
+      await backport.run();
+      expect(mockedGit.fetch).toHaveBeenCalledTimes(0);
+    });
   });
 
   describe("given a payload for a PR with backport label", () => {
@@ -88,6 +93,14 @@ describe("the backport action", () => {
     describe("and backport.sh returns exit code 0", () => {
       beforeEach(() => {
         mockedGit.performBackport.mockResolvedValue(0);
+      });
+      it("fetches the pull request's head", async () => {
+        await backport.run();
+        expect(mockedGit.fetch).toHaveBeenCalledWith(
+          "refs/pull/1347/head",
+          config.pwd
+        );
+        expect(mockedGit.fetch).toHaveBeenCalledWith("stable/0.25", config.pwd);
       });
       it("pushes the commits to origin", async () => {
         mockedGit.push.mockResolvedValue(0);

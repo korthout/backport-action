@@ -72,6 +72,11 @@ class Backport {
                 const labels = mainpr.labels;
                 const reviewers = (_d = (_c = mainpr.requested_reviewers) === null || _c === void 0 ? void 0 : _c.map((r) => r.login)) !== null && _d !== void 0 ? _d : [];
                 console.log(`Detected labels on PR: ${labels.map((label) => label.name)}`);
+                if (!someLabelIn(labels).matches(this.config.labels.pattern)) {
+                    console.log(`Nothing to backport: none of the labels match the backport pattern '${this.config.labels.pattern.source}'`);
+                    return; // nothing left to do here
+                }
+                yield git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd);
                 for (const label of labels) {
                     console.log(`Working on label ${label.name}`);
                     // we are looking for labels like "backport stable/0.24"
@@ -90,6 +95,7 @@ class Backport {
                     //extract the target branch (e.g. "stable/0.24")
                     const target = match[1];
                     console.log(`Found target in label: ${target}`);
+                    yield git.fetch(target, this.config.pwd);
                     try {
                         const branchname = `backport-${pull_number}-to-${target}`;
                         console.log(`Start backport to ${branchname}`);
@@ -247,6 +253,17 @@ class Backport {
     }
 }
 exports.Backport = Backport;
+/**
+ * Helper method for label arrays to check that it matches a particular pattern
+ *
+ * @param labels an array of labels
+ * @returns a 'curried' function to easily test for a matching a label
+ */
+function someLabelIn(labels) {
+    return {
+        matches: (pattern) => labels.some((l) => pattern.test(l.name)),
+    };
+}
 
 
 /***/ }),
@@ -269,8 +286,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.push = exports.performBackport = void 0;
+exports.push = exports.performBackport = exports.fetch = void 0;
 const execa_1 = __importDefault(__nccwpck_require__(5447));
+/**
+ * Fetches a ref from origin
+ *
+ * @param ref the sha, branchname, etc to fetch
+ * @param pwd the root of the git repository
+ */
+function fetch(ref, pwd) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { exitCode } = yield git("fetch", ["origin", ref], pwd);
+        if (exitCode !== 0) {
+            throw new Error(`'git fetch origin ${ref}' failed with exit code ${exitCode}`);
+        }
+    });
+}
+exports.fetch = fetch;
 /**
  * Performs the backport
  *
