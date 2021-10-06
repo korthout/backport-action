@@ -46,9 +46,6 @@ jobs:
     if: github.event.pull_request.merged
     steps:
       - uses: actions/checkout@v2
-        with:
-          # Required to find all branches
-          fetch-depth: 0
       - name: Create backport PRs
         uses: zeebe-io/backport-action@master
         with:
@@ -107,9 +104,6 @@ jobs:
       )
     steps:
       - uses: actions/checkout@v2
-        with:
-          # Required to find all branches
-          fetch-depth: 0
       - name: Create backport PRs
         uses: zeebe-io/backport-action@master
         with:
