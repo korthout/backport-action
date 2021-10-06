@@ -54,7 +54,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
           # Required
-          # Working directory for the backport script
+          # Working directory for the backport action
           github_workspace: ${{ github.workspace }}
 
           # Optional
@@ -112,7 +112,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
           # Required
-          # Working directory for the backport script
+          # Working directory for the backport action
           github_workspace: ${{ github.workspace }}
 
           # Optional
