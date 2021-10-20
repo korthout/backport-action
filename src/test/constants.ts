@@ -200,6 +200,7 @@ const repo_helloworld = {
   size: 108,
   default_branch: "master",
   open_issues_count: 0,
+  is_template: false,
   // topics: [
   //   "octocat",
   //   "atom",
