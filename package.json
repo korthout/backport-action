@@ -33,7 +33,6 @@
   "devDependencies": {
     "@octokit/webhooks-types": "^4.13.1",
     "@types/jest": "^27.0.2",
-    "@types/node": "^16.11.2",
     "@vercel/ncc": "^0.31.1",
     "exec-sh": "^0.4.0",
     "jest": "^27.3.1",
