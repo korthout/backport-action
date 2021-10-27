@@ -76,6 +76,7 @@ class Backport {
                     console.log(`Nothing to backport: none of the labels match the backport pattern '${this.config.labels.pattern.source}'`);
                     return; // nothing left to do here
                 }
+                yield git.fetch(baseref, this.config.pwd);
                 yield git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd);
                 for (const label of labels) {
                     console.log(`Working on label ${label.name}`);
