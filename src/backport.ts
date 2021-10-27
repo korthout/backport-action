@@ -69,6 +69,7 @@ export class Backport {
         return; // nothing left to do here
       }
 
+      await git.fetch(baseref, this.config.pwd);
       await git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd);
 
       for (const label of labels) {
