@@ -643,8 +643,8 @@ exports.composeBody = composeBody;
  */
 function getMentionedIssueRefs(body) {
     var _a, _b, _c;
-    const issueUrls = (_b = (_a = body.match(patterns.url.global)) === null || _a === void 0 ? void 0 : _a.map((url) => toRef(url))) !== null && _b !== void 0 ? _b : [];
-    const issueRefs = (_c = body.match(patterns.ref)) !== null && _c !== void 0 ? _c : [];
+    const issueUrls = (_b = (_a = body === null || body === void 0 ? void 0 : body.match(patterns.url.global)) === null || _a === void 0 ? void 0 : _a.map((url) => toRef(url))) !== null && _b !== void 0 ? _b : [];
+    const issueRefs = (_c = body === null || body === void 0 ? void 0 : body.match(patterns.ref)) !== null && _c !== void 0 ? _c : [];
     return issueUrls.concat(issueRefs).map((ref) => ref.trim());
 }
 exports.getMentionedIssueRefs = getMentionedIssueRefs;
