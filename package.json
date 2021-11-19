@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@octokit/webhooks-types": "^4.13.1",
-    "@types/jest": "^27.0.2",
+    "@types/jest": "^27.0.3",
     "@vercel/ncc": "^0.31.1",
     "jest": "^27.3.1",
     "prettier": "2.4.1",
