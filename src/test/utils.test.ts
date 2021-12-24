@@ -3,6 +3,10 @@ import { getMentionedIssueRefs, composeBody } from "../utils";
 
 describe("get mentioned issues", () => {
   describe("returns an empty list", () => {
+    it("for an null text", () => {
+      expect(getMentionedIssueRefs(null)).toHaveLength(0);
+    });
+
     it("for an empty text", () => {
       expect(getMentionedIssueRefs("")).toHaveLength(0);
     });

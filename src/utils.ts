@@ -19,7 +19,7 @@ export function composeBody(
 
 type PullRequest = {
   number: number;
-  body: string;
+  body: string | null;
   user: {
     login: string;
   };
@@ -29,10 +29,10 @@ type PullRequest = {
  * @param body Text in which to search for mentioned issues
  * @returns All found mentioned issues as GitHub issue references
  */
-export function getMentionedIssueRefs(body: string): string[] {
+export function getMentionedIssueRefs(body: string | null): string[] {
   const issueUrls =
-    body.match(patterns.url.global)?.map((url) => toRef(url)) ?? [];
-  const issueRefs = body.match(patterns.ref) ?? [];
+    body?.match(patterns.url.global)?.map((url) => toRef(url)) ?? [];
+  const issueRefs = body?.match(patterns.ref) ?? [];
   return issueUrls.concat(issueRefs).map((ref) => ref.trim());
 }
 
