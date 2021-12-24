@@ -28,7 +28,7 @@
     "@actions/github": "^5.0.0",
     "@types/dedent": "^0.7.0",
     "dedent": "^0.7.0",
-    "execa": "^5.1.1"
+    "execa": "^6.0.0"
   },
   "devDependencies": {
     "@octokit/webhooks-types": "^5.0.0",
