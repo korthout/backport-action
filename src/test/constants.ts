@@ -119,6 +119,13 @@ const repo = {
   owner: "octocat",
   repo: "Hello-World",
 };
+// I'm not sure why we really need this, but without it
+// each of these values is just seen as a string
+const visibilities: { [key: string]: "public" | "private" | "internal" } = {
+  public: "public",
+  private: "private",
+  internal: "internal",
+};
 const repo_helloworld = {
   id: 1296269,
   node_id: "MDEwOlJlcG9zaXRvcnkxMjk2MjY5",
@@ -201,12 +208,7 @@ const repo_helloworld = {
   default_branch: "master",
   open_issues_count: 0,
   is_template: false,
-  // topics: [
-  //   "octocat",
-  //   "atom",
-  //   "electron",
-  //   "api"
-  // ],
+  topics: ["octocat", "atom", "electron", "api"],
   has_issues: true,
   has_projects: true,
   has_wiki: true,
@@ -214,6 +216,7 @@ const repo_helloworld = {
   has_downloads: true,
   archived: false,
   disabled: false,
+  visibility: visibilities.public,
   pushed_at: "2011-01-26T19:06:43Z",
   created_at: "2011-01-26T19:01:12Z",
   updated_at: "2011-01-26T19:14:43Z",
