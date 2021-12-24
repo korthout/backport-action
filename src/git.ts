@@ -1,4 +1,4 @@
-import execa from "execa";
+import { execa } from "execa";
 
 /**
  * Fetches a ref from origin
