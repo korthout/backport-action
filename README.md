@@ -42,6 +42,9 @@ jobs:
   build:
     name: Create backport PRs
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # so it can comment
+      pull-requests: write # so it can create pull requests
     # Don't run on closed unmerged pull requests
     if: github.event.pull_request.merged
     steps:
@@ -91,6 +94,9 @@ jobs:
   build:
     name: Create backport PRs
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # so it can comment
+      pull-requests: write # so it can create pull requests
     # Only run when pull request is merged
     # or when a comment containing `/backport` is created
     if: >
