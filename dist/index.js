@@ -420,6 +420,7 @@ function cherryPick(diffrefs, pwd) {
     return __awaiter(this, void 0, void 0, function* () {
         const { exitCode } = yield git("cherry-pick", ["-x", ...diffrefs], pwd);
         if (exitCode !== 0) {
+            yield git("cherry-pick", ["--abort"], pwd);
             throw new Error(`'git cherry-pick -x ${diffrefs}' failed with exit code ${exitCode}`);
         }
     });
