@@ -141,6 +141,7 @@ async function checkout(branch: string, start: string, pwd: string) {
 async function cherryPick(diffrefs: string[], pwd: string) {
   const { exitCode } = await git("cherry-pick", ["-x", ...diffrefs], pwd);
   if (exitCode !== 0) {
+    await git("cherry-pick", ["--abort"], pwd);
     throw new Error(
       `'git cherry-pick -x ${diffrefs}' failed with exit code ${exitCode}`
     );
