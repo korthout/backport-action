@@ -110,7 +110,7 @@ describe("the backport action", () => {
           config.pwd
         );
       });
-      it("creates a pull request and requests reviewers", async () => {
+      it("creates a pull request", async () => {
         mockedGit.push.mockResolvedValue(0);
         await backport.run();
         expect(
@@ -123,14 +123,6 @@ describe("the backport action", () => {
           title: "[Backport stable/0.25] Amazing new feature",
           body: `Backport of #1347 to \`stable/0.25\`.`,
           maintainer_can_modify: true,
-        });
-        expect(
-          mockedDefaultGithubWithBackportLabel.requestReviewers
-        ).toHaveBeenCalledWith({
-          owner: "octocat",
-          repo: "Hello-World",
-          pull_number: 9000,
-          reviewers: ["other_user"],
         });
       });
     });

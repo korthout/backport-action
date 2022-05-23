@@ -49,7 +49,7 @@ class Backport {
         this.config = config;
     }
     run() {
-        var _a, _b, _c, _d;
+        var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const payload = this.github.getPayload();
@@ -70,7 +70,6 @@ class Backport {
                 const headref = mainpr.head.sha;
                 const baseref = mainpr.base.sha;
                 const labels = mainpr.labels;
-                const reviewers = (_d = (_c = mainpr.requested_reviewers) === null || _c === void 0 ? void 0 : _c.map((r) => r.login)) !== null && _d !== void 0 ? _d : [];
                 console.log(`Detected labels on PR: ${labels.map((label) => label.name)}`);
                 if (!someLabelIn(labels).matches(this.config.labels.pattern)) {
                     console.log(`Nothing to backport: none of the labels match the backport pattern '${this.config.labels.pattern.source}'`);
@@ -148,23 +147,6 @@ class Backport {
                             continue;
                         }
                         const new_pr = new_pr_response.data;
-                        const review_response = yield this.github.requestReviewers({
-                            owner,
-                            repo,
-                            pull_number: new_pr.number,
-                            reviewers,
-                        });
-                        if (review_response.status != 201) {
-                            console.error(JSON.stringify(review_response));
-                            const message = this.composeMessageForRequestReviewersFailed(review_response, target);
-                            yield this.github.createComment({
-                                owner,
-                                repo,
-                                issue_number: pull_number,
-                                body: message,
-                            });
-                            continue;
-                        }
                         const message = this.composeMessageForSuccess(new_pr.number, target);
                         yield this.github.createComment({
                             owner,
@@ -240,12 +222,6 @@ class Backport {
     composeMessageForCreatePRFailed(response) {
         return (0, dedent_1.default) `Backport branch created but failed to create PR. 
                 Request to create PR rejected with status ${response.status}.
-
-                (see action log for full response)`;
-    }
-    composeMessageForRequestReviewersFailed(response, target) {
-        return (0, dedent_1.default) `${this.composeMessageForSuccess(response.data.number, target)}
-                But, request reviewers was rejected with status ${response.status}.
 
                 (see action log for full response)`;
     }
