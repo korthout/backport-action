@@ -1,11 +1,7 @@
 import * as core from "@actions/core";
 import dedent from "dedent";
 
-import {
-  CreatePullRequestResponse,
-  RequestReviewersResponse,
-  PullRequest,
-} from "./github";
+import { CreatePullRequestResponse, PullRequest } from "./github";
 import { GithubApi } from "./github";
 import * as git from "./git";
 import * as utils from "./utils";
@@ -56,7 +52,6 @@ export class Backport {
       const headref = mainpr.head.sha;
       const baseref = mainpr.base.sha;
       const labels = mainpr.labels;
-      const reviewers = mainpr.requested_reviewers?.map((r) => r.login) ?? [];
 
       console.log(
         `Detected labels on PR: ${labels.map((label) => label.name)}`
@@ -171,27 +166,6 @@ export class Backport {
           }
           const new_pr = new_pr_response.data;
 
-          const review_response = await this.github.requestReviewers({
-            owner,
-            repo,
-            pull_number: new_pr.number,
-            reviewers,
-          });
-          if (review_response.status != 201) {
-            console.error(JSON.stringify(review_response));
-            const message = this.composeMessageForRequestReviewersFailed(
-              review_response,
-              target
-            );
-            await this.github.createComment({
-              owner,
-              repo,
-              issue_number: pull_number,
-              body: message,
-            });
-            continue;
-          }
-
           const message = this.composeMessageForSuccess(new_pr.number, target);
           await this.github.createComment({
             owner,
@@ -281,18 +255,6 @@ export class Backport {
   ): string {
     return dedent`Backport branch created but failed to create PR. 
                 Request to create PR rejected with status ${response.status}.
-
-                (see action log for full response)`;
-  }
-
-  private composeMessageForRequestReviewersFailed(
-    response: RequestReviewersResponse,
-    target: string
-  ): string {
-    return dedent`${this.composeMessageForSuccess(response.data.number, target)}
-                But, request reviewers was rejected with status ${
-                  response.status
-                }.
 
                 (see action log for full response)`;
   }
