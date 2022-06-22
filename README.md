@@ -107,7 +107,7 @@ jobs:
       ) || (
         github.event_name == 'issue_comment' &&
         github.event.issue.pull_request &&
-        github.event.commend.user.id != 97796249 &&
+        github.event.comment.user.id != 97796249 &&
         contains(github.event.comment.body, '/backport')
       )
     steps:
