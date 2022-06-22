@@ -98,8 +98,9 @@ jobs:
       contents: write # so it can comment
       pull-requests: write # so it can create pull requests
     # Only run when pull request is merged
-    # or when a comment containing `/backport` is created by someone other than the backport-action
-    # bot user (user id: 97796249)
+    # or when a comment containing `/backport` is created by someone other than the 
+    # https://github.com/backport-action bot user (user id: 97796249). Note that if you use your
+    # own PAT as `github_token`, that you should replace this id with yours.
     if: >
       (
         github.event_name == 'pull_request' &&
