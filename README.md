@@ -50,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Create backport PRs
-        uses: zeebe-io/backport-action@v0.0.8
+        uses: zeebe-io/backport-action@v0.0.9
         with:
           # Required
           # Token to authenticate requests to GitHub
@@ -73,6 +73,13 @@ jobs:
           # pull_description: |-
           #   # Description
           #   Backport of #${pull_number} to `${target_branch}`.
+
+          # Optional
+          # Template used as the title in the pull requests created by this action.
+          # Placeholders can be used to define variable values.
+          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
+          # Please refer to this action's README for all available placeholders.
+          # pull_title: [Backport ${target_branch}] ${pull_title}
 ```
 
 ### Trigger using a comment
@@ -114,7 +121,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Create backport PRs
-        uses: zeebe-io/backport-action@v0.0.8
+        uses: zeebe-io/backport-action@v0.0.9
         with:
           # Required
           # Token to authenticate requests to GitHub
@@ -137,13 +144,20 @@ jobs:
           # pull_description: |-
           #   # Description
           #   Backport of #${pull_number} to `${target_branch}`.
+
+          # Optional
+          # Template used as the title in the pull requests created by this action.
+          # Placeholders can be used to define variable values.
+          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
+          # Please refer to this action's README for all available placeholders.
+          # pull_title: [Backport ${target_branch}] ${pull_title}
 ```
 
 </p>
 </details>
 
 ### Placeholders
-In the `pull_description` input placeholders can be used to define variable values.
+In the `pull_description` and `pull_title` inputs placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 The following placeholders are available and are replaced with:
 
