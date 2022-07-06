@@ -29,7 +29,7 @@ inputs:
       These are indicated by a dollar sign and curly braces (`${placeholder}`).
       Please refer to this action's README for all available placeholders.
     required: false
-    default: [Backport ${target_branch}] ${pull_title}.
+    default: [Backport ${target_branch}] ${pull_title}
 
   # DEPRECATED
   version:

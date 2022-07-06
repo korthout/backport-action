@@ -14,7 +14,10 @@ jest.mock("../git");
 const config = {
   pwd: "./test/project",
   labels: { pattern: /^backport ([^ ]+)$/ },
-  pull: { description: "Backport of #${pull_number} to `${target_branch}`." },
+  pull: {
+    description: "Backport of #${pull_number} to `${target_branch}`.",
+    title: "[Backport ${target_branch}] ${pull_title}",
+  },
 };
 const mockedGit = mocked(git, true);
 

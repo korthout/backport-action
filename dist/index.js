@@ -184,8 +184,8 @@ class Backport {
         });
     }
     composePRContent(target, main) {
-        const title = `[Backport ${target}] ${main.title}`;
-        const body = utils.composeBody(this.config.pull.description, main, target);
+        const title = utils.composeMessage(this.config.pull.title, main, target);
+        const body = utils.composeMessage(this.config.pull.description, main, target);
         return { title, body };
     }
     composeMessageForBackportScriptFailure(target, exitcode, baseref, headref, branchname) {
@@ -577,11 +577,12 @@ function run() {
         const pwd = core.getInput("github_workspace", { required: true });
         const pattern = new RegExp(core.getInput("label_pattern"));
         const description = core.getInput("pull_description");
+        const title = core.getInput("pull_title");
         const github = new github_1.Github(token);
         const backport = new backport_1.Backport(github, {
             pwd,
             labels: { pattern },
-            pull: { description },
+            pull: { description, title },
         });
         return backport.run();
     });
@@ -598,22 +599,23 @@ run();
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getMentionedIssueRefs = exports.composeBody = void 0;
+exports.getMentionedIssueRefs = exports.composeMessage = void 0;
 /**
- * @param template The backport description template
+ * @param template The template
  * @param main The main pull request that is backported
  * @param target The target branchname
- * @returns Description that can be used as the backport pull request body
+ * @returns Description that can be used in the backport pull request
  */
-function composeBody(template, main, target) {
+function composeMessage(template, main, target) {
     const issues = getMentionedIssueRefs(main.body);
     return template
         .replace("${pull_author}", main.user.login)
         .replace("${pull_number}", main.number.toString())
+        .replace("${pull_title}", main.title)
         .replace("${target_branch}", target)
         .replace("${issue_refs}", issues.join(" "));
 }
-exports.composeBody = composeBody;
+exports.composeMessage = composeMessage;
 /**
  * @param body Text in which to search for mentioned issues
  * @returns All found mentioned issues as GitHub issue references
