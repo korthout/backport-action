@@ -1,5 +1,5 @@
 import dedent from "dedent";
-import { getMentionedIssueRefs, composeBody } from "../utils";
+import { getMentionedIssueRefs, composeMessage } from "../utils";
 
 describe("get mentioned issues", () => {
   describe("returns an empty list", () => {
@@ -134,22 +134,23 @@ describe("get mentioned issues", () => {
   });
 });
 
-describe("compose body", () => {
+describe("compose body/title", () => {
   const main_default = {
     number: 123,
     body: "foo-body",
     user: { login: "foo-author" },
+    title: 'some pr title'
   };
   const target = "foo-target";
 
   describe("returns same value as provided template", () => {
     it("for an empty template", () => {
-      expect(composeBody("", main_default, target)).toEqual("");
+      expect(composeMessage("", main_default, target)).toEqual("");
     });
 
     it("for a template without placeholders", () => {
       const template = text({});
-      expect(composeBody(template, main_default, target)).toEqual(template);
+      expect(composeMessage(template, main_default, target)).toEqual(template);
     });
 
     it("for a template with unknown placeholders", () => {
@@ -159,22 +160,29 @@ describe("compose body", () => {
         end: "${ghi}",
         part: "${jkl}",
       });
-      expect(composeBody(template, main_default, target)).toEqual(template);
+      expect(composeMessage(template, main_default, target)).toEqual(template);
     });
   });
 
   describe("returns evaluated templated", () => {
     it("for a template with target_branch placeholder", () => {
       const template = "Backport of some-title to `${target_branch}`";
-      expect(composeBody(template, main_default, target)).toEqual(
+      expect(composeMessage(template, main_default, target)).toEqual(
         "Backport of some-title to `foo-target`"
       );
     });
 
     it("for a template with pull_number placeholder", () => {
       const template = "Backport of #${pull_number} to some-target";
-      expect(composeBody(template, main_default, target)).toEqual(
+      expect(composeMessage(template, main_default, target)).toEqual(
         "Backport of #123 to some-target"
+      );
+    });
+
+    it("for a template with pull_title placeholder", () => {
+      const template = "Backport of ${pull_title} to some-target";
+      expect(composeMessage(template, main_default, target)).toEqual(
+        "Backport of some pr title to some-target"
       );
     });
 
@@ -182,14 +190,14 @@ describe("compose body", () => {
       const template = "Backport that refers to: ${issue_refs}";
 
       it("and body has no referred issues", () => {
-        expect(composeBody(template, main_default, target)).toEqual(
+        expect(composeMessage(template, main_default, target)).toEqual(
           "Backport that refers to: "
         );
       });
 
       it("and body has a referred issue", () => {
         expect(
-          composeBody(
+          composeMessage(
             template,
             {
               ...main_default,
@@ -202,7 +210,7 @@ describe("compose body", () => {
 
       it("and body has some referred issues", () => {
         expect(
-          composeBody(
+          composeMessage(
             template,
             {
               ...main_default,
@@ -216,7 +224,7 @@ describe("compose body", () => {
 
     it("for a template with pull_author placeholder", () => {
       const template = "Backport of pull made by @${pull_author}";
-      expect(composeBody(template, main_default, target)).toEqual(
+      expect(composeMessage(template, main_default, target)).toEqual(
         "Backport of pull made by @foo-author"
       );
     });

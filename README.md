@@ -152,6 +152,7 @@ Placeholder | Replaced with
 `issue_refs` | GitHub issue references to all issues mentioned in the original pull request description seperated by a space, e.g. `#123 #456 zeebe-io/backport-action#789`
 `pull_author` | The username of the original pull request's author, e.g. `korthout`
 `pull_number` | The number of the original pull request that is backported, e.g. `123`
+`pull_title` | The title of the original pull request that is backported, e.g. `fix: some error`
 `target_branch`| The branchname to which the pull request is backported, e.g. `release-0.23`
 
 ## Local compilation
