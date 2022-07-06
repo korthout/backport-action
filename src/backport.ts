@@ -203,7 +203,11 @@ export class Backport {
 
   private composePRContent(target: string, main: PullRequest): PRContent {
     const title = utils.composeMessage(this.config.pull.title, main, target);
-    const body = utils.composeMessage(this.config.pull.description, main, target);
+    const body = utils.composeMessage(
+      this.config.pull.description,
+      main,
+      target
+    );
     return { title, body };
   }
 

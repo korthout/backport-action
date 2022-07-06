@@ -8,7 +8,7 @@ import { PullRequest } from "./github";
  */
 export function composeMessage(
   template: string,
-  main: Pick<PullRequest, 'body' | 'user' | 'number' | 'title'>,
+  main: Pick<PullRequest, "body" | "user" | "number" | "title">,
   target: string
 ): string {
   const issues = getMentionedIssueRefs(main.body);

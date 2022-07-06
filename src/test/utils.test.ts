@@ -139,7 +139,7 @@ describe("compose body/title", () => {
     number: 123,
     body: "foo-body",
     user: { login: "foo-author" },
-    title: 'some pr title'
+    title: "some pr title",
   };
   const target = "foo-target";
 
