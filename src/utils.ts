@@ -6,7 +6,7 @@ import { PullRequest } from "./github";
  * @param target The target branchname
  * @returns Description that can be used in the backport pull request
  */
-export function composeMessage(
+export function replacePlaceholders(
   template: string,
   main: Pick<PullRequest, "body" | "user" | "number" | "title">,
   target: string
