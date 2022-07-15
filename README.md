@@ -79,7 +79,7 @@ jobs:
           # Placeholders can be used to define variable values.
           # These are indicated by a dollar sign and curly braces (`${placeholder}`).
           # Please refer to this action's README for all available placeholders.
-          # pull_title: [Backport ${target_branch}] ${pull_title}
+          # pull_title: "[Backport ${target_branch}] ${pull_title}"
 ```
 
 ### Trigger using a comment
@@ -150,7 +150,7 @@ jobs:
           # Placeholders can be used to define variable values.
           # These are indicated by a dollar sign and curly braces (`${placeholder}`).
           # Please refer to this action's README for all available placeholders.
-          # pull_title: [Backport ${target_branch}] ${pull_title}
+          # pull_title: "[Backport ${target_branch}] ${pull_title}"
 ```
 
 </p>
