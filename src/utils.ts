@@ -1,7 +1,7 @@
 import { PullRequest } from "./github";
 
 /**
- * @param template The template
+ * @param template The template potentially containing placeholders
  * @param main The main pull request that is backported
  * @param target The target branchname
  * @returns Description that can be used in the backport pull request
