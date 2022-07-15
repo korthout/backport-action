@@ -184,8 +184,8 @@ class Backport {
         });
     }
     composePRContent(target, main) {
-        const title = utils.composeMessage(this.config.pull.title, main, target);
-        const body = utils.composeMessage(this.config.pull.description, main, target);
+        const title = utils.replacePlaceholders(this.config.pull.title, main, target);
+        const body = utils.replacePlaceholders(this.config.pull.description, main, target);
         return { title, body };
     }
     composeMessageForBackportScriptFailure(target, exitcode, baseref, headref, branchname) {
@@ -599,14 +599,14 @@ run();
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getMentionedIssueRefs = exports.composeMessage = void 0;
+exports.getMentionedIssueRefs = exports.replacePlaceholders = void 0;
 /**
- * @param template The template
+ * @param template The template potentially containing placeholders
  * @param main The main pull request that is backported
  * @param target The target branchname
  * @returns Description that can be used in the backport pull request
  */
-function composeMessage(template, main, target) {
+function replacePlaceholders(template, main, target) {
     const issues = getMentionedIssueRefs(main.body);
     return template
         .replace("${pull_author}", main.user.login)
@@ -615,7 +615,7 @@ function composeMessage(template, main, target) {
         .replace("${target_branch}", target)
         .replace("${issue_refs}", issues.join(" "));
 }
-exports.composeMessage = composeMessage;
+exports.replacePlaceholders = replacePlaceholders;
 /**
  * @param body Text in which to search for mentioned issues
  * @returns All found mentioned issues as GitHub issue references
