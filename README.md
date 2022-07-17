@@ -48,7 +48,7 @@ jobs:
     # Don't run on closed unmerged pull requests
     if: github.event.pull_request.merged
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Create backport PRs
         uses: zeebe-io/backport-action@v0.0.7
         with:
@@ -109,7 +109,7 @@ jobs:
         contains(github.event.comment.body, '/backport')
       )
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Create backport PRs
         uses: zeebe-io/backport-action@v0.0.7
         with:
