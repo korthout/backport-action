@@ -73,6 +73,13 @@ jobs:
           # pull_description: |-
           #   # Description
           #   Backport of #${pull_number} to `${target_branch}`.
+
+          # Optional
+          # Template used as the title in the pull requests created by this action.
+          # Placeholders can be used to define variable values.
+          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
+          # Please refer to this action's README for all available placeholders.
+          # pull_title: "[Backport ${target_branch}] ${pull_title}"
 ```
 
 ### Trigger using a comment
@@ -137,13 +144,20 @@ jobs:
           # pull_description: |-
           #   # Description
           #   Backport of #${pull_number} to `${target_branch}`.
+
+          # Optional
+          # Template used as the title in the pull requests created by this action.
+          # Placeholders can be used to define variable values.
+          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
+          # Please refer to this action's README for all available placeholders.
+          # pull_title: "[Backport ${target_branch}] ${pull_title}"
 ```
 
 </p>
 </details>
 
 ### Placeholders
-In the `pull_description` input placeholders can be used to define variable values.
+In the `pull_description` and `pull_title` inputs placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 The following placeholders are available and are replaced with:
 
@@ -152,6 +166,7 @@ Placeholder | Replaced with
 `issue_refs` | GitHub issue references to all issues mentioned in the original pull request description seperated by a space, e.g. `#123 #456 zeebe-io/backport-action#789`
 `pull_author` | The username of the original pull request's author, e.g. `korthout`
 `pull_number` | The number of the original pull request that is backported, e.g. `123`
+`pull_title` | The title of the original pull request that is backported, e.g. `fix: some error`
 `target_branch`| The branchname to which the pull request is backported, e.g. `release-0.23`
 
 ## Local compilation

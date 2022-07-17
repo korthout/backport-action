@@ -1,29 +1,24 @@
+import { PullRequest } from "./github";
+
 /**
- * @param template The backport description template
+ * @param template The template potentially containing placeholders
  * @param main The main pull request that is backported
  * @param target The target branchname
- * @returns Description that can be used as the backport pull request body
+ * @returns Description that can be used in the backport pull request
  */
-export function composeBody(
+export function replacePlaceholders(
   template: string,
-  main: PullRequest,
+  main: Pick<PullRequest, "body" | "user" | "number" | "title">,
   target: string
 ): string {
   const issues = getMentionedIssueRefs(main.body);
   return template
     .replace("${pull_author}", main.user.login)
     .replace("${pull_number}", main.number.toString())
+    .replace("${pull_title}", main.title)
     .replace("${target_branch}", target)
     .replace("${issue_refs}", issues.join(" "));
 }
-
-type PullRequest = {
-  number: number;
-  body: string | null;
-  user: {
-    login: string;
-  };
-};
 
 /**
  * @param body Text in which to search for mentioned issues

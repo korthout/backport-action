@@ -18,6 +18,7 @@ type Config = {
   };
   pull: {
     description: string;
+    title: string;
   };
 };
 
@@ -201,8 +202,16 @@ export class Backport {
   }
 
   private composePRContent(target: string, main: PullRequest): PRContent {
-    const title = `[Backport ${target}] ${main.title}`;
-    const body = utils.composeBody(this.config.pull.description, main, target);
+    const title = utils.replacePlaceholders(
+      this.config.pull.title,
+      main,
+      target
+    );
+    const body = utils.replacePlaceholders(
+      this.config.pull.description,
+      main,
+      target
+    );
     return { title, body };
   }
 

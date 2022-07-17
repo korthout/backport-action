@@ -22,6 +22,15 @@ inputs:
     default: |-
       # Description
       Backport of #${pull_number} to `${target_branch}`.
+  pull_title:
+    description: >
+      Template used as the title in the pull requests created by this action.
+      Placeholders can be used to define variable values.
+      These are indicated by a dollar sign and curly braces (`${placeholder}`).
+      Please refer to this action's README for all available placeholders.
+    required: false
+    default: >-
+      [Backport ${target_branch}] ${pull_title}
 
   # DEPRECATED
   version:
