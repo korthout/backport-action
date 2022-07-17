@@ -31,7 +31,7 @@
     "execa": "^5.1.1"
   },
   "devDependencies": {
-    "@octokit/webhooks-types": "^5.0.0",
+    "@octokit/webhooks-types": "^6.2.3",
     "@types/jest": "^27.5.0",
     "@vercel/ncc": "^0.34.0",
     "jest": "^27.5.1",
