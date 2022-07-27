@@ -7,7 +7,7 @@ import execa from "execa";
  * @param pwd the root of the git repository
  */
 export async function fetch(ref: string, pwd: string) {
-  const { exitCode } = await git("fetch", ["origin", ref], pwd);
+  const { exitCode } = await git("fetch", ["--depth=1", "origin", ref], pwd);
   if (exitCode !== 0) {
     throw new Error(
       `'git fetch origin ${ref}' failed with exit code ${exitCode}`
