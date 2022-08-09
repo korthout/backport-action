@@ -61,7 +61,7 @@ setup () {
     mkdir $REPOSITORY_NAME
     cd $REPOSITORY_NAME
 
-    git init
+    git init --initial-branch='master'
 
     echo "[commit]" >> .git/config
     echo "	gpgsign = false" >> .git/config
