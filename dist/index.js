@@ -79,8 +79,12 @@ class Backport {
                     console.log(`Nothing to backport: none of the labels match the backport pattern '${this.config.labels.pattern.source}'`);
                     return; // nothing left to do here
                 }
-                yield git.fetch(baseref, this.config.pwd);
-                yield git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd);
+                console.log(`Fetching all the commits from the pull request: ${mainpr.commits + 1}`);
+                yield git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd, mainpr.commits + 1 // +1 in case this concerns a shallowly cloned repo
+                );
+                console.log("Determining first and last commit shas, so we can cherry-pick the commit range");
+                const commitShas = yield this.github.getCommits(mainpr);
+                console.log(`Found commits: ${commitShas}`);
                 for (const label of labels) {
                     console.log(`Working on label ${label.name}`);
                     // we are looking for labels like "backport stable/0.24"
@@ -99,14 +103,30 @@ class Backport {
                     //extract the target branch (e.g. "stable/0.24")
                     const target = match[1];
                     console.log(`Found target in label: ${target}`);
-                    yield git.fetch(target, this.config.pwd);
+                    yield git.fetch(target, this.config.pwd, 1);
                     try {
                         const branchname = `backport-${pull_number}-to-${target}`;
                         console.log(`Start backport to ${branchname}`);
-                        const scriptExitCode = yield git.performBackport(this.config.pwd, headref, baseref, `origin/${target}`, branchname);
-                        if (scriptExitCode != 0) {
-                            const message = this.composeMessageForBackportScriptFailure(target, scriptExitCode, baseref, headref, branchname);
-                            console.error(`exitcode(${scriptExitCode}): ${message}`);
+                        try {
+                            yield git.checkout(branchname, `origin/${target}`, this.config.pwd);
+                        }
+                        catch (error) {
+                            const message = this.composeMessageForBackportScriptFailure(target, 3, baseref, headref, branchname);
+                            console.error(message);
+                            yield this.github.createComment({
+                                owner,
+                                repo,
+                                issue_number: pull_number,
+                                body: message,
+                            });
+                            continue;
+                        }
+                        try {
+                            yield git.cherryPick(commitShas, this.config.pwd);
+                        }
+                        catch (error) {
+                            const message = this.composeMessageForBackportScriptFailure(target, 4, baseref, headref, branchname);
+                            console.error(message);
                             yield this.github.createComment({
                                 owner,
                                 repo,
@@ -267,74 +287,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.push = exports.performBackport = exports.fetch = void 0;
+exports.cherryPick = exports.checkout = exports.push = exports.fetch = void 0;
 const execa_1 = __importDefault(__nccwpck_require__(5447));
 /**
  * Fetches a ref from origin
  *
  * @param ref the sha, branchname, etc to fetch
  * @param pwd the root of the git repository
+ * @param depth the number of commits to fetch
  */
-function fetch(ref, pwd) {
+function fetch(ref, pwd, depth) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode } = yield git("fetch", ["origin", ref], pwd);
+        const { exitCode } = yield git("fetch", [`--depth=${depth}`, "origin", ref], pwd);
         if (exitCode !== 0) {
             throw new Error(`'git fetch origin ${ref}' failed with exit code ${exitCode}`);
         }
     });
 }
 exports.fetch = fetch;
-/**
- * Performs the backport
- *
- * @param pwd the root of the git repository
- * @param headref refers to the source branch of the merge commit, i.e. PR head
- * @param baseref refers to the target branch of the merge commit, i.e. PR merge target
- * @param target refers to the target to backport onto, e.g. stable/0.24
- * @param branchname is the name of the new branch containing the backport, e.g. backport-x-to-0.24
- * @returns a promise of the exit code:
- *   0: all good
- *   1: incorrect usage / unknown error
- *   3: unable to switch to new branch
- *   4: unable to cherry-pick commit
- *   5: headref not found
- *   6: baseref not found"
- */
-function performBackport(pwd, headref, baseref, target, branchname) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            // Check that $baseref and $headref commits exist
-            if (!(yield isCommit(headref, pwd))) {
-                return 5;
-            }
-            if (!(yield isCommit(baseref, pwd))) {
-                return 6;
-            }
-            const ancref = yield findCommonAncestor(baseref, headref, pwd);
-            const diffrefs = yield findDiff(ancref, headref, pwd);
-            try {
-                yield checkout(branchname, target, pwd);
-            }
-            catch (error) {
-                return 3;
-            }
-            try {
-                yield cherryPick(diffrefs, pwd);
-            }
-            catch (error) {
-                return 4;
-            }
-            // Success
-            return 0;
-        }
-        catch (error) {
-            // Unknown error
-            console.error(error);
-            return 1;
-        }
-    });
-}
-exports.performBackport = performBackport;
 function push(branchname, pwd) {
     return __awaiter(this, void 0, void 0, function* () {
         const { exitCode } = yield git("push", ["--set-upstream", "origin", branchname], pwd);
@@ -345,6 +315,7 @@ exports.push = push;
 function git(command, args, pwd) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
+        console.log(`git ${command} ${args.join(" ")}`);
         const child = (0, execa_1.default)("git", [command, ...args], {
             cwd: pwd,
             env: {
@@ -357,37 +328,6 @@ function git(command, args, pwd) {
         return child;
     });
 }
-function isCommit(ref, pwd) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode, stdout } = yield git("cat-file", ["-t", ref], pwd);
-        if (exitCode === 0) {
-            return stdout === "commit";
-        }
-        if (exitCode === 128) {
-            // commit does not exist
-            return false;
-        }
-        throw new Error(`'git cat-file -t ${ref}' failed with exit code ${exitCode}`);
-    });
-}
-function findCommonAncestor(ref1, ref2, pwd) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode, stdout } = yield git("merge-base", [ref1, ref2], pwd);
-        if (exitCode !== 0) {
-            throw new Error(`'git merge-base ${ref1} ${ref2}' failed with exit code ${exitCode}`);
-        }
-        return stdout;
-    });
-}
-function findDiff(ancref, headref, pwd) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode, stdout } = yield git("log", [`${ancref}..${headref}`, "--reverse", '--format="%h"'], pwd);
-        if (exitCode !== 0) {
-            throw new Error(`'git log ${ancref}..${headref} --reverse --format="%h"' failed with exit code ${exitCode}`);
-        }
-        return stdout.replace(new RegExp('"', "g"), "").split("\n");
-    });
-}
 function checkout(branch, start, pwd) {
     return __awaiter(this, void 0, void 0, function* () {
         const { exitCode } = yield git("switch", ["-c", branch, start], pwd);
@@ -396,15 +336,17 @@ function checkout(branch, start, pwd) {
         }
     });
 }
-function cherryPick(diffrefs, pwd) {
+exports.checkout = checkout;
+function cherryPick(commitShas, pwd) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode } = yield git("cherry-pick", ["-x", ...diffrefs], pwd);
+        const { exitCode } = yield git("cherry-pick", ["-x", ...commitShas], pwd);
         if (exitCode !== 0) {
             yield git("cherry-pick", ["--abort"], pwd);
-            throw new Error(`'git cherry-pick -x ${diffrefs}' failed with exit code ${exitCode}`);
+            throw new Error(`'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`);
         }
     });
 }
+exports.cherryPick = cherryPick;
 
 
 /***/ }),
@@ -516,6 +458,29 @@ class Github {
                 else
                     throw error;
             });
+        });
+    }
+    getFirstAndLastCommitSha(pull) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const commits = yield this.getCommits(pull);
+            return {
+                firstCommitSha: commits[0],
+                lastCommitSha: commits.length > 1 ? commits[commits.length - 1] : null,
+            };
+        });
+    }
+    getCommits(pull) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`Retrieving the commits from pull request ${pull.number}`);
+            const commits = [];
+            const getCommitsPaged = (page) => __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls
+                .listCommits(Object.assign(Object.assign({}, this.getRepo()), { pull_number: pull.number, per_page: 100, page: page }))
+                .then((commits) => commits.data.map((commit) => commit.sha));
+            for (let page = 1; page <= Math.ceil(pull.commits / 100); page++) {
+                const commitsOnPage = yield getCommitsPaged(page);
+                commits.push(...commitsOnPage);
+            }
+            return commits;
         });
     }
     createPR(pr) {
