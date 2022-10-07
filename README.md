@@ -50,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Create backport PRs
-        uses: zeebe-io/backport-action@v0.0.8
+        uses: zeebe-io/backport-action@v0
         with:
           # Required
           # Token to authenticate requests to GitHub
@@ -121,7 +121,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Create backport PRs
-        uses: zeebe-io/backport-action@v0.0.8
+        uses: zeebe-io/backport-action@v0
         with:
           # Required
           # Token to authenticate requests to GitHub
@@ -209,3 +209,4 @@ npm run all
 
 The distribution is hosted in this repository under `dist`.
 Simply build and package the distribution and commit the changes to release a new version.
+Release commits should also be tagged (e.g. `v1.2.3`) and the major release tag (e.g. `v1`) should be moved as [officially recommended](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md).
