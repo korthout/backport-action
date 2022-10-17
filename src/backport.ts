@@ -77,10 +77,10 @@ export class Backport {
       console.log(
         "Determining first and last commit shas, so we can cherry-pick the commit range"
       );
-      const { firstCommitSha, lastCommitSha } =
-        await this.github.getFirstAndLastCommitSha(mainpr);
 
-      console.log(`Found commits: ${firstCommitSha}..${lastCommitSha}`);
+      const commitShas = await this.github.getCommits(mainpr);
+
+      console.log(`Found commits: ${commitShas}`);
 
       for (const label of labels) {
         console.log(`Working on label ${label.name}`);
@@ -133,11 +133,7 @@ export class Backport {
           }
 
           try {
-            await git.cherryPick(
-              firstCommitSha,
-              lastCommitSha,
-              this.config.pwd
-            );
+            await git.cherryPick(commitShas, this.config.pwd);
           } catch (error) {
             const message = this.composeMessageForBackportScriptFailure(
               target,

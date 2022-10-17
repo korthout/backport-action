@@ -52,19 +52,12 @@ export async function checkout(branch: string, start: string, pwd: string) {
   }
 }
 
-export async function cherryPick(
-  firstCommitSha: string,
-  lastCommitSha: string | null,
-  pwd: string
-) {
-  const commits = lastCommitSha
-    ? `${firstCommitSha}..${lastCommitSha}`
-    : firstCommitSha;
-  const { exitCode } = await git("cherry-pick", ["-x", commits], pwd);
+export async function cherryPick(commitShas: string[], pwd: string) {
+  const { exitCode } = await git("cherry-pick", ["-x", ...commitShas], pwd);
   if (exitCode !== 0) {
     await git("cherry-pick", ["--abort"], pwd);
     throw new Error(
-      `'git cherry-pick -x ${commits}' failed with exit code ${exitCode}`
+      `'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`
     );
   }
 }

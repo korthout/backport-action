@@ -16,9 +16,7 @@ export interface GithubApi {
   createComment(comment: Comment): Promise<{}>;
   getPullRequest(pull_number: number): Promise<PullRequest>;
   isMerged(pull: PullRequest): Promise<boolean>;
-  getFirstAndLastCommitSha(
-    pull: PullRequest
-  ): Promise<{ firstCommitSha: string; lastCommitSha: string | null }>;
+  getCommits(pull: PullRequest): Promise<string[]>;
   createPR(pr: CreatePullRequest): Promise<CreatePullRequestResponse>;
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
 }
@@ -86,7 +84,7 @@ export class Github implements GithubApi {
     };
   }
 
-  async getCommits(pull: PullRequest) {
+  public async getCommits(pull: PullRequest) {
     console.log(`Retrieving the commits from pull request ${pull.number}`);
 
     const commits: string[] = [];
