@@ -37,5 +37,5 @@ inputs:
     description: The version of backport-action - deprecated
     required: false
 runs:
-  using: "node12"
+  using: "node16"
   main: "dist/index.js"
