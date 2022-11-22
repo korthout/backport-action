@@ -65,8 +65,22 @@ export class Backport {
         return; // nothing left to do here
       }
 
-      await git.fetch(baseref, this.config.pwd);
-      await git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd);
+      console.log(
+        `Fetching all the commits from the pull request: ${mainpr.commits + 1}`
+      );
+      await git.fetch(
+        `refs/pull/${pull_number}/head`,
+        this.config.pwd,
+        mainpr.commits + 1 // +1 in case this concerns a shallowly cloned repo
+      );
+
+      console.log(
+        "Determining first and last commit shas, so we can cherry-pick the commit range"
+      );
+      const { firstCommitSha, lastCommitSha } =
+        await this.github.getFirstAndLastCommitSha(mainpr);
+
+      console.log(`Found commits: ${firstCommitSha}..${lastCommitSha}`);
 
       for (const label of labels) {
         console.log(`Working on label ${label.name}`);
@@ -92,29 +106,47 @@ export class Backport {
         const target = match[1];
         console.log(`Found target in label: ${target}`);
 
-        await git.fetch(target, this.config.pwd);
+        await git.fetch(target, this.config.pwd, 1);
 
         try {
           const branchname = `backport-${pull_number}-to-${target}`;
 
           console.log(`Start backport to ${branchname}`);
-          const scriptExitCode = await git.performBackport(
-            this.config.pwd,
-            headref,
-            baseref,
-            `origin/${target}`,
-            branchname
-          );
-
-          if (scriptExitCode != 0) {
+          try {
+            await git.checkout(branchname, `origin/${target}`, this.config.pwd);
+          } catch (error) {
             const message = this.composeMessageForBackportScriptFailure(
               target,
-              scriptExitCode,
+              3,
               baseref,
               headref,
               branchname
             );
-            console.error(`exitcode(${scriptExitCode}): ${message}`);
+            console.error(message);
+            await this.github.createComment({
+              owner,
+              repo,
+              issue_number: pull_number,
+              body: message,
+            });
+            continue;
+          }
+
+          try {
+            await git.cherryPick(
+              firstCommitSha,
+              lastCommitSha,
+              this.config.pwd
+            );
+          } catch (error) {
+            const message = this.composeMessageForBackportScriptFailure(
+              target,
+              4,
+              baseref,
+              headref,
+              branchname
+            );
+            console.error(message);
             await this.github.createComment({
               owner,
               repo,

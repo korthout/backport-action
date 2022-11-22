@@ -16,6 +16,9 @@ export interface GithubApi {
   createComment(comment: Comment): Promise<{}>;
   getPullRequest(pull_number: number): Promise<PullRequest>;
   isMerged(pull: PullRequest): Promise<boolean>;
+  getFirstAndLastCommitSha(
+    pull: PullRequest
+  ): Promise<{ firstCommitSha: string; lastCommitSha: string | null }>;
   createPR(pr: CreatePullRequest): Promise<CreatePullRequestResponse>;
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
 }
@@ -73,6 +76,39 @@ export class Github implements GithubApi {
       });
   }
 
+  public async getFirstAndLastCommitSha(
+    pull: PullRequest
+  ): Promise<{ firstCommitSha: string; lastCommitSha: string | null }> {
+    const commits = await this.getCommits(pull);
+    return {
+      firstCommitSha: commits[0],
+      lastCommitSha: commits.length > 1 ? commits[commits.length - 1] : null,
+    };
+  }
+
+  async getCommits(pull: PullRequest) {
+    console.log(`Retrieving the commits from pull request ${pull.number}`);
+
+    const commits: string[] = [];
+
+    const getCommitsPaged = (page: number) =>
+      this.#octokit.rest.pulls
+        .listCommits({
+          ...this.getRepo(),
+          pull_number: pull.number,
+          per_page: 100,
+          page: page,
+        })
+        .then((commits) => commits.data.map((commit) => commit.sha));
+
+    for (let page = 1; page <= Math.ceil(pull.commits / 100); page++) {
+      const commitsOnPage = await getCommitsPaged(page);
+      commits.push(...commitsOnPage);
+    }
+
+    return commits;
+  }
+
   public async createPR(pr: CreatePullRequest) {
     console.log(`Create PR: ${pr.body}`);
     return this.#octokit.rest.pulls.create(pr);
@@ -103,6 +139,7 @@ export type PullRequest = {
   requested_reviewers: {
     login: string;
   }[];
+  commits: number;
 };
 export type CreatePullRequestResponse = {
   status: number;
