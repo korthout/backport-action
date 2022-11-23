@@ -1,7 +1,5 @@
 # Backport action
 
-> This project is still in an early development stage
-
 This is a GitHub action to backport merged pull requests (PR) to branches.
 For example, to patch an older version with changes that you're merging into your main branch, without the manual labor of cherry-picking the individual commits.
 
@@ -9,6 +7,13 @@ A backport consists of creating a new branch, cherry-picking the changes of the 
 
 This backport action is able to deal with so called `octopus` merges (i.e. merges of multiple branches with a single commit).
 Therefore, this action is compatible with [Bors](https://bors.tech/) and similar tools.
+
+> **Note**
+> Version `1.0.0` (i.e. `v1`) will be released soon.
+> You can already try it out using the latest pre-release `v1-rc1`.
+> After the `v1` release, [SemVer](https://semver.org/) will be respected.
+> The repo will also move from [zeebe-io/backport-action](https://github.com/zeebe-io/backport-action) to [korthout/backport-action](https://github.com/korthout/backport-action).
+> You can read more about it [here](https://github.com/zeebe-io/backport-action/issues/289).
 
 ## Usage
 
@@ -50,7 +55,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Create backport PRs
-        uses: zeebe-io/backport-action@v0
+        uses: zeebe-io/backport-action@v1-rc1
         with:
           # Optional
           # Token to authenticate requests to GitHub
@@ -121,7 +126,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Create backport PRs
-        uses: zeebe-io/backport-action@v0
+        uses: zeebe-io/backport-action@v1-rc1
         with:
           # Optional
           # Token to authenticate requests to GitHub
