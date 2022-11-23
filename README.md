@@ -185,8 +185,6 @@ npm run format && npm run build && npm run package
 
 ## Testing
 
-Tests are located in both src (unit tests) and in [test](test) (integration-style tests).
-
 Run all tests
 
 ```
