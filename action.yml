@@ -3,8 +3,10 @@ description: "Automatically backport pull requests"
 author: "zeebe-io"
 inputs:
   github_token:
-    description: Token for the GitHub API
-    required: true
+    description: >
+      Token to authenticate requests to GitHub.
+      Either GITHUB_TOKEN or a repo-scoped Personal Access Token (PAT).
+    default: ${{ github.token }}
   github_workspace:
     description: The GitHub workspace directory path
     required: true
