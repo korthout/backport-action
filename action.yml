@@ -3,14 +3,15 @@ description: "Automatically backport pull requests"
 author: "zeebe-io"
 inputs:
   github_token:
-    description: Token for the GitHub API
-    required: true
+    description: >
+      Token to authenticate requests to GitHub.
+      Either GITHUB_TOKEN or a repo-scoped Personal Access Token (PAT).
+    default: ${{ github.token }}
   github_workspace:
-    description: The GitHub workspace directory path
-    required: true
+    description: Working directory for the backport action.
+    default: ${{ github.workspace }}
   label_pattern:
-    description: A regex pattern to match the backport labels
-    required: false
+    description: A regex pattern to match the backport labels.
     default: ^backport ([^ ]+)$
   pull_description:
     description: >
@@ -18,7 +19,6 @@ inputs:
       Placeholders can be used to define variable values.
       These are indicated by a dollar sign and curly braces (`${placeholder}`).
       Please refer to this action's README for all available placeholders.
-    required: false
     default: |-
       # Description
       Backport of #${pull_number} to `${target_branch}`.
@@ -28,7 +28,6 @@ inputs:
       Placeholders can be used to define variable values.
       These are indicated by a dollar sign and curly braces (`${placeholder}`).
       Please refer to this action's README for all available placeholders.
-    required: false
     default: >-
       [Backport ${target_branch}] ${pull_title}
 
