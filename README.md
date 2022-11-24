@@ -198,6 +198,8 @@ Shorthand for format, build, package and test
 npm run all
 ```
 
+This action can also be tested using [korthout/backport-action-test](https://github.com/korthout/backport-action-test).
+
 ## Releases
 
 The distribution is hosted in this repository under `dist`.
