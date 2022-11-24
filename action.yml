@@ -31,11 +31,6 @@ inputs:
     required: false
     default: >-
       [Backport ${target_branch}] ${pull_title}
-
-  # DEPRECATED
-  version:
-    description: The version of backport-action - deprecated
-    required: false
 runs:
   using: "node16"
   main: "dist/index.js"
