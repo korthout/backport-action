@@ -14,7 +14,7 @@ For each of those labels:
 4. comment on the original pull request about its success
 
 This backport action is able to deal with so called `octopus` merges (i.e. merges of multiple branches with a single commit).
-Therefore, this action is compatible with [Bors](https://bors.tech/) and similar tools.
+Therefore, this action is compatible with [Bors](https://bors.tech/), [GitHub Merge Queue](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue) and similar tools.
 
 > **Note**
 > Version `1.0.0` (i.e. `v1`) will be released soon.
