@@ -8,8 +8,8 @@ inputs:
       Either GITHUB_TOKEN or a repo-scoped Personal Access Token (PAT).
     default: ${{ github.token }}
   github_workspace:
-    description: The GitHub workspace directory path
-    required: true
+    description: Working directory for the backport action.
+    default: ${{ github.workspace }}
   label_pattern:
     description: A regex pattern to match the backport labels.
     default: ^backport ([^ ]+)$
