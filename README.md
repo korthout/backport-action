@@ -1,9 +1,17 @@
 # Backport action
 
-This is a GitHub action to backport merged pull requests (PR) to branches.
-For example, to patch an older version with changes that you're merging into your main branch, without the manual labor of cherry-picking the individual commits.
+A GitHub action to backport merged pull requests to selected branches.
 
-A backport consists of creating a new branch, cherry-picking the changes of the original PR and creating a new PR to merge them.
+This can be useful when you're supporting multiple versions of your product.
+After fixing a bug, you may want to apply that patch to the other versions.
+The manual labor of cherry-picking the individual commits can be automated using this action.
+
+The backport action will look for backport labels (e.g. `backport release-3.4`) on your merged pull request.
+For each of those labels:
+1. fetch and checkout a new branch from the target branch (e.g. `release-3.4`)
+2. cherry-pick the merged pull request's commits
+3. create a pull request to merge the new branch into the target branch
+4. comment on the original pull request about its success
 
 This backport action is able to deal with so called `octopus` merges (i.e. merges of multiple branches with a single commit).
 Therefore, this action is compatible with [Bors](https://bors.tech/) and similar tools.
@@ -16,25 +24,6 @@ Therefore, this action is compatible with [Bors](https://bors.tech/) and similar
 > You can read more about it [here](https://github.com/zeebe-io/backport-action/issues/289).
 
 ## Usage
-
-Simply mark a PR with backport labels: `backport <branchname>`.
-
-For example, a PR with labels
-
-```
-backport stable/0.24
-backport release-0.23
-```
-
-will be backported to branches `stable/0.24` and `release-0.23` when merged.
-
-If something goes wrong, the bot will comment on your PR.
-It will also comment after successfully backporting.
-Links are created between the original and the new PRs.
-
-It's also possible to configure the bot to trigger a backport using a comment on a PR.
-
-## Installation
 
 Add the following workflow configuration to your repository's `.github/workflows` folder.
 
