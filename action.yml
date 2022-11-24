@@ -9,8 +9,7 @@ inputs:
     description: The GitHub workspace directory path
     required: true
   label_pattern:
-    description: A regex pattern to match the backport labels
-    required: false
+    description: A regex pattern to match the backport labels.
     default: ^backport ([^ ]+)$
   pull_description:
     description: >
@@ -18,7 +17,6 @@ inputs:
       Placeholders can be used to define variable values.
       These are indicated by a dollar sign and curly braces (`${placeholder}`).
       Please refer to this action's README for all available placeholders.
-    required: false
     default: |-
       # Description
       Backport of #${pull_number} to `${target_branch}`.
@@ -28,7 +26,6 @@ inputs:
       Placeholders can be used to define variable values.
       These are indicated by a dollar sign and curly braces (`${placeholder}`).
       Please refer to this action's README for all available placeholders.
-    required: false
     default: >-
       [Backport ${target_branch}] ${pull_title}
 
