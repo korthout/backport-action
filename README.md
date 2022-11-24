@@ -52,13 +52,13 @@ jobs:
       - name: Create backport PRs
         uses: zeebe-io/backport-action@v0
         with:
-          # Required
+          # Optional
           # Token to authenticate requests to GitHub
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # github_token: ${{ secrets.GITHUB_TOKEN }}
 
-          # Required
+          # Optional
           # Working directory for the backport action
-          github_workspace: ${{ github.workspace }}
+          # github_workspace: ${{ github.workspace }}
 
           # Optional
           # Regex pattern to match github labels
@@ -123,13 +123,13 @@ jobs:
       - name: Create backport PRs
         uses: zeebe-io/backport-action@v0
         with:
-          # Required
+          # Optional
           # Token to authenticate requests to GitHub
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # github_token: ${{ secrets.GITHUB_TOKEN }}
 
-          # Required
+          # Optional
           # Working directory for the backport action
-          github_workspace: ${{ github.workspace }}
+          # github_workspace: ${{ github.workspace }}
 
           # Optional
           # Regex pattern to match github labels
