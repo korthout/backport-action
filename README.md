@@ -28,22 +28,22 @@ Therefore, this action is compatible with [Bors](https://bors.tech/), [GitHub Me
 Add the following workflow configuration to your repository's `.github/workflows` folder.
 
 ```yaml
-name: Backport labeled merged pull requests
+name: Backport merged pull request
 on:
   pull_request:
     types: [closed]
+permissions:
+  contents: write # so it can comment
+  pull-requests: write # so it can create pull requests
 jobs:
-  build:
-    name: Create backport PRs
+  backport:
+    name: Backport pull request
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # so it can comment
-      pull-requests: write # so it can create pull requests
     # Don't run on closed unmerged pull requests
     if: github.event.pull_request.merged
     steps:
       - uses: actions/checkout@v3
-      - name: Create backport PRs
+      - name: Create backport pull requests
         uses: zeebe-io/backport-action@v1-rc1
         with:
           # Optional
@@ -85,19 +85,20 @@ To enable this, add the following workflow configuration to your repository's `.
  <p>
 
 ```yaml
-name: Backport labeled merged pull requests
+name: Backport merged pull request
 on:
   pull_request:
     types: [closed]
   issue_comment:
     types: [created]
+permissions:
+  contents: write # so it can comment
+  pull-requests: write # so it can create pull requests
 jobs:
-  build:
-    name: Create backport PRs
+  backport:
+    name: Backport pull request
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # so it can comment
-      pull-requests: write # so it can create pull requests
+
     # Only run when pull request is merged
     # or when a comment containing `/backport` is created by someone other than the 
     # https://github.com/backport-action bot user (user id: 97796249). Note that if you use your
@@ -114,7 +115,7 @@ jobs:
       )
     steps:
       - uses: actions/checkout@v3
-      - name: Create backport PRs
+      - name: Create backport pull requests
         uses: zeebe-io/backport-action@v1-rc1
         with:
           # Optional
