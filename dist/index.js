@@ -84,6 +84,15 @@ class Backport {
                 );
                 console.log("Determining first and last commit shas, so we can cherry-pick the commit range");
                 const commitShas = yield this.github.getCommits(mainpr);
+                let labelsToCopy = [];
+                if (typeof this.config.copy_labels_pattern !== "undefined") {
+                    let copyLabelsPattern = this.config.copy_labels_pattern;
+                    labelsToCopy = labels
+                        .map((label) => label.name)
+                        .filter((label) => label.match(copyLabelsPattern) &&
+                        !label.match(this.config.labels.pattern));
+                }
+                console.log(`Copying labels: ${labelsToCopy}`);
                 console.log(`Found commits: ${commitShas}`);
                 for (const label of labels) {
                     console.log(`Working on label ${label.name}`);
@@ -189,6 +198,11 @@ class Backport {
                             continue;
                         }
                         const new_pr = new_pr_response.data;
+                        const label_response = yield this.github.labelPR(new_pr.number, labelsToCopy);
+                        if (label_response.status != 200) {
+                            console.error(JSON.stringify(label_response));
+                            // The PR was still created so let's still comment on the original.
+                        }
                         const message = this.composeMessageForSuccess(new_pr.number, target);
                         yield this.github.createComment({
                             owner,
@@ -527,6 +541,12 @@ class Github {
             return __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls.requestReviewers(request);
         });
     }
+    labelPR(pr, labels) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`Label PR: ${pr}`);
+            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addLabels(Object.assign(Object.assign({}, this.getRepo()), { issue_number: pr, labels }));
+        });
+    }
 }
 exports.Github = Github;
 _Github_octokit = new WeakMap(), _Github_context = new WeakMap();
@@ -587,11 +607,13 @@ function run() {
         const pattern = new RegExp(core.getInput("label_pattern"));
         const description = core.getInput("pull_description");
         const title = core.getInput("pull_title");
+        const copy_labels_pattern = new RegExp(core.getInput("copy_labels_pattern"));
         const github = new github_1.Github(token);
         const backport = new backport_1.Backport(github, {
             pwd,
             labels: { pattern },
             pull: { description, title },
+            copy_labels_pattern,
         });
         return backport.run();
     });
