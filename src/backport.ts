@@ -20,6 +20,7 @@ type Config = {
     description: string;
     title: string;
   };
+  copy_labels_pattern?: RegExp;
 };
 
 enum Output {
@@ -84,6 +85,20 @@ export class Backport {
       );
 
       const commitShas = await this.github.getCommits(mainpr);
+
+      let labelsToCopy: string[] = [];
+      if (typeof this.config.copy_labels_pattern !== "undefined") {
+        let copyLabelsPattern: RegExp = this.config.copy_labels_pattern;
+        labelsToCopy = labels
+          .map((label) => label.name)
+          .filter(
+            (label) =>
+              label.match(copyLabelsPattern) &&
+              !label.match(this.config.labels.pattern)
+          );
+      }
+
+      console.log(`Copying labels: ${labelsToCopy}`);
 
       console.log(`Found commits: ${commitShas}`);
 
@@ -221,6 +236,15 @@ export class Backport {
             continue;
           }
           const new_pr = new_pr_response.data;
+
+          const label_response = await this.github.labelPR(
+            new_pr.number,
+            labelsToCopy
+          );
+          if (label_response.status != 200) {
+            console.error(JSON.stringify(label_response));
+            // The PR was still created so let's still comment on the original.
+          }
 
           const message = this.composeMessageForSuccess(new_pr.number, target);
           successByTarget.set(target, true);
