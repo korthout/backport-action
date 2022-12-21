@@ -16,13 +16,6 @@ For each of those labels:
 This backport action is able to deal with so called `octopus` merges (i.e. merges of multiple branches with a single commit).
 Therefore, this action is compatible with [Bors](https://bors.tech/), [GitHub Merge Queue](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue) and similar tools.
 
-> **Note**
-> Version `1.0.0` (i.e. `v1`) will be released soon.
-> You can already try it out using the latest pre-release `v1-rc1`.
-> After the `v1` release, [SemVer](https://semver.org/) will be respected.
-> The repo will also move from [zeebe-io/backport-action](https://github.com/zeebe-io/backport-action) to [korthout/backport-action](https://github.com/korthout/backport-action).
-> You can read more about it [here](https://github.com/korthout/backport-action/issues/289).
-
 ## Usage
 
 Add the following workflow configuration to your repository's `.github/workflows` folder.
