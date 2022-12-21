@@ -1,6 +1,6 @@
 name: "backport-action"
 description: "Automatically backport pull requests"
-author: "zeebe-io"
+author: "korthout"
 inputs:
   github_token:
     description: >

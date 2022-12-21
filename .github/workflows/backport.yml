@@ -26,4 +26,4 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Create backport pull requests
-        uses: zeebe-io/backport-action@v1-rc1
+        uses: korthout/backport-action@v1-rc1

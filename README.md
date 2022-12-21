@@ -21,7 +21,7 @@ Therefore, this action is compatible with [Bors](https://bors.tech/), [GitHub Me
 > You can already try it out using the latest pre-release `v1-rc1`.
 > After the `v1` release, [SemVer](https://semver.org/) will be respected.
 > The repo will also move from [zeebe-io/backport-action](https://github.com/zeebe-io/backport-action) to [korthout/backport-action](https://github.com/korthout/backport-action).
-> You can read more about it [here](https://github.com/zeebe-io/backport-action/issues/289).
+> You can read more about it [here](https://github.com/korthout/backport-action/issues/289).
 
 ## Usage
 
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Create backport pull requests
-        uses: zeebe-io/backport-action@v1-rc1
+        uses: korthout/backport-action@v1-rc1
         with:
           # Optional
           # Token to authenticate requests to GitHub
@@ -116,7 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Create backport pull requests
-        uses: zeebe-io/backport-action@v1-rc1
+        uses: korthout/backport-action@v1-rc1
         with:
           # Optional
           # Token to authenticate requests to GitHub
@@ -158,7 +158,7 @@ The following placeholders are available and are replaced with:
 
 Placeholder | Replaced with
 ------------|------------
-`issue_refs` | GitHub issue references to all issues mentioned in the original pull request description seperated by a space, e.g. `#123 #456 zeebe-io/backport-action#789`
+`issue_refs` | GitHub issue references to all issues mentioned in the original pull request description seperated by a space, e.g. `#123 #456 korthout/backport-action#789`
 `pull_author` | The username of the original pull request's author, e.g. `korthout`
 `pull_number` | The number of the original pull request that is backported, e.g. `123`
 `pull_title` | The title of the original pull request that is backported, e.g. `fix: some error`
