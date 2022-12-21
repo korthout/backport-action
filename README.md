@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Create backport pull requests
-        uses: korthout/backport-action@v1-rc1
+        uses: korthout/backport-action@v1
         with:
           # Optional
           # Token to authenticate requests to GitHub
@@ -116,7 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Create backport pull requests
-        uses: korthout/backport-action@v1-rc1
+        uses: korthout/backport-action@v1
         with:
           # Optional
           # Token to authenticate requests to GitHub

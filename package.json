@@ -1,7 +1,7 @@
 {
   "name": "backport-action",
-  "version": "1.0.0-rc1",
-  "private": true,
+  "version": "1.0.0",
+  "private": false,
   "description": "GitHub action to automatically backport pull requests",
   "main": "lib/main.js",
   "scripts": {
