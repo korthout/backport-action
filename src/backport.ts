@@ -271,7 +271,7 @@ export class Backport {
                 git cherry-pick -x $ancref..${headref}
                 \`\`\``
         : dedent`Note that rebase and squash merges are not supported at this time.
-                For more information see https://github.com/zeebe-io/backport-action/issues/46.`;
+                For more information see https://github.com/korthout/backport-action/issues/46.`;
 
     return dedent`Backport failed for \`${target}\`, ${reason}.
 
