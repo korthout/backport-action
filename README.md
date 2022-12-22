@@ -1,6 +1,6 @@
 # Backport action
 
-A GitHub action to backport merged pull requests to selected branches.
+Fast and flexible GitHub action to backport merged pull requests to selected branches.
 
 This can be useful when you're supporting multiple versions of your product.
 After fixing a bug, you may want to apply that patch to the other versions.

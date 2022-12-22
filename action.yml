@@ -1,6 +1,7 @@
-name: "Backport"
-description: "Cherry-pick commits from labelled pull requests (supports Merge Queue & Bors)"
-author: "korthout"
+name: Backport merged pull requests to selected branches
+description: >
+  Fast and flexible action to cherry-pick commits from labeled pull requests
+author: korthout
 inputs:
   github_token:
     description: >
