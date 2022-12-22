@@ -1,5 +1,5 @@
-name: "backport-action"
-description: "Automatically backport pull requests"
+name: "Backport"
+description: "Cherry-pick commits from labelled pull requests (supports Merge Queue & Bors)"
 author: "korthout"
 inputs:
   github_token:
