@@ -297,7 +297,8 @@ export class Backport {
   }
 
   private composeMessageForSuccess(pr_number: number, target: string) {
-    return dedent`Successfully created backport PR #${pr_number} for \`${target}\`.`;
+    return dedent`Successfully created backport PR for \`${target}\`:
+                  - #${pr_number}`;
   }
 }
 

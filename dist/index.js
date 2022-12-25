@@ -250,7 +250,8 @@ class Backport {
                 (see action log for full response)`;
     }
     composeMessageForSuccess(pr_number, target) {
-        return (0, dedent_1.default) `Successfully created backport PR #${pr_number} for \`${target}\`.`;
+        return (0, dedent_1.default) `Successfully created backport PR for \`${target}\`:
+                  - #${pr_number}`;
     }
 }
 exports.Backport = Backport;
