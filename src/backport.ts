@@ -106,7 +106,23 @@ export class Backport {
         const target = match[1];
         console.log(`Found target in label: ${target}`);
 
-        await git.fetch(target, this.config.pwd, 1);
+        try {
+          await git.fetch(target, this.config.pwd, 1);
+        } catch (error) {
+          if (error instanceof git.GitRefNotFoundError) {
+            const message = this.composeMessageForFetchTargetFailure(error.ref);
+            console.error(message);
+            await this.github.createComment({
+              owner,
+              repo,
+              issue_number: pull_number,
+              body: message,
+            });
+            continue;
+          } else {
+            throw error;
+          }
+        }
 
         try {
           const branchname = `backport-${pull_number}-to-${target}`;
@@ -241,6 +257,11 @@ export class Backport {
       target
     );
     return { title, body };
+  }
+
+  private composeMessageForFetchTargetFailure(target: string) {
+    return dedent`Backport failed for \`${target}\`: couldn't find remote ref \`${target}\`.
+                  Please ensure that this Github repo has a branch named \`${target}\`.`;
   }
 
   private composeMessageForBackportScriptFailure(
