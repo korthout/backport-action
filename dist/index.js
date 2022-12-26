@@ -103,7 +103,25 @@ class Backport {
                     //extract the target branch (e.g. "stable/0.24")
                     const target = match[1];
                     console.log(`Found target in label: ${target}`);
-                    yield git.fetch(target, this.config.pwd, 1);
+                    try {
+                        yield git.fetch(target, this.config.pwd, 1);
+                    }
+                    catch (error) {
+                        if (error instanceof git.GitRefNotFoundError) {
+                            const message = this.composeMessageForFetchTargetFailure(error.ref);
+                            console.error(message);
+                            yield this.github.createComment({
+                                owner,
+                                repo,
+                                issue_number: pull_number,
+                                body: message,
+                            });
+                            continue;
+                        }
+                        else {
+                            throw error;
+                        }
+                    }
                     try {
                         const branchname = `backport-${pull_number}-to-${target}`;
                         console.log(`Start backport to ${branchname}`);
@@ -212,6 +230,10 @@ class Backport {
         const body = utils.replacePlaceholders(this.config.pull.description, main, target);
         return { title, body };
     }
+    composeMessageForFetchTargetFailure(target) {
+        return (0, dedent_1.default) `Backport failed for \`${target}\`: couldn't find remote ref \`${target}\`.
+                  Please ensure that this Github repo has a branch named \`${target}\`.`;
+    }
     composeMessageForBackportScriptFailure(target, exitcode, baseref, headref, branchname) {
         var _a;
         const reasons = {
@@ -287,19 +309,31 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.cherryPick = exports.checkout = exports.push = exports.fetch = void 0;
+exports.cherryPick = exports.checkout = exports.push = exports.fetch = exports.GitRefNotFoundError = void 0;
 const execa_1 = __importDefault(__nccwpck_require__(5447));
+class GitRefNotFoundError extends Error {
+    constructor(message, ref) {
+        super(message);
+        this.ref = ref;
+    }
+}
+exports.GitRefNotFoundError = GitRefNotFoundError;
 /**
  * Fetches a ref from origin
  *
  * @param ref the sha, branchname, etc to fetch
  * @param pwd the root of the git repository
  * @param depth the number of commits to fetch
+ * @throws GitRefNotFoundError when ref not found
+ * @throws Error for any other non-zero exit code
  */
 function fetch(ref, pwd, depth) {
     return __awaiter(this, void 0, void 0, function* () {
         const { exitCode } = yield git("fetch", [`--depth=${depth}`, "origin", ref], pwd);
-        if (exitCode !== 0) {
+        if (exitCode === 128) {
+            throw new GitRefNotFoundError(`Expected to fetch '${ref}', but couldn't find it`, ref);
+        }
+        else if (exitCode !== 0) {
             throw new Error(`'git fetch origin ${ref}' failed with exit code ${exitCode}`);
         }
     });
