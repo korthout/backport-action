@@ -1,11 +1,21 @@
 import { execa } from "execa";
 
+export class GitRefNotFoundError extends Error {
+  ref: string;
+  constructor(message: string, ref: string) {
+    super(message);
+    this.ref = ref;
+  }
+}
+
 /**
  * Fetches a ref from origin
  *
  * @param ref the sha, branchname, etc to fetch
  * @param pwd the root of the git repository
  * @param depth the number of commits to fetch
+ * @throws GitRefNotFoundError when ref not found
+ * @throws Error for any other non-zero exit code
  */
 export async function fetch(ref: string, pwd: string, depth: number) {
   const { exitCode } = await git(
@@ -13,7 +23,12 @@ export async function fetch(ref: string, pwd: string, depth: number) {
     [`--depth=${depth}`, "origin", ref],
     pwd
   );
-  if (exitCode !== 0) {
+  if (exitCode === 128) {
+    throw new GitRefNotFoundError(
+      `Expected to fetch '${ref}', but couldn't find it`,
+      ref
+    );
+  } else if (exitCode !== 0) {
     throw new Error(
       `'git fetch origin ${ref}' failed with exit code ${exitCode}`
     );
