@@ -31,6 +31,15 @@ inputs:
       Please refer to this action's README for all available placeholders.
     default: >-
       [Backport ${target_branch}] ${pull_title}
+outputs:
+  was_successful:
+    description: >
+      Whether or not the changes could be backported successfully to all targets.
+      Either 'true' or 'false'.
+  was_successful_by_target:
+    description: >
+      Whether or not the changes could be backported successfully to all targets - broken down by target.
+      Follows the pattern '{{label}}=true|false'.
 runs:
   using: "node16"
   main: "dist/index.js"

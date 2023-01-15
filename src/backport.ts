@@ -22,6 +22,11 @@ type Config = {
   };
 };
 
+enum Output {
+  wasSuccessful = "was_successful",
+  wasSuccessfulByTarget = "was_successful_by_target"
+}
+
 export class Backport {
   private github;
   private config;
@@ -82,6 +87,7 @@ export class Backport {
 
       console.log(`Found commits: ${commitShas}`);
 
+      const successByTarget = new Map<string, boolean>();
       for (const label of labels) {
         console.log(`Working on label ${label.name}`);
 
@@ -112,6 +118,7 @@ export class Backport {
           if (error instanceof git.GitRefNotFoundError) {
             const message = this.composeMessageForFetchTargetFailure(error.ref);
             console.error(message);
+            successByTarget.set(target, false);
             await this.github.createComment({
               owner,
               repo,
@@ -139,6 +146,7 @@ export class Backport {
               branchname
             );
             console.error(message);
+            successByTarget.set(target, false);
             await this.github.createComment({
               owner,
               repo,
@@ -159,6 +167,7 @@ export class Backport {
               branchname
             );
             console.error(message);
+            successByTarget.set(target, false);
             await this.github.createComment({
               owner,
               repo,
@@ -176,6 +185,7 @@ export class Backport {
               pushExitCode
             );
             console.error(message);
+            successByTarget.set(target, false);
             await this.github.createComment({
               owner,
               repo,
@@ -199,6 +209,7 @@ export class Backport {
 
           if (new_pr_response.status != 201) {
             console.error(JSON.stringify(new_pr_response));
+            successByTarget.set(target, false);
             const message =
               this.composeMessageForCreatePRFailed(new_pr_response);
             await this.github.createComment({
@@ -212,6 +223,7 @@ export class Backport {
           const new_pr = new_pr_response.data;
 
           const message = this.composeMessageForSuccess(new_pr.number, target);
+          successByTarget.set(target, true);
           await this.github.createComment({
             owner,
             repo,
@@ -221,6 +233,7 @@ export class Backport {
         } catch (error) {
           if (error instanceof Error) {
             console.error(error.message);
+            successByTarget.set(target, false);
             await this.github.createComment({
               owner,
               repo,
@@ -232,6 +245,8 @@ export class Backport {
           }
         }
       }
+
+      this.createOutput(successByTarget);
     } catch (error) {
       if (error instanceof Error) {
         console.error(error.message);
@@ -320,6 +335,15 @@ export class Backport {
   private composeMessageForSuccess(pr_number: number, target: string) {
     return dedent`Successfully created backport PR for \`${target}\`:
                   - #${pr_number}`;
+  }
+
+  private createOutput(successByTarget: Map<string, boolean>) {
+    const anyTargetFailed = Array.from(successByTarget.values()).includes(false);
+    core.setOutput(Output.wasSuccessful, !anyTargetFailed);
+
+    const byTargetOutput = Array.from(successByTarget.entries())
+        .reduce<string>((i, [target, result]) => `${i}${target}=${result}\n`, '');
+    core.setOutput(Output.wasSuccessfulByTarget, byTargetOutput);
   }
 }
 
