@@ -24,7 +24,7 @@ type Config = {
 
 enum Output {
   wasSuccessful = "was_successful",
-  wasSuccessfulByTarget = "was_successful_by_target"
+  wasSuccessfulByTarget = "was_successful_by_target",
 }
 
 export class Backport {
@@ -338,11 +338,15 @@ export class Backport {
   }
 
   private createOutput(successByTarget: Map<string, boolean>) {
-    const anyTargetFailed = Array.from(successByTarget.values()).includes(false);
+    const anyTargetFailed = Array.from(successByTarget.values()).includes(
+      false
+    );
     core.setOutput(Output.wasSuccessful, !anyTargetFailed);
 
-    const byTargetOutput = Array.from(successByTarget.entries())
-        .reduce<string>((i, [target, result]) => `${i}${target}=${result}\n`, '');
+    const byTargetOutput = Array.from(successByTarget.entries()).reduce<string>(
+      (i, [target, result]) => `${i}${target}=${result}\n`,
+      ""
+    );
     core.setOutput(Output.wasSuccessfulByTarget, byTargetOutput);
   }
 }
