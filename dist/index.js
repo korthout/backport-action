@@ -47,6 +47,11 @@ const core = __importStar(__nccwpck_require__(2186));
 const dedent_1 = __importDefault(__nccwpck_require__(5281));
 const git = __importStar(__nccwpck_require__(3374));
 const utils = __importStar(__nccwpck_require__(918));
+var Output;
+(function (Output) {
+    Output["wasSuccessful"] = "was_successful";
+    Output["wasSuccessfulByTarget"] = "was_successful_by_target";
+})(Output || (Output = {}));
 class Backport {
     constructor(github, config) {
         this.github = github;
@@ -85,6 +90,7 @@ class Backport {
                 console.log("Determining first and last commit shas, so we can cherry-pick the commit range");
                 const commitShas = yield this.github.getCommits(mainpr);
                 console.log(`Found commits: ${commitShas}`);
+                const successByTarget = new Map();
                 for (const label of labels) {
                     console.log(`Working on label ${label.name}`);
                     // we are looking for labels like "backport stable/0.24"
@@ -110,6 +116,7 @@ class Backport {
                         if (error instanceof git.GitRefNotFoundError) {
                             const message = this.composeMessageForFetchTargetFailure(error.ref);
                             console.error(message);
+                            successByTarget.set(target, false);
                             yield this.github.createComment({
                                 owner,
                                 repo,
@@ -131,6 +138,7 @@ class Backport {
                         catch (error) {
                             const message = this.composeMessageForBackportScriptFailure(target, 3, baseref, headref, branchname);
                             console.error(message);
+                            successByTarget.set(target, false);
                             yield this.github.createComment({
                                 owner,
                                 repo,
@@ -145,6 +153,7 @@ class Backport {
                         catch (error) {
                             const message = this.composeMessageForBackportScriptFailure(target, 4, baseref, headref, branchname);
                             console.error(message);
+                            successByTarget.set(target, false);
                             yield this.github.createComment({
                                 owner,
                                 repo,
@@ -158,6 +167,7 @@ class Backport {
                         if (pushExitCode != 0) {
                             const message = this.composeMessageForGitPushFailure(target, pushExitCode);
                             console.error(message);
+                            successByTarget.set(target, false);
                             yield this.github.createComment({
                                 owner,
                                 repo,
@@ -179,6 +189,7 @@ class Backport {
                         });
                         if (new_pr_response.status != 201) {
                             console.error(JSON.stringify(new_pr_response));
+                            successByTarget.set(target, false);
                             const message = this.composeMessageForCreatePRFailed(new_pr_response);
                             yield this.github.createComment({
                                 owner,
@@ -190,6 +201,7 @@ class Backport {
                         }
                         const new_pr = new_pr_response.data;
                         const message = this.composeMessageForSuccess(new_pr.number, target);
+                        successByTarget.set(target, true);
                         yield this.github.createComment({
                             owner,
                             repo,
@@ -200,6 +212,7 @@ class Backport {
                     catch (error) {
                         if (error instanceof Error) {
                             console.error(error.message);
+                            successByTarget.set(target, false);
                             yield this.github.createComment({
                                 owner,
                                 repo,
@@ -212,6 +225,7 @@ class Backport {
                         }
                     }
                 }
+                this.createOutput(successByTarget);
             }
             catch (error) {
                 if (error instanceof Error) {
@@ -274,6 +288,12 @@ class Backport {
     composeMessageForSuccess(pr_number, target) {
         return (0, dedent_1.default) `Successfully created backport PR for \`${target}\`:
                   - #${pr_number}`;
+    }
+    createOutput(successByTarget) {
+        const anyTargetFailed = Array.from(successByTarget.values()).includes(false);
+        core.setOutput(Output.wasSuccessful, !anyTargetFailed);
+        const byTargetOutput = Array.from(successByTarget.entries()).reduce((i, [target, result]) => `${i}${target}=${result}\n`, "");
+        core.setOutput(Output.wasSuccessfulByTarget, byTargetOutput);
     }
 }
 exports.Backport = Backport;
