@@ -157,6 +157,15 @@ Placeholder | Replaced with
 `pull_title` | The title of the original pull request that is backported, e.g. `fix: some error`
 `target_branch`| The branchname to which the pull request is backported, e.g. `release-0.23`
 
+## Outputs
+
+The action provides the following [outputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idoutputs):
+
+Output | Description
+-------|------------
+`was_successful` | Whether or not the changes could be backported successfully to all targets. Either `true` or `false`.
+`was_successful_by_target` | Whether or not the changes could be backported successfully to all targets - broken down by target. Follows the pattern `{{label}}=true\|false`.
+
 ## Local compilation
 
 Install the dependencies
