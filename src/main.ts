@@ -13,14 +13,15 @@ async function run(): Promise<void> {
   const pattern = new RegExp(core.getInput("label_pattern"));
   const description = core.getInput("pull_description");
   const title = core.getInput("pull_title");
-  const copy_labels_pattern = new RegExp(core.getInput("copy_labels_pattern"));
+  const copy_labels_pattern = core.getInput("copy_labels_pattern");
 
   const github = new Github(token);
   const backport = new Backport(github, {
     pwd,
     labels: { pattern },
     pull: { description, title },
-    copy_labels_pattern,
+    copy_labels_pattern:
+      copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
   });
 
   return backport.run();

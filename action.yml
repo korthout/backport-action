@@ -33,7 +33,6 @@ inputs:
       [Backport ${target_branch}] ${pull_title}
   copy_labels_pattern:
     description: Regex pattern to match github labels which will be copied from the original PR to the backport PR
-    default: null
 outputs:
   was_successful:
     description: >
