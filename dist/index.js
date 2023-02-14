@@ -89,6 +89,7 @@ class Backport {
                 );
                 console.log("Determining first and last commit shas, so we can cherry-pick the commit range");
                 const commitShas = yield this.github.getCommits(mainpr);
+                console.log(`Found commits: ${commitShas}`);
                 let labelsToCopy = [];
                 if (typeof this.config.copy_labels_pattern !== "undefined") {
                     let copyLabelsPattern = this.config.copy_labels_pattern;
@@ -97,8 +98,7 @@ class Backport {
                         .filter((label) => label.match(copyLabelsPattern) &&
                         !label.match(this.config.labels.pattern));
                 }
-                console.log(`Copying labels: ${labelsToCopy}`);
-                console.log(`Found commits: ${commitShas}`);
+                console.log(`Will copy labels matching ${this.config.copy_labels_pattern}. Found matching labels: ${labelsToCopy}`);
                 const successByTarget = new Map();
                 for (const label of labels) {
                     console.log(`Working on label ${label.name}`);
@@ -209,10 +209,12 @@ class Backport {
                             continue;
                         }
                         const new_pr = new_pr_response.data;
-                        const label_response = yield this.github.labelPR(new_pr.number, labelsToCopy);
-                        if (label_response.status != 200) {
-                            console.error(JSON.stringify(label_response));
-                            // The PR was still created so let's still comment on the original.
+                        if (labelsToCopy.length > 0) {
+                            const label_response = yield this.github.labelPR(new_pr.number, labelsToCopy);
+                            if (label_response.status != 200) {
+                                console.error(JSON.stringify(label_response));
+                                // The PR was still created so let's still comment on the original.
+                            }
                         }
                         const message = this.composeMessageForSuccess(new_pr.number, target);
                         successByTarget.set(target, true);
@@ -563,7 +565,7 @@ class Github {
     }
     labelPR(pr, labels) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log(`Label PR: ${pr}`);
+            console.log(`Label PR #${pr} with labels: ${labels}`);
             return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addLabels(Object.assign(Object.assign({}, this.getRepo()), { issue_number: pr, labels }));
         });
     }
@@ -627,13 +629,13 @@ function run() {
         const pattern = new RegExp(core.getInput("label_pattern"));
         const description = core.getInput("pull_description");
         const title = core.getInput("pull_title");
-        const copy_labels_pattern = new RegExp(core.getInput("copy_labels_pattern"));
+        const copy_labels_pattern = core.getInput("copy_labels_pattern");
         const github = new github_1.Github(token);
         const backport = new backport_1.Backport(github, {
             pwd,
             labels: { pattern },
             pull: { description, title },
-            copy_labels_pattern,
+            copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
         });
         return backport.run();
     });
