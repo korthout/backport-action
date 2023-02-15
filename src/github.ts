@@ -118,7 +118,7 @@ export class Github implements GithubApi {
     return this.#octokit.rest.pulls.requestReviewers(request);
   }
 
-  public async labelPR(pr: number, labels: [string]) {
+  public async labelPR(pr: number, labels: string[]) {
     console.log(`Label PR #${pr} with labels: ${labels}`);
     return this.#octokit.rest.issues.addLabels({
       ...this.getRepo(),
