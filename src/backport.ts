@@ -237,13 +237,15 @@ export class Backport {
           }
           const new_pr = new_pr_response.data;
 
-          const label_response = await this.github.labelPR(
-            new_pr.number,
-            labelsToCopy
-          );
-          if (label_response.status != 200) {
-            console.error(JSON.stringify(label_response));
-            // The PR was still created so let's still comment on the original.
+          if (labelsToCopy.length > 0) {
+            const label_response = await this.github.labelPR(
+              new_pr.number,
+              labelsToCopy
+            );
+            if (label_response.status != 200) {
+              console.error(JSON.stringify(label_response));
+              // The PR was still created so let's still comment on the original.
+            }
           }
 
           const message = this.composeMessageForSuccess(new_pr.number, target);
