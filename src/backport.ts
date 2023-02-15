@@ -85,6 +85,7 @@ export class Backport {
       );
 
       const commitShas = await this.github.getCommits(mainpr);
+      console.log(`Found commits: ${commitShas}`);
 
       let labelsToCopy: string[] = [];
       if (typeof this.config.copy_labels_pattern !== "undefined") {
@@ -97,10 +98,9 @@ export class Backport {
               !label.match(this.config.labels.pattern)
           );
       }
-
-      console.log(`Copying labels: ${labelsToCopy}`);
-
-      console.log(`Found commits: ${commitShas}`);
+      console.log(
+        `Will copy labels matching ${this.config.copy_labels_pattern}. Found matching labels: ${labelsToCopy}`
+      );
 
       const successByTarget = new Map<string, boolean>();
       for (const label of labels) {
