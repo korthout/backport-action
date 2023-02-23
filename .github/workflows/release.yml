@@ -6,13 +6,6 @@ on:
         description: The new version to release, e.g. 1.0.0
         type: string
         required: true
-      type:
-        type: choice
-        description: Is this a major, minor or patch release?
-        options:
-        - major
-        - minor
-        - patch
       nextDevelopmentVersion:
         description: >
           The new version to use during development, e.g. 1.1.0-SNAPSHOT
@@ -21,7 +14,7 @@ on:
       dryRun:
         description: Don't push commits or tags
         type: boolean
-        default: false
+        default: true
 concurrency: release
 jobs:
   release:
@@ -59,35 +52,19 @@ jobs:
           include: "package.json"
           regex: false
 
-      - name: Extract major, minor and patch version components
+      - name: Extract semver release version components
         uses: madhead/semver-utils@v3
         id: version
         with:
-          version: ${{ input.releaseVersion }}
+          version: ${{ inputs.releaseVersion }}
 
-      - name: Move and create tags for patch release
-        if: ${{ input.type == 'patch' }}
+      - name: Create and move major/minor tags
         run:
-          git tag --delete v${{ steps.version.outputs.major }}
-          git tag --delete v${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }}
-          git tag v${{ steps.version.outputs.major }}
-          git tag v${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }}
-
-      - name: Move and create tags for minor release
-        if: ${{ input.type == 'minor' }}
-        run:
-          git tag --delete v${{ steps.version.outputs.major }}
-          git tag v${{ steps.version.outputs.major }}
-          git tag v${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }}
-
-      - name: Create tags for major release
-        if: ${{ input.type == 'major' }}
-        run:
-          git tag v${{ steps.version.outputs.major }}
-          git tag v${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }}
+          git tag v${{ steps.version.outputs.major }} --force
+          git tag v${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }} --force
 
       - name: Push major/minor tags
-        if: ${{ intput.dryRun == false }}
+        if: ${{ inputs.dryRun == false }}
         run:
           git push origin v${{ steps.version.outputs.major }} --force
           git push origin v${{ steps.version.outputs.minor }} --force
