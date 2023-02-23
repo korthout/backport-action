@@ -31,6 +31,11 @@ inputs:
       Please refer to this action's README for all available placeholders.
     default: >-
       [Backport ${target_branch}] ${pull_title}
+  copy_labels_pattern:
+    description: >
+      Regex pattern to match github labels which will be copied from the
+      original pull request to the backport pull request. By default, no labels
+      are copied.
 outputs:
   was_successful:
     description: >

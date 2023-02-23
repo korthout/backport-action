@@ -18,6 +18,7 @@ export interface GithubApi {
   isMerged(pull: PullRequest): Promise<boolean>;
   getCommits(pull: PullRequest): Promise<string[]>;
   createPR(pr: CreatePullRequest): Promise<CreatePullRequestResponse>;
+  labelPR(pr: number, labels: string[]): Promise<LabelPullRequestResponse>;
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
 }
 
@@ -116,6 +117,15 @@ export class Github implements GithubApi {
     console.log(`Request reviewers: ${request.reviewers}`);
     return this.#octokit.rest.pulls.requestReviewers(request);
   }
+
+  public async labelPR(pr: number, labels: string[]) {
+    console.log(`Label PR #${pr} with labels: ${labels}`);
+    return this.#octokit.rest.issues.addLabels({
+      ...this.getRepo(),
+      issue_number: pr,
+      labels,
+    });
+  }
 }
 
 export type PullRequest = {
@@ -147,6 +157,9 @@ export type CreatePullRequestResponse = {
   };
 };
 export type RequestReviewersResponse = CreatePullRequestResponse;
+export type LabelPullRequestResponse = {
+  status: number;
+};
 
 export type Comment = {
   owner: string;

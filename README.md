@@ -67,6 +67,12 @@ jobs:
           # These are indicated by a dollar sign and curly braces (`${placeholder}`).
           # Please refer to this action's README for all available placeholders.
           # pull_title: "[Backport ${target_branch}] ${pull_title}"
+
+          # Optional
+          # Regex pattern to match github labels which will be copied from the
+          # original pull request to the backport pull request. By default, no
+          # labels are copied.
+          # copy_labels_pattern: ''
 ```
 
 ### Trigger using a comment
@@ -139,6 +145,12 @@ jobs:
           # These are indicated by a dollar sign and curly braces (`${placeholder}`).
           # Please refer to this action's README for all available placeholders.
           # pull_title: "[Backport ${target_branch}] ${pull_title}"
+
+          # Optional
+          # Regex pattern to match github labels which will be copied from the
+          # original pull request to the backport pull request. By default, no
+          # labels are copied.
+          # copy_labels_pattern: ''
 ```
 
 </p>
