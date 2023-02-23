@@ -146,8 +146,10 @@ export class Backport {
           }
         }
 
+        const folderName = `backport`;
+
         try {
-          const branchname = `backport-${pull_number}-to-${target}`;
+          const branchname = `${folderName}/backport-${pull_number}-to-${target}`;
 
           console.log(`Start backport to ${branchname}`);
           try {
