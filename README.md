@@ -107,7 +107,10 @@ The action can be configured with the following optional [inputs](https://docs.g
 
 Default: `${{ github.token }}`
 
-Token to authenticate requests to GitHub. Either `GITHUB_TOKEN` or a repo-scoped [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (PAT).
+Token to authenticate requests to GitHub.
+Used to create and label pull requests and to comment.
+
+Either `GITHUB_TOKEN` or a repo-scoped [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (PAT).
 
 ### `github_workspace`
 
@@ -117,10 +120,13 @@ Working directory for the backport action.
 
 ### `label_pattern`
 
-Default: `^backport ([^ ]+)$`
+Default: `^backport ([^ ]+)$` (e.g. matches `backport release-3.4`)
 
-A regex pattern to match the backport labels.
+Regex pattern to match the backport labels on the merged pull request.
 Must contain a capture group for the target branch.
+
+The action will backport the pull request to each matched target branch.
+See [How it works](#how-it-works).
 
 ### `pull_description`
 
@@ -130,7 +136,7 @@ Default:
 Backport of #${pull_number} to `${target_branch}`.
 ```
 
-Template used as description in the pull requests created by this action.
+Template used as description (i.e. body) in the pull requests created by this action.
 
 Placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
@@ -151,6 +157,7 @@ Please refer to this action's README for all available [placeholders](#placehold
 Default: `''` (disabled)
 
 Regex pattern to match github labels which will be copied from the original pull request to the backport pull request.
+Note that labels matching `label_pattern` are excluded.
 By default, no labels are copied.
 
 ## Placeholders
