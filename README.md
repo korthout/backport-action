@@ -38,41 +38,6 @@ jobs:
       - uses: actions/checkout@v3
       - name: Create backport pull requests
         uses: korthout/backport-action@v1
-        with:
-          # Optional
-          # Token to authenticate requests to GitHub
-          # github_token: ${{ secrets.GITHUB_TOKEN }}
-
-          # Optional
-          # Working directory for the backport action
-          # github_workspace: ${{ github.workspace }}
-
-          # Optional
-          # Regex pattern to match github labels
-          # Must contain a capture group for the target branch
-          # label_pattern: ^backport ([^ ]+)$
-
-          # Optional
-          # Template used as description in the pull requests created by this action.
-          # Placeholders can be used to define variable values.
-          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
-          # Please refer to this action's README for all available placeholders.
-          # pull_description: |-
-          #   # Description
-          #   Backport of #${pull_number} to `${target_branch}`.
-
-          # Optional
-          # Template used as the title in the pull requests created by this action.
-          # Placeholders can be used to define variable values.
-          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
-          # Please refer to this action's README for all available placeholders.
-          # pull_title: "[Backport ${target_branch}] ${pull_title}"
-
-          # Optional
-          # Regex pattern to match github labels which will be copied from the
-          # original pull request to the backport pull request. By default, no
-          # labels are copied.
-          # copy_labels_pattern: ''
 ```
 
 ### Trigger using a comment
@@ -116,48 +81,67 @@ jobs:
       - uses: actions/checkout@v3
       - name: Create backport pull requests
         uses: korthout/backport-action@v1
-        with:
-          # Optional
-          # Token to authenticate requests to GitHub
-          # github_token: ${{ secrets.GITHUB_TOKEN }}
-
-          # Optional
-          # Working directory for the backport action
-          # github_workspace: ${{ github.workspace }}
-
-          # Optional
-          # Regex pattern to match github labels
-          # Must contain a capture group for the target branch
-          # label_pattern: ^backport ([^ ]+)$
-
-          # Optional
-          # Template used as description in the pull requests created by this action.
-          # Placeholders can be used to define variable values.
-          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
-          # Please refer to this action's README for all available placeholders.
-          # pull_description: |-
-          #   # Description
-          #   Backport of #${pull_number} to `${target_branch}`.
-
-          # Optional
-          # Template used as the title in the pull requests created by this action.
-          # Placeholders can be used to define variable values.
-          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
-          # Please refer to this action's README for all available placeholders.
-          # pull_title: "[Backport ${target_branch}] ${pull_title}"
-
-          # Optional
-          # Regex pattern to match github labels which will be copied from the
-          # original pull request to the backport pull request. By default, no
-          # labels are copied.
-          # copy_labels_pattern: ''
 ```
 
 </p>
 </details>
 
-### Placeholders
-In the `pull_description` and `pull_title` inputs placeholders can be used to define variable values.
+## Inputs
+
+The action can be configured with the following optional [inputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepswith):
+
+### `github_token`
+
+Default: `${{ github.token }}`
+
+Token to authenticate requests to GitHub. Either `GITHUB_TOKEN` or a repo-scoped [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (PAT).
+
+### `github_workspace`
+
+Default: `${{ github.workspace }}`
+
+Working directory for the backport action.
+
+### `label_pattern`
+
+Default: `^backport ([^ ]+)$`
+
+A regex pattern to match the backport labels.
+Must contain a capture group for the target branch.
+
+### `pull_description`
+
+Default:
+```
+# Description
+Backport of #${pull_number} to `${target_branch}`.
+```
+
+Template used as description in the pull requests created by this action.
+
+Placeholders can be used to define variable values.
+These are indicated by a dollar sign and curly braces (`${placeholder}`).
+Please refer to this action's README for all available [placeholders](#placeholders).
+
+### `pull_title`
+
+Default: `[Backport ${target_branch}] ${pull_title}`
+
+Template used as the title in the pull requests created by this action.
+
+Placeholders can be used to define variable values.
+These are indicated by a dollar sign and curly braces (`${placeholder}`).
+Please refer to this action's README for all available [placeholders](#placeholders).
+
+### `copy_labels_pattern`
+
+Default: `''` (disabled)
+
+Regex pattern to match github labels which will be copied from the original pull request to the backport pull request.
+By default, no labels are copied.
+
+## Placeholders
+In the `pull_description` and `pull_title` inputs, placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 The following placeholders are available and are replaced with:
 
