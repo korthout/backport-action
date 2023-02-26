@@ -6,17 +6,21 @@ inputs:
   github_token:
     description: >
       Token to authenticate requests to GitHub.
+      Used to create and label pull requests and to comment.
       Either GITHUB_TOKEN or a repo-scoped Personal Access Token (PAT).
     default: ${{ github.token }}
   github_workspace:
     description: Working directory for the backport action.
     default: ${{ github.workspace }}
   label_pattern:
-    description: A regex pattern to match the backport labels.
+    description: >
+      Regex pattern to match the backport labels on the merged pull request.
+      Must contain a capture group for the target branch.
+      The action will backport the pull request to each matched target branch.
     default: ^backport ([^ ]+)$
   pull_description:
     description: >
-      Template used as description in the pull requests created by this action.
+      Template used as description (i.e. body) in the pull requests created by this action.
       Placeholders can be used to define variable values.
       These are indicated by a dollar sign and curly braces (`${placeholder}`).
       Please refer to this action's README for all available placeholders.
@@ -33,9 +37,9 @@ inputs:
       [Backport ${target_branch}] ${pull_title}
   copy_labels_pattern:
     description: >
-      Regex pattern to match github labels which will be copied from the
-      original pull request to the backport pull request. By default, no labels
-      are copied.
+      Regex pattern to match github labels which will be copied from the original pull request to the backport pull request.
+      Note that labels matching `label_pattern` are excluded.
+      By default, no labels are copied.
 outputs:
   was_successful:
     description: >

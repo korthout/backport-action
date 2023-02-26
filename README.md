@@ -6,15 +6,22 @@ This can be useful when you're supporting multiple versions of your product.
 After fixing a bug, you may want to apply that patch to the other versions.
 The manual labor of cherry-picking the individual commits can be automated using this action.
 
-The backport action will look for backport labels (e.g. `backport release-3.4`) on your merged pull request.
+## Features
+
+- Works out of the box - No configuration required / Defaults for everything
+- Fast - Only fetches the bare minimum / Supports shallow clones
+- Flexible - Supports all [merge methods](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/about-merge-methods-on-github) including [merge queue](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue) and [Bors](https://bors.tech/)
+- Configurable - Use inputs and outputs to fit it to your project
+- Transparent - Informs about its success / Cherry-picks with [`-x`](https://git-scm.com/docs/git-cherry-pick#Documentation/git-cherry-pick.txt--x)
+
+## How it works
+
+The backport action looks for labels matching the `label_pattern` input (e.g. `backport release-3.4`) on your merged pull request.
 For each of those labels:
 1. fetch and checkout a new branch from the target branch (e.g. `release-3.4`)
 2. cherry-pick the merged pull request's commits
 3. create a pull request to merge the new branch into the target branch
 4. comment on the original pull request about its success
-
-This backport action is able to deal with so called `octopus` merges (i.e. merges of multiple branches with a single commit).
-Therefore, this action is compatible with [Bors](https://bors.tech/), [GitHub Merge Queue](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue) and similar tools.
 
 ## Usage
 
@@ -23,7 +30,7 @@ Add the following workflow configuration to your repository's `.github/workflows
 ```yaml
 name: Backport merged pull request
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
 permissions:
   contents: write # so it can comment
@@ -38,42 +45,13 @@ jobs:
       - uses: actions/checkout@v3
       - name: Create backport pull requests
         uses: korthout/backport-action@v1
-        with:
-          # Optional
-          # Token to authenticate requests to GitHub
-          # github_token: ${{ secrets.GITHUB_TOKEN }}
-
-          # Optional
-          # Working directory for the backport action
-          # github_workspace: ${{ github.workspace }}
-
-          # Optional
-          # Regex pattern to match github labels
-          # Must contain a capture group for the target branch
-          # label_pattern: ^backport ([^ ]+)$
-
-          # Optional
-          # Template used as description in the pull requests created by this action.
-          # Placeholders can be used to define variable values.
-          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
-          # Please refer to this action's README for all available placeholders.
-          # pull_description: |-
-          #   # Description
-          #   Backport of #${pull_number} to `${target_branch}`.
-
-          # Optional
-          # Template used as the title in the pull requests created by this action.
-          # Placeholders can be used to define variable values.
-          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
-          # Please refer to this action's README for all available placeholders.
-          # pull_title: "[Backport ${target_branch}] ${pull_title}"
-
-          # Optional
-          # Regex pattern to match github labels which will be copied from the
-          # original pull request to the backport pull request. By default, no
-          # labels are copied.
-          # copy_labels_pattern: ''
 ```
+
+> **Note**
+> This workflow runs on [`pull_request_target`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target) so that `GITHUB_TOKEN` has write access to the repo when the merged pull request comes from a forked repository.
+> This write access is necessary for the action to push the commits it cherry-picked.
+> The backport action can be run on [`pull_request`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request) instead, by checking out the repository using a [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (PAT) with write access to the repo.
+> See [actions/checkout#usage](https://github.com/actions/checkout#usage) (`token`).
 
 ### Trigger using a comment
 
@@ -86,7 +64,7 @@ To enable this, add the following workflow configuration to your repository's `.
 ```yaml
 name: Backport merged pull request
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
   issue_comment:
     types: [created]
@@ -116,48 +94,74 @@ jobs:
       - uses: actions/checkout@v3
       - name: Create backport pull requests
         uses: korthout/backport-action@v1
-        with:
-          # Optional
-          # Token to authenticate requests to GitHub
-          # github_token: ${{ secrets.GITHUB_TOKEN }}
-
-          # Optional
-          # Working directory for the backport action
-          # github_workspace: ${{ github.workspace }}
-
-          # Optional
-          # Regex pattern to match github labels
-          # Must contain a capture group for the target branch
-          # label_pattern: ^backport ([^ ]+)$
-
-          # Optional
-          # Template used as description in the pull requests created by this action.
-          # Placeholders can be used to define variable values.
-          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
-          # Please refer to this action's README for all available placeholders.
-          # pull_description: |-
-          #   # Description
-          #   Backport of #${pull_number} to `${target_branch}`.
-
-          # Optional
-          # Template used as the title in the pull requests created by this action.
-          # Placeholders can be used to define variable values.
-          # These are indicated by a dollar sign and curly braces (`${placeholder}`).
-          # Please refer to this action's README for all available placeholders.
-          # pull_title: "[Backport ${target_branch}] ${pull_title}"
-
-          # Optional
-          # Regex pattern to match github labels which will be copied from the
-          # original pull request to the backport pull request. By default, no
-          # labels are copied.
-          # copy_labels_pattern: ''
 ```
 
 </p>
 </details>
 
-### Placeholders
-In the `pull_description` and `pull_title` inputs placeholders can be used to define variable values.
+## Inputs
+
+The action can be configured with the following optional [inputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepswith):
+
+### `github_token`
+
+Default: `${{ github.token }}`
+
+Token to authenticate requests to GitHub.
+Used to create and label pull requests and to comment.
+
+Either `GITHUB_TOKEN` or a repo-scoped [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (PAT).
+
+### `github_workspace`
+
+Default: `${{ github.workspace }}`
+
+Working directory for the backport action.
+
+### `label_pattern`
+
+Default: `^backport ([^ ]+)$` (e.g. matches `backport release-3.4`)
+
+Regex pattern to match the backport labels on the merged pull request.
+Must contain a capture group for the target branch.
+
+The action will backport the pull request to each matched target branch.
+See [How it works](#how-it-works).
+
+### `pull_description`
+
+Default:
+```
+# Description
+Backport of #${pull_number} to `${target_branch}`.
+```
+
+Template used as description (i.e. body) in the pull requests created by this action.
+
+Placeholders can be used to define variable values.
+These are indicated by a dollar sign and curly braces (`${placeholder}`).
+Please refer to this action's README for all available [placeholders](#placeholders).
+
+### `pull_title`
+
+Default: `[Backport ${target_branch}] ${pull_title}`
+
+Template used as the title in the pull requests created by this action.
+
+Placeholders can be used to define variable values.
+These are indicated by a dollar sign and curly braces (`${placeholder}`).
+Please refer to this action's README for all available [placeholders](#placeholders).
+
+### `copy_labels_pattern`
+
+Default: `''` (disabled)
+
+Regex pattern to match github labels which will be copied from the original pull request to the backport pull request.
+Note that labels matching `label_pattern` are excluded.
+By default, no labels are copied.
+
+## Placeholders
+In the `pull_description` and `pull_title` inputs, placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 The following placeholders are available and are replaced with:
 
@@ -177,45 +181,3 @@ Output | Description
 -------|------------
 `was_successful` | Whether or not the changes could be backported successfully to all targets. Either `true` or `false`.
 `was_successful_by_target` | Whether or not the changes could be backported successfully to all targets - broken down by target. Follows the pattern `{{label}}=true\|false`.
-
-## Local compilation
-
-Install the dependencies
-
-```
-npm install
-```
-
-Build the typescript and package it for distribution
-
-```
-npm run format && npm run build && npm run package
-```
-
-## Testing
-
-Run all tests
-
-```
-npm test
-```
-
-Run all tests with additional console output
-
-```
-npm run test-verbose
-```
-
-Shorthand for format, build, package and test
-
-```
-npm run all
-```
-
-This action can also be tested using [korthout/backport-action-test](https://github.com/korthout/backport-action-test).
-
-## Releases
-
-The distribution is hosted in this repository under `dist`.
-Simply build and package the distribution and commit the changes to release a new version.
-Release commits should also be tagged (e.g. `v1.2.3`) and the major release tag (e.g. `v1`) should be moved as [officially recommended](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md).
