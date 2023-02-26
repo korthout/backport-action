@@ -16,7 +16,7 @@ The manual labor of cherry-picking the individual commits can be automated using
 
 ## How it works
 
-The backport action will look for backport labels (e.g. `backport release-3.4`) on your merged pull request.
+The backport action looks for labels matching the `label_pattern` input (e.g. `backport release-3.4`) on your merged pull request.
 For each of those labels:
 1. fetch and checkout a new branch from the target branch (e.g. `release-3.4`)
 2. cherry-pick the merged pull request's commits
