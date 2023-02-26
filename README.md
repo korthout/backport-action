@@ -23,7 +23,7 @@ Add the following workflow configuration to your repository's `.github/workflows
 ```yaml
 name: Backport merged pull request
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
 permissions:
   contents: write # so it can comment
@@ -40,6 +40,12 @@ jobs:
         uses: korthout/backport-action@v1
 ```
 
+> **Note**
+> This workflow runs on [`pull_request_target`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target) so that `GITHUB_TOKEN` has write access to the repo when the merged pull request comes from a forked repository.
+> This write access is necessary for the action to push the commits it cherry-picked.
+> The backport action can be run on [`pull_request`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request) instead, by checking out the repository using a [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (PAT) with write access to the repo.
+> See [actions/checkout#usage](https://github.com/actions/checkout#usage) (`token`).
+
 ### Trigger using a comment
 
 You can also trigger the backport action by writing a comment containing `/backport` on a merged pull request.
@@ -51,7 +57,7 @@ To enable this, add the following workflow configuration to your repository's `.
 ```yaml
 name: Backport merged pull request
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
   issue_comment:
     types: [created]
