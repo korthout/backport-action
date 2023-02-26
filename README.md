@@ -6,15 +6,22 @@ This can be useful when you're supporting multiple versions of your product.
 After fixing a bug, you may want to apply that patch to the other versions.
 The manual labor of cherry-picking the individual commits can be automated using this action.
 
+## Features
+
+- Works out of the box - No configuration required / Defaults for everything
+- Fast - Only fetches the bare minimum / Supports shallow clones
+- Flexible - Supports all [merge methods](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/about-merge-methods-on-github) including [merge queue](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue) and [Bors](https://bors.tech/)
+- Configurable - Use inputs and outputs to fit it to your project
+- Transparent - Informs about its success / Cherry-picks with [`-x`](https://git-scm.com/docs/git-cherry-pick#Documentation/git-cherry-pick.txt--x)
+
+## How it works
+
 The backport action will look for backport labels (e.g. `backport release-3.4`) on your merged pull request.
 For each of those labels:
 1. fetch and checkout a new branch from the target branch (e.g. `release-3.4`)
 2. cherry-pick the merged pull request's commits
 3. create a pull request to merge the new branch into the target branch
 4. comment on the original pull request about its success
-
-This backport action is able to deal with so called `octopus` merges (i.e. merges of multiple branches with a single commit).
-Therefore, this action is compatible with [Bors](https://bors.tech/), [GitHub Merge Queue](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue) and similar tools.
 
 ## Usage
 
