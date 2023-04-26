@@ -344,7 +344,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cherryPick = exports.checkout = exports.push = exports.fetch = exports.GitRefNotFoundError = void 0;
-const execa_1 = __nccwpck_require__(276);
+const execa_1 = __nccwpck_require__(9956);
 class GitRefNotFoundError extends Error {
     constructor(message, ref) {
         super(message);
@@ -8389,7 +8389,7 @@ exports.implementation = class URLImpl {
 
 
 const conversions = __nccwpck_require__(5871);
-const utils = __nccwpck_require__(3979);
+const utils = __nccwpck_require__(276);
 const Impl = __nccwpck_require__(8262);
 
 const impl = utils.implSymbol;
@@ -9910,7 +9910,7 @@ module.exports.parseURL = function (input, options) {
 
 /***/ }),
 
-/***/ 3979:
+/***/ 276:
 /***/ ((module) => {
 
 "use strict";
@@ -11585,7 +11585,7 @@ module.exports = require("zlib");
 
 /***/ }),
 
-/***/ 276:
+/***/ 9956:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -11594,6 +11594,7 @@ __nccwpck_require__.r(__webpack_exports__);
 
 // EXPORTS
 __nccwpck_require__.d(__webpack_exports__, {
+  "$": () => (/* binding */ $),
   "execa": () => (/* binding */ execa),
   "execaCommand": () => (/* binding */ execaCommand),
   "execaCommandSync": () => (/* binding */ execaCommandSync),
@@ -12452,6 +12453,8 @@ const setExitHandler = async (spawned, {cleanup, detached}, timedPromise) => {
 	});
 };
 
+;// CONCATENATED MODULE: external "node:fs"
+const external_node_fs_namespaceObject = require("node:fs");
 ;// CONCATENATED MODULE: ./node_modules/is-stream/index.js
 function isStream(stream) {
 	return stream !== null
@@ -12483,6 +12486,50 @@ function isTransformStream(stream) {
 		&& typeof stream._transform === 'function';
 }
 
+;// CONCATENATED MODULE: ./node_modules/execa/lib/pipe.js
+
+
+
+
+const isExecaChildProcess = target => target instanceof external_node_child_process_namespaceObject.ChildProcess && typeof target.then === 'function';
+
+const pipeToTarget = (spawned, streamName, target) => {
+	if (typeof target === 'string') {
+		spawned[streamName].pipe((0,external_node_fs_namespaceObject.createWriteStream)(target));
+		return spawned;
+	}
+
+	if (isWritableStream(target)) {
+		spawned[streamName].pipe(target);
+		return spawned;
+	}
+
+	if (!isExecaChildProcess(target)) {
+		throw new TypeError('The second argument must be a string, a stream or an Execa child process.');
+	}
+
+	if (!isWritableStream(target.stdin)) {
+		throw new TypeError('The target child process\'s stdin must be available.');
+	}
+
+	spawned[streamName].pipe(target.stdin);
+	return target;
+};
+
+const addPipeMethods = spawned => {
+	if (spawned.stdout !== null) {
+		spawned.pipeStdout = pipeToTarget.bind(undefined, spawned, 'stdout');
+	}
+
+	if (spawned.stderr !== null) {
+		spawned.pipeStderr = pipeToTarget.bind(undefined, spawned, 'stderr');
+	}
+
+	if (spawned.all !== undefined) {
+		spawned.pipeAll = pipeToTarget.bind(undefined, spawned, 'all');
+	}
+};
+
 // EXTERNAL MODULE: ./node_modules/get-stream/index.js
 var get_stream = __nccwpck_require__(1766);
 // EXTERNAL MODULE: ./node_modules/merge-stream/index.js
@@ -12492,8 +12539,46 @@ var merge_stream = __nccwpck_require__(2621);
 
 
 
-// `input` option
-const handleInput = (spawned, input) => {
+
+const validateInputOptions = input => {
+	if (input !== undefined) {
+		throw new TypeError('The `input` and `inputFile` options cannot be both set.');
+	}
+};
+
+const getInputSync = ({input, inputFile}) => {
+	if (typeof inputFile !== 'string') {
+		return input;
+	}
+
+	validateInputOptions(input);
+	return (0,external_node_fs_namespaceObject.readFileSync)(inputFile);
+};
+
+// `input` and `inputFile` option in sync mode
+const handleInputSync = options => {
+	const input = getInputSync(options);
+
+	if (isStream(input)) {
+		throw new TypeError('The `input` option cannot be a stream in sync mode');
+	}
+
+	return input;
+};
+
+const getInput = ({input, inputFile}) => {
+	if (typeof inputFile !== 'string') {
+		return input;
+	}
+
+	validateInputOptions(input);
+	return (0,external_node_fs_namespaceObject.createReadStream)(inputFile);
+};
+
+// `input` and `inputFile` option in async mode
+const handleInput = (spawned, options) => {
+	const input = getInput(options);
+
 	if (input === undefined) {
 		return;
 	}
@@ -12570,12 +12655,6 @@ const getSpawnedResult = async ({stdout, stderr, all}, {encoding, buffer, maxBuf
 	}
 };
 
-const validateInputSync = ({input}) => {
-	if (isStream(input)) {
-		throw new TypeError('The `input` option cannot be a stream in sync mode');
-	}
-};
-
 ;// CONCATENATED MODULE: ./node_modules/execa/lib/promise.js
 // eslint-disable-next-line unicorn/prefer-top-level-await
 const nativePromisePrototype = (async () => {})().constructor.prototype;
@@ -12595,8 +12674,6 @@ const mergePromise = (spawned, promise) => {
 
 		Reflect.defineProperty(spawned, property, {...descriptor, value});
 	}
-
-	return spawned;
 };
 
 // Use promises instead of `child_process` events
@@ -12617,6 +12694,9 @@ const getSpawnedPromise = spawned => new Promise((resolve, reject) => {
 });
 
 ;// CONCATENATED MODULE: ./node_modules/execa/lib/command.js
+
+
+
 const normalizeArgs = (file, args = []) => {
 	if (!Array.isArray(args)) {
 		return [file];
@@ -12659,7 +12739,108 @@ const parseCommand = command => {
 	return tokens;
 };
 
+const parseExpression = expression => {
+	const typeOfExpression = typeof expression;
+
+	if (typeOfExpression === 'string') {
+		return expression;
+	}
+
+	if (typeOfExpression === 'number') {
+		return String(expression);
+	}
+
+	if (
+		typeOfExpression === 'object'
+		&& expression !== null
+		&& !(expression instanceof external_node_child_process_namespaceObject.ChildProcess)
+		&& 'stdout' in expression
+	) {
+		const typeOfStdout = typeof expression.stdout;
+
+		if (typeOfStdout === 'string') {
+			return expression.stdout;
+		}
+
+		if (external_node_buffer_namespaceObject.Buffer.isBuffer(expression.stdout)) {
+			return expression.stdout.toString();
+		}
+
+		throw new TypeError(`Unexpected "${typeOfStdout}" stdout in template expression`);
+	}
+
+	throw new TypeError(`Unexpected "${typeOfExpression}" in template expression`);
+};
+
+const concatTokens = (tokens, nextTokens, isNew) => isNew || tokens.length === 0 || nextTokens.length === 0
+	? [...tokens, ...nextTokens]
+	: [
+		...tokens.slice(0, -1),
+		`${tokens[tokens.length - 1]}${nextTokens[0]}`,
+		...nextTokens.slice(1),
+	];
+
+const parseTemplate = ({templates, expressions, tokens, index, template}) => {
+	const templateString = template ?? templates.raw[index];
+	const templateTokens = templateString.split(SPACES_REGEXP).filter(Boolean);
+	const newTokens = concatTokens(
+		tokens,
+		templateTokens,
+		templateString.startsWith(' '),
+	);
+
+	if (index === expressions.length) {
+		return newTokens;
+	}
+
+	const expression = expressions[index];
+	const expressionTokens = Array.isArray(expression)
+		? expression.map(expression => parseExpression(expression))
+		: [parseExpression(expression)];
+	return concatTokens(
+		newTokens,
+		expressionTokens,
+		templateString.endsWith(' '),
+	);
+};
+
+const parseTemplates = (templates, expressions) => {
+	let tokens = [];
+
+	for (const [index, template] of templates.entries()) {
+		tokens = parseTemplate({templates, expressions, tokens, index, template});
+	}
+
+	return tokens;
+};
+
+
+;// CONCATENATED MODULE: external "node:util"
+const external_node_util_namespaceObject = require("node:util");
+;// CONCATENATED MODULE: ./node_modules/execa/lib/verbose.js
+
+
+
+const verboseDefault = (0,external_node_util_namespaceObject.debuglog)('execa').enabled;
+
+const padField = (field, padding) => String(field).padStart(padding, '0');
+
+const getTimestamp = () => {
+	const date = new Date();
+	return `${padField(date.getHours(), 2)}:${padField(date.getMinutes(), 2)}:${padField(date.getSeconds(), 2)}.${padField(date.getMilliseconds(), 3)}`;
+};
+
+const logCommand = (escapedCommand, {verbose}) => {
+	if (!verbose) {
+		return;
+	}
+
+	external_node_process_namespaceObject.stderr.write(`[${getTimestamp()}] ${escapedCommand}\n`);
+};
+
 ;// CONCATENATED MODULE: ./node_modules/execa/index.js
+
+
 
 
 
@@ -12706,6 +12887,7 @@ const handleArguments = (file, args, options = {}) => {
 		cleanup: true,
 		all: false,
 		windowsHide: true,
+		verbose: verboseDefault,
 		...options,
 	};
 
@@ -12738,6 +12920,7 @@ function execa(file, args, options) {
 	const parsed = handleArguments(file, args, options);
 	const command = joinCommand(file, args);
 	const escapedCommand = getEscapedCommand(file, args);
+	logCommand(escapedCommand, parsed.options);
 
 	validateTimeout(parsed.options);
 
@@ -12759,7 +12942,8 @@ function execa(file, args, options) {
 			isCanceled: false,
 			killed: false,
 		}));
-		return mergePromise(dummySpawned, errorPromise);
+		mergePromise(dummySpawned, errorPromise);
+		return dummySpawned;
 	}
 
 	const spawnedPromise = getSpawnedPromise(spawned);
@@ -12816,23 +13000,26 @@ function execa(file, args, options) {
 
 	const handlePromiseOnce = node_modules_onetime(handlePromise);
 
-	handleInput(spawned, parsed.options.input);
+	handleInput(spawned, parsed.options);
 
 	spawned.all = makeAllStream(spawned, parsed.options);
 
-	return mergePromise(spawned, handlePromiseOnce);
+	addPipeMethods(spawned);
+	mergePromise(spawned, handlePromiseOnce);
+	return spawned;
 }
 
 function execaSync(file, args, options) {
 	const parsed = handleArguments(file, args, options);
 	const command = joinCommand(file, args);
 	const escapedCommand = getEscapedCommand(file, args);
+	logCommand(escapedCommand, parsed.options);
 
-	validateInputSync(parsed.options);
+	const input = handleInputSync(parsed.options);
 
 	let result;
 	try {
-		result = external_node_child_process_namespaceObject.spawnSync(parsed.file, parsed.args, parsed.options);
+		result = external_node_child_process_namespaceObject.spawnSync(parsed.file, parsed.args, {...parsed.options, input});
 	} catch (error) {
 		throw makeError({
 			error,
@@ -12885,6 +13072,40 @@ function execaSync(file, args, options) {
 		killed: false,
 	};
 }
+
+const normalizeScriptStdin = ({input, inputFile, stdio}) => input === undefined && inputFile === undefined && stdio === undefined
+	? {stdin: 'inherit'}
+	: {};
+
+const normalizeScriptOptions = (options = {}) => ({
+	preferLocal: true,
+	...normalizeScriptStdin(options),
+	...options,
+});
+
+function create$(options) {
+	function $(templatesOrOptions, ...expressions) {
+		if (!Array.isArray(templatesOrOptions)) {
+			return create$({...options, ...templatesOrOptions});
+		}
+
+		const [file, ...args] = parseTemplates(templatesOrOptions, expressions);
+		return execa(file, args, normalizeScriptOptions(options));
+	}
+
+	$.sync = (templates, ...expressions) => {
+		if (!Array.isArray(templates)) {
+			throw new TypeError('Please use $(options).sync`command` instead of $.sync(options)`command`.');
+		}
+
+		const [file, ...args] = parseTemplates(templates, expressions);
+		return execaSync(file, args, normalizeScriptOptions(options));
+	};
+
+	return $;
+}
+
+const $ = create$();
 
 function execaCommand(command, options) {
 	const [file, ...args] = parseCommand(command);
