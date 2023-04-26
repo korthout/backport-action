@@ -11,4 +11,4 @@ jobs:
       - name: Create and move next-preview tag
         run: |
           git tag v1.next-preview --force
-          git push origin v1.next-preview
+          git push origin v1.next-preview --force
