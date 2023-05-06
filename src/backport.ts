@@ -44,6 +44,8 @@ export class Backport {
       const repo = payload.repository?.name ?? this.github.getRepo().repo;
       const pull_number = this.github.getPullNumber();
       const mainpr = await this.github.getPullRequest(pull_number);
+      const headref = mainpr.head.sha;
+      const baseref = mainpr.base.sha;
 
       if (!(await this.github.isMerged(mainpr))) {
         const message = "Only merged pull requests can be backported.";
@@ -56,17 +58,10 @@ export class Backport {
         return;
       }
 
-      const headref = mainpr.head.sha;
-      const baseref = mainpr.base.sha;
-      const labels = mainpr.labels;
-
-      console.log(
-        `Detected labels on PR: ${labels.map((label) => label.name)}`
-      );
-
-      if (!someLabelIn(labels).matches(this.config.labels.pattern)) {
+      const target_branches = this.findTargetBranches(mainpr);
+      if (target_branches.length === 0) {
         console.log(
-          `Nothing to backport: none of the labels match the backport pattern '${this.config.labels.pattern.source}'`
+          `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.labels.pattern.source}'`
         );
         return; // nothing left to do here
       }
@@ -90,7 +85,7 @@ export class Backport {
       let labelsToCopy: string[] = [];
       if (typeof this.config.copy_labels_pattern !== "undefined") {
         let copyLabelsPattern: RegExp = this.config.copy_labels_pattern;
-        labelsToCopy = labels
+        labelsToCopy = mainpr.labels
           .map((label) => label.name)
           .filter(
             (label) =>
@@ -103,29 +98,8 @@ export class Backport {
       );
 
       const successByTarget = new Map<string, boolean>();
-      for (const label of labels) {
-        console.log(`Working on label ${label.name}`);
-
-        // we are looking for labels like "backport stable/0.24"
-        const match = this.config.labels.pattern.exec(label.name);
-
-        if (!match) {
-          console.log("Doesn't match expected prefix");
-          continue;
-        }
-        if (match.length < 2) {
-          console.error(
-            dedent`\`label_pattern\` '${this.config.labels.pattern.source}' \
-            matched "${label.name}", but did not capture any branchname. \
-            Please make sure to provide a regex with a capture group as \
-            \`label_pattern\`.`
-          );
-          continue;
-        }
-
-        //extract the target branch (e.g. "stable/0.24")
-        const target = match[1];
-        console.log(`Found target in label: ${target}`);
+      for (const target of target_branches) {
+        console.log(`Backporting to target branch '${target}...'`);
 
         try {
           await git.fetch(target, this.config.pwd, 1);
@@ -286,6 +260,36 @@ export class Backport {
     }
   }
 
+  private findTargetBranches(mainpr: PullRequest): string[] {
+    console.log("Determining target branches...");
+
+    const labels = mainpr.labels;
+    console.log(`Detected labels on PR: ${labels.map((label) => label.name)}`);
+
+    const targetBranchesFromLabels = mainpr.labels
+      .map((label) => label.name)
+      .map((label) => {
+        return { label: label, match: this.config.labels.pattern.exec(label) };
+      })
+      .filter((result) => {
+        if (!result.match) {
+          console.log(
+            `label '${result.label}' doesn't match \`label_pattern\` '${this.config.labels.pattern.source}'`
+          );
+        } else if (result.match.length < 2) {
+          console.error(
+            dedent`label '${result.label}' matches \`label_pattern\` '${this.config.labels.pattern.source}', \
+            but no branchname could be captured. Please make sure to provide a regex with a capture group as \
+            \`label_pattern\`.`
+          );
+        }
+        return !!result.match && result.match.length === 2;
+      })
+      .map((result) => result.match!![1]);
+
+    return targetBranchesFromLabels;
+  }
+
   private composePRContent(target: string, main: PullRequest): PRContent {
     const title = utils.replacePlaceholders(
       this.config.pull.title,
@@ -375,18 +379,4 @@ export class Backport {
     );
     core.setOutput(Output.wasSuccessfulByTarget, byTargetOutput);
   }
-}
-
-/**
- * Helper method for label arrays to check that it matches a particular pattern
- *
- * @param labels an array of labels
- * @returns a 'curried' function to easily test for a matching a label
- */
-function someLabelIn(labels: { name: string }[]): {
-  matches: (pattern: RegExp) => boolean;
-} {
-  return {
-    matches: (pattern) => labels.some((l) => pattern.test(l.name)),
-  };
 }
