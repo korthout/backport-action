@@ -21,6 +21,7 @@ type Config = {
     title: string;
   };
   copy_labels_pattern?: RegExp;
+  target_branches?: string;
 };
 
 enum Output {
@@ -58,7 +59,7 @@ export class Backport {
         return;
       }
 
-      const target_branches = this.findTargetBranches(mainpr);
+      const target_branches = this.findTargetBranches(mainpr, this.config);
       if (target_branches.length === 0) {
         console.log(
           `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.labels.pattern.source}'`
@@ -260,7 +261,7 @@ export class Backport {
     }
   }
 
-  private findTargetBranches(mainpr: PullRequest): string[] {
+  private findTargetBranches(mainpr: PullRequest, config: Config): string[] {
     console.log("Determining target branches...");
 
     const labels = mainpr.labels;
@@ -287,7 +288,20 @@ export class Backport {
       })
       .map((result) => result.match!![1]);
 
-    return targetBranchesFromLabels;
+    const configuredTargetBranches =
+      config.target_branches
+        ?.split(",")
+        .map((t) => t.trim())
+        .filter((t) => t !== "") ?? [];
+
+    console.log(`Found target branches in labels: ${targetBranchesFromLabels}`);
+    console.log(
+      `Found target branches in \`target_branches\` input: ${configuredTargetBranches}`
+    );
+
+    return [
+      ...new Set([...targetBranchesFromLabels, ...configuredTargetBranches]),
+    ];
   }
 
   private composePRContent(target: string, main: PullRequest): PRContent {

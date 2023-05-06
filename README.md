@@ -16,9 +16,13 @@ The manual labor of cherry-picking the individual commits can be automated using
 
 ## How it works
 
-The backport action looks for labels matching the `label_pattern` input (e.g. `backport release-3.4`) on your merged pull request.
-For each of those labels:
-1. fetch and checkout a new branch from the target branch (e.g. `release-3.4`)
+You can select the branches to backport merged pull requests in two ways:
+- using labels on the merged pull request.
+  The action looks for labels on your merged pull request matching the [`label_pattern`](#label_pattern) input
+- using the [`target_branches`](#target_branches) input
+
+For each selected branch, the backport action takes the following steps:
+1. fetch and checkout a new branch from the target branch
 2. cherry-pick the merged pull request's commits
 3. create a pull request to merge the new branch into the target branch
 4. comment on the original pull request about its success
@@ -157,6 +161,16 @@ Template used as the title in the pull requests created by this action.
 Placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 Please refer to this action's README for all available [placeholders](#placeholders).
+
+### `target_branches`
+
+Default: `''` (disabled)
+
+The action will backport the pull request to each specified target branch (comma-separated).
+See [How it works](#how-it-works).
+
+Can be used in addition to backport labels.
+By default, only backport labels are used to specify the target branches.
 
 ## Placeholders
 In the `pull_description` and `pull_title` inputs, placeholders can be used to define variable values.
