@@ -262,46 +262,8 @@ export class Backport {
   }
 
   private findTargetBranches(mainpr: PullRequest, config: Config): string[] {
-    console.log("Determining target branches...");
-
-    const labels = mainpr.labels;
-    console.log(`Detected labels on PR: ${labels.map((label) => label.name)}`);
-
-    const targetBranchesFromLabels = mainpr.labels
-      .map((label) => label.name)
-      .map((label) => {
-        return { label: label, match: this.config.labels.pattern.exec(label) };
-      })
-      .filter((result) => {
-        if (!result.match) {
-          console.log(
-            `label '${result.label}' doesn't match \`label_pattern\` '${this.config.labels.pattern.source}'`
-          );
-        } else if (result.match.length < 2) {
-          console.error(
-            dedent`label '${result.label}' matches \`label_pattern\` '${this.config.labels.pattern.source}', \
-            but no branchname could be captured. Please make sure to provide a regex with a capture group as \
-            \`label_pattern\`.`
-          );
-        }
-        return !!result.match && result.match.length === 2;
-      })
-      .map((result) => result.match!![1]);
-
-    const configuredTargetBranches =
-      config.target_branches
-        ?.split(",")
-        .map((t) => t.trim())
-        .filter((t) => t !== "") ?? [];
-
-    console.log(`Found target branches in labels: ${targetBranchesFromLabels}`);
-    console.log(
-      `Found target branches in \`target_branches\` input: ${configuredTargetBranches}`
-    );
-
-    return [
-      ...new Set([...targetBranchesFromLabels, ...configuredTargetBranches]),
-    ];
+    const labels = mainpr.labels.map((label) => label.name);
+    return findTargetBranches(config, labels);
   }
 
   private composePRContent(target: string, main: PullRequest): PRContent {
@@ -393,4 +355,48 @@ export class Backport {
     );
     core.setOutput(Output.wasSuccessfulByTarget, byTargetOutput);
   }
+}
+
+export function findTargetBranches(
+  config: Pick<Config, "labels" | "target_branches">,
+  labels: string[]
+) {
+  console.log("Determining target branches...");
+
+  console.log(`Detected labels on PR: ${labels}`);
+
+  const targetBranchesFromLabels = labels
+    .map((label) => {
+      return { label: label, match: config.labels.pattern.exec(label) };
+    })
+    .filter((result) => {
+      if (!result.match) {
+        console.log(
+          `label '${result.label}' doesn't match \`label_pattern\` '${config.labels.pattern.source}'`
+        );
+      } else if (result.match.length < 2) {
+        console.error(
+          dedent`label '${result.label}' matches \`label_pattern\` '${config.labels.pattern.source}', \
+          but no branchname could be captured. Please make sure to provide a regex with a capture group as \
+          \`label_pattern\`.`
+        );
+      }
+      return !!result.match && result.match.length === 2;
+    })
+    .map((result) => result.match!![1]);
+
+  const configuredTargetBranches =
+    config.target_branches
+      ?.split(",")
+      .map((t) => t.trim())
+      .filter((t) => t !== "") ?? [];
+
+  console.log(`Found target branches in labels: ${targetBranchesFromLabels}`);
+  console.log(
+    `Found target branches in \`target_branches\` input: ${configuredTargetBranches}`
+  );
+
+  return [
+    ...new Set([...targetBranchesFromLabels, ...configuredTargetBranches]),
+  ];
 }
