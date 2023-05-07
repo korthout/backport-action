@@ -26,7 +26,7 @@ describe("find target branches", () => {
 
     it("when a label matches the pattern but doesn't capture a target branch", () => {
       expect(
-        findTargetBranches({ labels: { pattern: /^a label$/ } }, ["a label"])
+        findTargetBranches({ labels: { pattern: /^no capture group$/ } }, ["no capture group"])
       ).toEqual([]);
     });
 
