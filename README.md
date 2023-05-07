@@ -103,6 +103,14 @@ jobs:
 
 The action can be configured with the following optional [inputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepswith):
 
+### `copy_labels_pattern`
+
+Default: `''` (disabled)
+
+Regex pattern to match github labels which will be copied from the original pull request to the backport pull request.
+Note that labels matching `label_pattern` are excluded.
+By default, no labels are copied.
+
 ### `github_token`
 
 Default: `${{ github.token }}`
@@ -151,14 +159,6 @@ Template used as the title in the pull requests created by this action.
 Placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 Please refer to this action's README for all available [placeholders](#placeholders).
-
-### `copy_labels_pattern`
-
-Default: `''` (disabled)
-
-Regex pattern to match github labels which will be copied from the original pull request to the backport pull request.
-Note that labels matching `label_pattern` are excluded.
-By default, no labels are copied.
 
 ## Placeholders
 In the `pull_description` and `pull_title` inputs, placeholders can be used to define variable values.
