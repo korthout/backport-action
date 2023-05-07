@@ -365,7 +365,31 @@ export function findTargetBranches(
 
   console.log(`Detected labels on PR: ${labels}`);
 
-  const targetBranchesFromLabels = labels
+  const targetBranchesFromLabels = findTargetBranchesFromLabels(labels, config);
+  const configuredTargetBranches =
+    config.target_branches
+      ?.split(",")
+      .map((t) => t.trim())
+      .filter((t) => t !== "") ?? [];
+
+  console.log(`Found target branches in labels: ${targetBranchesFromLabels}`);
+  console.log(
+    `Found target branches in \`target_branches\` input: ${configuredTargetBranches}`
+  );
+
+  return [
+    ...new Set([...targetBranchesFromLabels, ...configuredTargetBranches]),
+  ];
+}
+
+function findTargetBranchesFromLabels(
+  labels: string[],
+  config: Pick<Config, "labels">
+) {
+  if (config.labels.pattern.source === new RegExp("").source) {
+    return [];
+  }
+  return labels
     .map((label) => {
       return { label: label, match: config.labels.pattern.exec(label) };
     })
@@ -384,19 +408,4 @@ export function findTargetBranches(
       return !!result.match && result.match.length === 2;
     })
     .map((result) => result.match!![1]);
-
-  const configuredTargetBranches =
-    config.target_branches
-      ?.split(",")
-      .map((t) => t.trim())
-      .filter((t) => t !== "") ?? [];
-
-  console.log(`Found target branches in labels: ${targetBranchesFromLabels}`);
-  console.log(
-    `Found target branches in \`target_branches\` input: ${configuredTargetBranches}`
-  );
-
-  return [
-    ...new Set([...targetBranchesFromLabels, ...configuredTargetBranches]),
-  ];
 }

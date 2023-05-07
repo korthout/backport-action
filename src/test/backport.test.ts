@@ -30,6 +30,14 @@ describe("find target branches", () => {
       ).toEqual([]);
     });
 
+    it("when the label pattern is an empty string", () => {
+      expect(
+        findTargetBranches({ labels: { pattern: new RegExp("") } }, [
+          "an empty string",
+        ])
+      ).toEqual([]);
+    });
+
     it("when target_branches is an empty string", () => {
       expect(
         findTargetBranches(
