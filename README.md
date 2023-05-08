@@ -134,6 +134,7 @@ Default: `^backport ([^ ]+)$` (e.g. matches `backport release-3.4`)
 
 Regex pattern to match the backport labels on the merged pull request.
 Must contain a capture group for the target branch.
+Label matching can be disabled entirely using an empty string `''` as pattern.
 
 The action will backport the pull request to each matched target branch.
 See [How it works](#how-it-works).

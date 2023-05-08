@@ -14,7 +14,7 @@ type PRContent = {
 type Config = {
   pwd: string;
   labels: {
-    pattern: RegExp;
+    pattern?: RegExp;
   };
   pull: {
     description: string;
@@ -62,7 +62,7 @@ export class Backport {
       const target_branches = this.findTargetBranches(mainpr, this.config);
       if (target_branches.length === 0) {
         console.log(
-          `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.labels.pattern.source}'`
+          `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.labels.pattern?.source}'`
         );
         return; // nothing left to do here
       }
@@ -91,7 +91,8 @@ export class Backport {
           .filter(
             (label) =>
               label.match(copyLabelsPattern) &&
-              !label.match(this.config.labels.pattern)
+              (this.config.labels.pattern === undefined ||
+                !label.match(this.config.labels.pattern))
           );
       }
       console.log(
@@ -386,21 +387,22 @@ function findTargetBranchesFromLabels(
   labels: string[],
   config: Pick<Config, "labels">
 ) {
-  if (config.labels.pattern.source === new RegExp("").source) {
+  const pattern = config.labels.pattern;
+  if (pattern === undefined) {
     return [];
   }
   return labels
     .map((label) => {
-      return { label: label, match: config.labels.pattern.exec(label) };
+      return { label: label, match: pattern.exec(label) };
     })
     .filter((result) => {
       if (!result.match) {
         console.log(
-          `label '${result.label}' doesn't match \`label_pattern\` '${config.labels.pattern.source}'`
+          `label '${result.label}' doesn't match \`label_pattern\` '${pattern.source}'`
         );
       } else if (result.match.length < 2) {
         console.error(
-          dedent`label '${result.label}' matches \`label_pattern\` '${config.labels.pattern.source}', \
+          dedent`label '${result.label}' matches \`label_pattern\` '${pattern.source}', \
           but no branchname could be captured. Please make sure to provide a regex with a capture group as \
           \`label_pattern\`.`
         );

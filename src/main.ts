@@ -10,7 +10,7 @@ import { Github } from "./github";
 async function run(): Promise<void> {
   const token = core.getInput("github_token", { required: true });
   const pwd = core.getInput("github_workspace", { required: true });
-  const pattern = new RegExp(core.getInput("label_pattern"));
+  const pattern = core.getInput("label_pattern");
   const description = core.getInput("pull_description");
   const title = core.getInput("pull_title");
   const copy_labels_pattern = core.getInput("copy_labels_pattern");
@@ -19,7 +19,7 @@ async function run(): Promise<void> {
   const github = new Github(token);
   const backport = new Backport(github, {
     pwd,
-    labels: { pattern },
+    labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
     pull: { description, title },
     copy_labels_pattern:
       copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),

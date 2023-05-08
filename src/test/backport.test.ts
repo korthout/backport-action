@@ -26,13 +26,15 @@ describe("find target branches", () => {
 
     it("when a label matches the pattern but doesn't capture a target branch", () => {
       expect(
-        findTargetBranches({ labels: { pattern: /^no capture group$/ } }, ["no capture group"])
+        findTargetBranches({ labels: { pattern: /^no capture group$/ } }, [
+          "no capture group",
+        ])
       ).toEqual([]);
     });
 
     it("when the label pattern is an empty string", () => {
       expect(
-        findTargetBranches({ labels: { pattern: new RegExp("") } }, [
+        findTargetBranches({ labels: { pattern: undefined } }, [
           "an empty string",
         ])
       ).toEqual([]);
