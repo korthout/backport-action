@@ -67,7 +67,7 @@ jobs:
         if: ${{ inputs.dryRun == false }}
         run: |
           git push origin v${{ steps.version.outputs.major }} --force
-          git push origin v${{ steps.version.outputs.minor }} --force
+          git push origin v${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }} --force
 
       - name: Update release-next-preview workflow
         uses: jacobtomlinson/gha-find-replace@v3
