@@ -167,7 +167,7 @@ Please refer to this action's README for all available [placeholders](#placehold
 
 Default: `''` (disabled)
 
-The action will backport the pull request to each specified target branch (comma-separated).
+The action will backport the pull request to each specified target branch (space-delimited).
 See [How it works](#how-it-works).
 
 Can be used in addition to backport labels.

@@ -85,7 +85,7 @@ describe("find target branches", () => {
         findTargetBranches(
           {
             labels: { pattern: default_pattern },
-            target_branches: "release-1,another/target/branch",
+            target_branches: "release-1 another/target/branch",
           },
           []
         )

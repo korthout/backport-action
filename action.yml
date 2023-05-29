@@ -42,7 +42,7 @@ inputs:
       [Backport ${target_branch}] ${pull_title}
   target_branches:
     description: >
-      The action will backport the pull request to each specified target branch (comma-separated).
+      The action will backport the pull request to each specified target branch (space-delimited).
       Can be used in addition to backport labels.
       By default, only backport labels are used to specify the target branches.
 outputs:

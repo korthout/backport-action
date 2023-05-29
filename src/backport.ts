@@ -369,7 +369,7 @@ export function findTargetBranches(
   const targetBranchesFromLabels = findTargetBranchesFromLabels(labels, config);
   const configuredTargetBranches =
     config.target_branches
-      ?.split(",")
+      ?.split(" ")
       .map((t) => t.trim())
       .filter((t) => t !== "") ?? [];
 
