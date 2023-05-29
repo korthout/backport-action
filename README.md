@@ -16,9 +16,13 @@ The manual labor of cherry-picking the individual commits can be automated using
 
 ## How it works
 
-The backport action looks for labels matching the `label_pattern` input (e.g. `backport release-3.4`) on your merged pull request.
-For each of those labels:
-1. fetch and checkout a new branch from the target branch (e.g. `release-3.4`)
+You can select the branches to backport merged pull requests in two ways:
+- using labels on the merged pull request.
+  The action looks for labels on your merged pull request matching the [`label_pattern`](#label_pattern) input
+- using the [`target_branches`](#target_branches) input
+
+For each selected branch, the backport action takes the following steps:
+1. fetch and checkout a new branch from the target branch
 2. cherry-pick the merged pull request's commits
 3. create a pull request to merge the new branch into the target branch
 4. comment on the original pull request about its success
@@ -50,8 +54,6 @@ jobs:
 > **Note**
 > This workflow runs on [`pull_request_target`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target) so that `GITHUB_TOKEN` has write access to the repo when the merged pull request comes from a forked repository.
 > This write access is necessary for the action to push the commits it cherry-picked.
-> The backport action can be run on [`pull_request`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request) instead, by checking out the repository using a [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (PAT) with write access to the repo.
-> See [actions/checkout#usage](https://github.com/actions/checkout#usage) (`token`).
 
 ### Trigger using a comment
 
@@ -103,6 +105,14 @@ jobs:
 
 The action can be configured with the following optional [inputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepswith):
 
+### `copy_labels_pattern`
+
+Default: `''` (disabled)
+
+Regex pattern to match github labels which will be copied from the original pull request to the backport pull request.
+Note that labels matching `label_pattern` are excluded.
+By default, no labels are copied.
+
 ### `github_token`
 
 Default: `${{ github.token }}`
@@ -124,6 +134,7 @@ Default: `^backport ([^ ]+)$` (e.g. matches `backport release-3.4`)
 
 Regex pattern to match the backport labels on the merged pull request.
 Must contain a capture group for the target branch.
+Label matching can be disabled entirely using an empty string `''` as pattern.
 
 The action will backport the pull request to each matched target branch.
 See [How it works](#how-it-works).
@@ -152,13 +163,15 @@ Placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 Please refer to this action's README for all available [placeholders](#placeholders).
 
-### `copy_labels_pattern`
+### `target_branches`
 
 Default: `''` (disabled)
 
-Regex pattern to match github labels which will be copied from the original pull request to the backport pull request.
-Note that labels matching `label_pattern` are excluded.
-By default, no labels are copied.
+The action will backport the pull request to each specified target branch (space-delimited).
+See [How it works](#how-it-works).
+
+Can be used in addition to backport labels.
+By default, only backport labels are used to specify the target branches.
 
 ## Placeholders
 In the `pull_description` and `pull_title` inputs, placeholders can be used to define variable values.
