@@ -241,7 +241,7 @@ class Backport {
     }
     findTargetBranches(mainpr, config) {
         const labels = mainpr.labels.map((label) => label.name);
-        return findTargetBranches(config, labels);
+        return findTargetBranches(config, labels, mainpr.head.ref);
     }
     composePRContent(target, main) {
         const title = utils.replacePlaceholders(this.config.pull.title, main, target);
@@ -301,7 +301,7 @@ class Backport {
     }
 }
 exports.Backport = Backport;
-function findTargetBranches(config, labels) {
+function findTargetBranches(config, labels, headref) {
     var _a, _b;
     console.log("Determining target branches...");
     console.log(`Detected labels on PR: ${labels}`);
@@ -309,9 +309,12 @@ function findTargetBranches(config, labels) {
     const configuredTargetBranches = (_b = (_a = config.target_branches) === null || _a === void 0 ? void 0 : _a.split(" ").map((t) => t.trim()).filter((t) => t !== "")) !== null && _b !== void 0 ? _b : [];
     console.log(`Found target branches in labels: ${targetBranchesFromLabels}`);
     console.log(`Found target branches in \`target_branches\` input: ${configuredTargetBranches}`);
-    return [
+    console.log(`Exclude pull request's headref from target branches: ${headref}`);
+    const targetBranches = [
         ...new Set([...targetBranchesFromLabels, ...configuredTargetBranches]),
-    ];
+    ].filter((t) => t !== headref);
+    console.log(`Determined target branches: ${targetBranches}`);
+    return targetBranches;
 }
 exports.findTargetBranches = findTargetBranches;
 function findTargetBranchesFromLabels(labels, config) {
