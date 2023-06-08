@@ -137,6 +137,7 @@ Must contain a capture group for the target branch.
 Label matching can be disabled entirely using an empty string `''` as pattern.
 
 The action will backport the pull request to each matched target branch.
+Note that the pull request's headref is excluded automatically.
 See [How it works](#how-it-works).
 
 ### `pull_description`
@@ -168,6 +169,7 @@ Please refer to this action's README for all available [placeholders](#placehold
 Default: `''` (disabled)
 
 The action will backport the pull request to each specified target branch (space-delimited).
+Note that the pull request's headref is excluded automatically.
 See [How it works](#how-it-works).
 
 Can be used in addition to backport labels.
