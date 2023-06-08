@@ -57,6 +57,26 @@ describe("find target branches", () => {
         )
       ).toEqual([]);
     });
+
+    it("when the label pattern only matches the headref", () => {
+      expect(
+        findTargetBranches(
+          { labels: { pattern: default_pattern } },
+          ["backport feature/one"],
+          "feature/one"
+        )
+      ).toEqual([]);
+    });
+
+    it("when target_branches only contains the headref", () => {
+      expect(
+        findTargetBranches(
+          { labels: {}, target_branches: "feature/one" },
+          [],
+          "feature/one"
+        )
+      ).toEqual([]);
+    });
   });
 
   describe("returns selected branches", () => {
@@ -117,6 +137,26 @@ describe("find target branches", () => {
           "feature/one"
         )
       ).toEqual(["release-1"]);
+    });
+
+    it("when several labels match the pattern the headref is excluded", () => {
+      expect(
+        findTargetBranches(
+          { labels: { pattern: default_pattern } },
+          ["backport feature/one", "backport feature/two"],
+          "feature/one"
+        )
+      ).toEqual(["feature/two"]);
+    });
+
+    it("when several target branches are specified the headref is excluded", () => {
+      expect(
+        findTargetBranches(
+          { labels: {}, target_branches: "feature/one feature/two" },
+          [],
+          "feature/one"
+        )
+      ).toEqual(["feature/two"]);
     });
   });
 });
