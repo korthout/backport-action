@@ -378,10 +378,13 @@ export function findTargetBranches(
   console.log(
     `Found target branches in \`target_branches\` input: ${configuredTargetBranches}`
   );
+  console.log(
+    `Exclude pull request's headref from target branches: ${headref}`
+  );
 
   const targetBranches = [
     ...new Set([...targetBranchesFromLabels, ...configuredTargetBranches]),
-  ];
+  ].filter((t) => t !== headref);
 
   console.log(`Determined target branches: ${targetBranches}`);
 
