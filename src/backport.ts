@@ -378,9 +378,13 @@ export function findTargetBranches(
     `Found target branches in \`target_branches\` input: ${configuredTargetBranches}`
   );
 
-  return [
+  const targetBranches = [
     ...new Set([...targetBranchesFromLabels, ...configuredTargetBranches]),
   ];
+
+  console.log(`Determined target branches: ${targetBranches}`);
+
+  return targetBranches;
 }
 
 function findTargetBranchesFromLabels(
