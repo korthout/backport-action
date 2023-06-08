@@ -264,7 +264,7 @@ export class Backport {
 
   private findTargetBranches(mainpr: PullRequest, config: Config): string[] {
     const labels = mainpr.labels.map((label) => label.name);
-    return findTargetBranches(config, labels);
+    return findTargetBranches(config, labels, mainpr.head.ref);
   }
 
   private composePRContent(target: string, main: PullRequest): PRContent {
@@ -360,7 +360,8 @@ export class Backport {
 
 export function findTargetBranches(
   config: Pick<Config, "labels" | "target_branches">,
-  labels: string[]
+  labels: string[],
+  headref: string
 ) {
   console.log("Determining target branches...");
 
