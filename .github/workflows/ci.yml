@@ -34,7 +34,7 @@ jobs:
       - name: Publish artifacts
         if: >
           github.ref == 'refs/heads/main'
-            || contains('refs/heads/release', github.ref)
+            || startsWith(github.ref, 'refs/heads/release')
         uses: EndBug/add-and-commit@v9
         with:
           commit: --signoff
