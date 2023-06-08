@@ -134,6 +134,7 @@ export type PullRequest = {
   body: string | null;
   head: {
     sha: string;
+    ref: string;
   };
   base: {
     sha: string;

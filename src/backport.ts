@@ -264,7 +264,7 @@ export class Backport {
 
   private findTargetBranches(mainpr: PullRequest, config: Config): string[] {
     const labels = mainpr.labels.map((label) => label.name);
-    return findTargetBranches(config, labels);
+    return findTargetBranches(config, labels, mainpr.head.ref);
   }
 
   private composePRContent(target: string, main: PullRequest): PRContent {
@@ -360,7 +360,8 @@ export class Backport {
 
 export function findTargetBranches(
   config: Pick<Config, "labels" | "target_branches">,
-  labels: string[]
+  labels: string[],
+  headref: string
 ) {
   console.log("Determining target branches...");
 
@@ -377,10 +378,17 @@ export function findTargetBranches(
   console.log(
     `Found target branches in \`target_branches\` input: ${configuredTargetBranches}`
   );
+  console.log(
+    `Exclude pull request's headref from target branches: ${headref}`
+  );
 
-  return [
+  const targetBranches = [
     ...new Set([...targetBranchesFromLabels, ...configuredTargetBranches]),
-  ];
+  ].filter((t) => t !== headref);
+
+  console.log(`Determined target branches: ${targetBranches}`);
+
+  return targetBranches;
 }
 
 function findTargetBranchesFromLabels(
