@@ -84,8 +84,7 @@ class Backport {
                     return; // nothing left to do here
                 }
                 console.log(`Fetching all the commits from the pull request: ${mainpr.commits + 1}`);
-                yield git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd, mainpr.commits + 1 // +1 in case this concerns a shallowly cloned repo
-                );
+                yield git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd, mainpr.commits + 1);
                 console.log("Determining first and last commit shas, so we can cherry-pick the commit range");
                 const commitShas = yield this.github.getCommits(mainpr);
                 console.log(`Found commits: ${commitShas}`);
