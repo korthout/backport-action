@@ -13,8 +13,8 @@ describe("find target branches", () => {
         findTargetBranches(
           { labels: { pattern: default_pattern } },
           [],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual([]);
     });
 
@@ -23,8 +23,8 @@ describe("find target branches", () => {
         findTargetBranches(
           { labels: { pattern: default_pattern } },
           ["a label", "another-label", "a/third/label"],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual([]);
     });
 
@@ -33,8 +33,8 @@ describe("find target branches", () => {
         findTargetBranches(
           { labels: { pattern: /^no capture group$/ } },
           ["no capture group"],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual([]);
     });
 
@@ -43,8 +43,8 @@ describe("find target branches", () => {
         findTargetBranches(
           { labels: { pattern: undefined } },
           ["an empty string"],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual([]);
     });
 
@@ -53,8 +53,8 @@ describe("find target branches", () => {
         findTargetBranches(
           { labels: { pattern: default_pattern }, target_branches: "" },
           ["a label"],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual([]);
     });
 
@@ -63,8 +63,8 @@ describe("find target branches", () => {
         findTargetBranches(
           { labels: { pattern: default_pattern } },
           ["backport feature/one"],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual([]);
     });
 
@@ -73,8 +73,8 @@ describe("find target branches", () => {
         findTargetBranches(
           { labels: {}, target_branches: "feature/one" },
           [],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual([]);
     });
   });
@@ -85,8 +85,8 @@ describe("find target branches", () => {
         findTargetBranches(
           { labels: { pattern: default_pattern } },
           ["backport release-1"],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual(["release-1"]);
     });
 
@@ -95,8 +95,8 @@ describe("find target branches", () => {
         findTargetBranches(
           { labels: { pattern: default_pattern } },
           ["backport release-1", "backport another/target/branch"],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual(["release-1", "another/target/branch"]);
     });
 
@@ -108,8 +108,8 @@ describe("find target branches", () => {
             target_branches: "release-1",
           },
           [],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual(["release-1"]);
     });
 
@@ -121,8 +121,8 @@ describe("find target branches", () => {
             target_branches: "release-1 another/target/branch",
           },
           [],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual(["release-1", "another/target/branch"]);
     });
 
@@ -134,8 +134,8 @@ describe("find target branches", () => {
             target_branches: "release-1",
           },
           ["backport release-1"],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual(["release-1"]);
     });
 
@@ -144,8 +144,8 @@ describe("find target branches", () => {
         findTargetBranches(
           { labels: { pattern: default_pattern } },
           ["backport feature/one", "backport feature/two"],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual(["feature/two"]);
     });
 
@@ -154,8 +154,8 @@ describe("find target branches", () => {
         findTargetBranches(
           { labels: {}, target_branches: "feature/one feature/two" },
           [],
-          "feature/one"
-        )
+          "feature/one",
+        ),
       ).toEqual(["feature/two"]);
     });
   });

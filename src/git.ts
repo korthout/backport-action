@@ -21,16 +21,16 @@ export async function fetch(ref: string, pwd: string, depth: number) {
   const { exitCode } = await git(
     "fetch",
     [`--depth=${depth}`, "origin", ref],
-    pwd
+    pwd,
   );
   if (exitCode === 128) {
     throw new GitRefNotFoundError(
       `Expected to fetch '${ref}', but couldn't find it`,
-      ref
+      ref,
     );
   } else if (exitCode !== 0) {
     throw new Error(
-      `'git fetch origin ${ref}' failed with exit code ${exitCode}`
+      `'git fetch origin ${ref}' failed with exit code ${exitCode}`,
     );
   }
 }
@@ -39,7 +39,7 @@ export async function push(branchname: string, pwd: string) {
   const { exitCode } = await git(
     "push",
     ["--set-upstream", "origin", branchname],
-    pwd
+    pwd,
   );
   return exitCode;
 }
@@ -62,7 +62,7 @@ export async function checkout(branch: string, start: string, pwd: string) {
   const { exitCode } = await git("switch", ["-c", branch, start], pwd);
   if (exitCode !== 0) {
     throw new Error(
-      `'git switch -c ${branch} ${start}' failed with exit code ${exitCode}`
+      `'git switch -c ${branch} ${start}' failed with exit code ${exitCode}`,
     );
   }
 }
@@ -72,7 +72,7 @@ export async function cherryPick(commitShas: string[], pwd: string) {
   if (exitCode !== 0) {
     await git("cherry-pick", ["--abort"], pwd);
     throw new Error(
-      `'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`
+      `'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`,
     );
   }
 }

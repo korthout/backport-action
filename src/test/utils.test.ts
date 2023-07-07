@@ -21,15 +21,15 @@ describe("get mentioned issues", () => {
 
     it("for a text with an external issue reference as part of a word", () => {
       expect(
-        getMentionedIssueRefs(text({ part: "zeebe-io/zeebe#123" }))
+        getMentionedIssueRefs(text({ part: "zeebe-io/zeebe#123" })),
       ).toHaveLength(0);
     });
 
     it("for a text with an issue url as part of a word", () => {
       expect(
         getMentionedIssueRefs(
-          text({ part: "github.com/zeebe-io/backport-action/issues/123" })
-        )
+          text({ part: "github.com/zeebe-io/backport-action/issues/123" }),
+        ),
       ).toHaveLength(0);
     });
   });
@@ -47,39 +47,39 @@ describe("get mentioned issues", () => {
 
     it("for a text with an external issue reference at the start", () => {
       expect(
-        getMentionedIssueRefs(text({ start: "zeebe-io/zeebe#123" }))
+        getMentionedIssueRefs(text({ start: "zeebe-io/zeebe#123" })),
       ).toEqual(["zeebe-io/zeebe#123"]);
     });
     it("for a text with an external issue reference in the middle", () => {
       expect(
-        getMentionedIssueRefs(text({ middle: "zeebe-io/zeebe#123" }))
+        getMentionedIssueRefs(text({ middle: "zeebe-io/zeebe#123" })),
       ).toEqual(["zeebe-io/zeebe#123"]);
     });
     it("for a text with an external issue reference at the end", () => {
       expect(
-        getMentionedIssueRefs(text({ end: "zeebe-io/zeebe#123" }))
+        getMentionedIssueRefs(text({ end: "zeebe-io/zeebe#123" })),
       ).toEqual(["zeebe-io/zeebe#123"]);
     });
 
     it("for a text with an issue url at the start", () => {
       expect(
         getMentionedIssueRefs(
-          text({ start: "github.com/zeebe-io/backport-action/issues/123/" })
-        )
+          text({ start: "github.com/zeebe-io/backport-action/issues/123/" }),
+        ),
       ).toEqual(["zeebe-io/backport-action#123"]);
     });
     it("for a text with an issue url in the middle", () => {
       expect(
         getMentionedIssueRefs(
-          text({ middle: "github.com/zeebe-io/backport-action/issues/123" })
-        )
+          text({ middle: "github.com/zeebe-io/backport-action/issues/123" }),
+        ),
       ).toEqual(["zeebe-io/backport-action#123"]);
     });
     it("for a text with an issue url at the end", () => {
       expect(
         getMentionedIssueRefs(
-          text({ end: "github.com/zeebe-io/backport-action/issues/123" })
-        )
+          text({ end: "github.com/zeebe-io/backport-action/issues/123" }),
+        ),
       ).toEqual(["zeebe-io/backport-action#123"]);
     });
   });
@@ -88,8 +88,8 @@ describe("get mentioned issues", () => {
     it("for a text with an issue reference at the start, middle and end", () => {
       expect(
         getMentionedIssueRefs(
-          text({ start: "#123", middle: "#234", end: "#345" })
-        )
+          text({ start: "#123", middle: "#234", end: "#345" }),
+        ),
       ).toEqual(["#123", "#234", "#345"]);
     });
     it("for a text with an external issue reference at the start, middle and end", () => {
@@ -99,8 +99,8 @@ describe("get mentioned issues", () => {
             start: "zeebe-io/zeebe#123",
             middle: "zeebe-io/zeebe#234",
             end: "zeebe-io/zeebe#345",
-          })
-        )
+          }),
+        ),
       ).toEqual([
         "zeebe-io/zeebe#123",
         "zeebe-io/zeebe#234",
@@ -111,8 +111,12 @@ describe("get mentioned issues", () => {
       const base = "github.com/zeebe-io/backport-action/issues/";
       expect(
         getMentionedIssueRefs(
-          text({ start: `${base}123`, middle: `${base}234`, end: `${base}345` })
-        )
+          text({
+            start: `${base}123`,
+            middle: `${base}234`,
+            end: `${base}345`,
+          }),
+        ),
       ).toEqual([
         "zeebe-io/backport-action#123",
         "zeebe-io/backport-action#234",
@@ -123,8 +127,12 @@ describe("get mentioned issues", () => {
       const base = "github.com/zeebe-io/zeebe/issues/";
       expect(
         getMentionedIssueRefs(
-          text({ start: `${base}123`, middle: `${base}234`, end: `${base}345` })
-        )
+          text({
+            start: `${base}123`,
+            middle: `${base}234`,
+            end: `${base}345`,
+          }),
+        ),
       ).toEqual([
         "zeebe-io/zeebe#123",
         "zeebe-io/zeebe#234",
@@ -151,7 +159,7 @@ describe("compose body/title", () => {
     it("for a template without placeholders", () => {
       const template = text({});
       expect(replacePlaceholders(template, main_default, target)).toEqual(
-        template
+        template,
       );
     });
 
@@ -163,7 +171,7 @@ describe("compose body/title", () => {
         part: "${jkl}",
       });
       expect(replacePlaceholders(template, main_default, target)).toEqual(
-        template
+        template,
       );
     });
   });
@@ -172,21 +180,21 @@ describe("compose body/title", () => {
     it("for a template with target_branch placeholder", () => {
       const template = "Backport of some-title to `${target_branch}`";
       expect(replacePlaceholders(template, main_default, target)).toEqual(
-        "Backport of some-title to `foo-target`"
+        "Backport of some-title to `foo-target`",
       );
     });
 
     it("for a template with pull_number placeholder", () => {
       const template = "Backport of #${pull_number} to some-target";
       expect(replacePlaceholders(template, main_default, target)).toEqual(
-        "Backport of #123 to some-target"
+        "Backport of #123 to some-target",
       );
     });
 
     it("for a template with pull_title placeholder", () => {
       const template = "Backport of ${pull_title} to some-target";
       expect(replacePlaceholders(template, main_default, target)).toEqual(
-        "Backport of some pr title to some-target"
+        "Backport of some pr title to some-target",
       );
     });
 
@@ -195,7 +203,7 @@ describe("compose body/title", () => {
 
       it("and body has no referred issues", () => {
         expect(replacePlaceholders(template, main_default, target)).toEqual(
-          "Backport that refers to: "
+          "Backport that refers to: ",
         );
       });
 
@@ -207,8 +215,8 @@ describe("compose body/title", () => {
               ...main_default,
               body: "Body mentions #123 and that's it.",
             },
-            target
-          )
+            target,
+          ),
         ).toEqual("Backport that refers to: #123");
       });
 
@@ -220,8 +228,8 @@ describe("compose body/title", () => {
               ...main_default,
               body: "This body refers to #123 and foo/bar#456",
             },
-            target
-          )
+            target,
+          ),
         ).toEqual("Backport that refers to: #123 foo/bar#456");
       });
     });
@@ -229,7 +237,7 @@ describe("compose body/title", () => {
     it("for a template with pull_author placeholder", () => {
       const template = "Backport of pull made by @${pull_author}";
       expect(replacePlaceholders(template, main_default, target)).toEqual(
-        "Backport of pull made by @foo-author"
+        "Backport of pull made by @foo-author",
       );
     });
   });

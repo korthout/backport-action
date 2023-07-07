@@ -62,22 +62,22 @@ export class Backport {
       const target_branches = this.findTargetBranches(mainpr, this.config);
       if (target_branches.length === 0) {
         console.log(
-          `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.labels.pattern?.source}'`
+          `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.labels.pattern?.source}'`,
         );
         return; // nothing left to do here
       }
 
       console.log(
-        `Fetching all the commits from the pull request: ${mainpr.commits + 1}`
+        `Fetching all the commits from the pull request: ${mainpr.commits + 1}`,
       );
       await git.fetch(
         `refs/pull/${pull_number}/head`,
         this.config.pwd,
-        mainpr.commits + 1 // +1 in case this concerns a shallowly cloned repo
+        mainpr.commits + 1, // +1 in case this concerns a shallowly cloned repo
       );
 
       console.log(
-        "Determining first and last commit shas, so we can cherry-pick the commit range"
+        "Determining first and last commit shas, so we can cherry-pick the commit range",
       );
 
       const commitShas = await this.github.getCommits(mainpr);
@@ -92,11 +92,11 @@ export class Backport {
             (label) =>
               label.match(copyLabelsPattern) &&
               (this.config.labels.pattern === undefined ||
-                !label.match(this.config.labels.pattern))
+                !label.match(this.config.labels.pattern)),
           );
       }
       console.log(
-        `Will copy labels matching ${this.config.copy_labels_pattern}. Found matching labels: ${labelsToCopy}`
+        `Will copy labels matching ${this.config.copy_labels_pattern}. Found matching labels: ${labelsToCopy}`,
       );
 
       const successByTarget = new Map<string, boolean>();
@@ -134,7 +134,7 @@ export class Backport {
               3,
               baseref,
               headref,
-              branchname
+              branchname,
             );
             console.error(message);
             successByTarget.set(target, false);
@@ -155,7 +155,7 @@ export class Backport {
               4,
               baseref,
               headref,
-              branchname
+              branchname,
             );
             console.error(message);
             successByTarget.set(target, false);
@@ -173,7 +173,7 @@ export class Backport {
           if (pushExitCode != 0) {
             const message = this.composeMessageForGitPushFailure(
               target,
-              pushExitCode
+              pushExitCode,
             );
             console.error(message);
             successByTarget.set(target, false);
@@ -216,7 +216,7 @@ export class Backport {
           if (labelsToCopy.length > 0) {
             const label_response = await this.github.labelPR(
               new_pr.number,
-              labelsToCopy
+              labelsToCopy,
             );
             if (label_response.status != 200) {
               console.error(JSON.stringify(label_response));
@@ -256,7 +256,7 @@ export class Backport {
       } else {
         console.error(`An unexpected error occurred: ${JSON.stringify(error)}`);
         core.setFailed(
-          "An unexpected error occured. Please check the logs for details"
+          "An unexpected error occured. Please check the logs for details",
         );
       }
     }
@@ -271,12 +271,12 @@ export class Backport {
     const title = utils.replacePlaceholders(
       this.config.pull.title,
       main,
-      target
+      target,
     );
     const body = utils.replacePlaceholders(
       this.config.pull.description,
       main,
-      target
+      target,
     );
     return { title, body };
   }
@@ -291,7 +291,7 @@ export class Backport {
     exitcode: number,
     baseref: string,
     headref: string,
-    branchname: string
+    branchname: string,
   ): string {
     const reasons: { [key: number]: string } = {
       1: "due to an unknown script error",
@@ -324,14 +324,14 @@ export class Backport {
 
   private composeMessageForGitPushFailure(
     target: string,
-    exitcode: number
+    exitcode: number,
   ): string {
     //TODO better error messages depending on exit code
     return dedent`Git push to origin failed for ${target} with exitcode ${exitcode}`;
   }
 
   private composeMessageForCreatePRFailed(
-    response: CreatePullRequestResponse
+    response: CreatePullRequestResponse,
   ): string {
     return dedent`Backport branch created but failed to create PR. 
                 Request to create PR rejected with status ${response.status}.
@@ -346,13 +346,13 @@ export class Backport {
 
   private createOutput(successByTarget: Map<string, boolean>) {
     const anyTargetFailed = Array.from(successByTarget.values()).includes(
-      false
+      false,
     );
     core.setOutput(Output.wasSuccessful, !anyTargetFailed);
 
     const byTargetOutput = Array.from(successByTarget.entries()).reduce<string>(
       (i, [target, result]) => `${i}${target}=${result}\n`,
-      ""
+      "",
     );
     core.setOutput(Output.wasSuccessfulByTarget, byTargetOutput);
   }
@@ -361,7 +361,7 @@ export class Backport {
 export function findTargetBranches(
   config: Pick<Config, "labels" | "target_branches">,
   labels: string[],
-  headref: string
+  headref: string,
 ) {
   console.log("Determining target branches...");
 
@@ -376,10 +376,10 @@ export function findTargetBranches(
 
   console.log(`Found target branches in labels: ${targetBranchesFromLabels}`);
   console.log(
-    `Found target branches in \`target_branches\` input: ${configuredTargetBranches}`
+    `Found target branches in \`target_branches\` input: ${configuredTargetBranches}`,
   );
   console.log(
-    `Exclude pull request's headref from target branches: ${headref}`
+    `Exclude pull request's headref from target branches: ${headref}`,
   );
 
   const targetBranches = [
@@ -393,7 +393,7 @@ export function findTargetBranches(
 
 function findTargetBranchesFromLabels(
   labels: string[],
-  config: Pick<Config, "labels">
+  config: Pick<Config, "labels">,
 ) {
   const pattern = config.labels.pattern;
   if (pattern === undefined) {
@@ -406,13 +406,13 @@ function findTargetBranchesFromLabels(
     .filter((result) => {
       if (!result.match) {
         console.log(
-          `label '${result.label}' doesn't match \`label_pattern\` '${pattern.source}'`
+          `label '${result.label}' doesn't match \`label_pattern\` '${pattern.source}'`,
         );
       } else if (result.match.length < 2) {
         console.error(
           dedent`label '${result.label}' matches \`label_pattern\` '${pattern.source}', \
           but no branchname could be captured. Please make sure to provide a regex with a capture group as \
-          \`label_pattern\`.`
+          \`label_pattern\`.`,
         );
       }
       return !!result.match && result.match.length === 2;

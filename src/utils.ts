@@ -9,7 +9,7 @@ import { PullRequest } from "./github";
 export function replacePlaceholders(
   template: string,
   main: Pick<PullRequest, "body" | "user" | "number" | "title">,
-  target: string
+  target: string,
 ): string {
   const issues = getMentionedIssueRefs(main.body);
   return template
@@ -56,7 +56,7 @@ const toRef = (url: string) => {
   const result = patterns.url.first.exec(url);
   if (!result) {
     console.error(
-      `Expected to transform url (${url}) to GitHub reference, but it did not match pattern'`
+      `Expected to transform url (${url}) to GitHub reference, but it did not match pattern'`,
     );
     return "";
   }
