@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - release*
-  pull_request_target: { }
+  pull_request: { }
 
 jobs:
   build:
@@ -33,8 +33,10 @@ jobs:
           CI: true
       - name: Publish artifacts
         if: >
-          github.ref == 'refs/heads/main'
-            || startsWith(github.ref, 'refs/heads/release')
+          github.event_name == 'push' && (
+            github.ref == 'refs/heads/main' ||
+            startsWith(github.ref, 'refs/heads/release')
+          )
         uses: EndBug/add-and-commit@v9
         with:
           commit: --signoff
