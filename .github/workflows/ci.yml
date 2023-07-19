@@ -26,13 +26,15 @@ jobs:
         run: npm run test-verbose
         env:
           CI: true
+      - name: Prepare post-merge steps
+        if: >
+          github.event.action == 'closed' &&
+          github.event.pull_request.merged
+        run: git checkout ${{ github.event.pull_request.base.ref }}
       - name: Publish artifacts
         if: >
           github.event.action == 'closed' &&
-          github.event.pull_request.merged && (
-            github.ref == 'refs/heads/main' ||
-            startsWith(github.ref, 'refs/heads/release')
-          )
+          github.event.pull_request.merged
         uses: EndBug/add-and-commit@v9
         with:
           commit: --signoff
@@ -44,8 +46,8 @@ jobs:
         if: >
           github.event.action == 'closed' &&
           github.event.pull_request.merged && (
-            github.ref == 'refs/heads/main' ||
-            startsWith(github.ref, 'refs/heads/release')
+            github.event.pull_request.base.ref == 'refs/heads/main' ||
+            startsWith(github.event.pull_request.base.ref, 'refs/heads/release')
           )
         run: |
           git tag v1.next-preview --force
