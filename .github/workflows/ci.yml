@@ -1,10 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - main
-      - release*
   pull_request: { }
 
 jobs:
@@ -12,8 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.BACKPORT_ACTION_PAT }}
       - name: Use Node.js 16.x
         uses: actions/setup-node@v3
         with:
@@ -33,7 +27,8 @@ jobs:
           CI: true
       - name: Publish artifacts
         if: >
-          github.event_name == 'push' && (
+          github.event.action == 'closed' &&
+          github.event.pull_request.merged && (
             github.ref == 'refs/heads/main' ||
             startsWith(github.ref, 'refs/heads/release')
           )
@@ -44,3 +39,13 @@ jobs:
           fetch: false
           message: 'dist: build new artifacts'
           push: true
+      - name: Create and move next-preview tag
+        if: >
+          github.event.action == 'closed' &&
+          github.event.pull_request.merged && (
+            github.ref == 'refs/heads/main' ||
+            startsWith(github.ref, 'refs/heads/release')
+          )
+        run: |
+          git tag v1.next-preview --force
+          git push origin v1.next-preview --force
