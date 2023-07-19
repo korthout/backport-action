@@ -46,8 +46,8 @@ jobs:
         if: >
           github.event.action == 'closed' &&
           github.event.pull_request.merged && (
-            github.event.pull_request.base.ref == 'refs/heads/main' ||
-            startsWith(github.event.pull_request.base.ref, 'refs/heads/release')
+            github.event.pull_request.base.ref == 'main' ||
+            startsWith(github.event.pull_request.base.ref, 'release')
           )
         run: |
           git tag v1.next-preview --force
