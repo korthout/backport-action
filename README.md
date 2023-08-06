@@ -113,6 +113,15 @@ Regex pattern to match github labels which will be copied from the original pull
 Note that labels matching `label_pattern` are excluded.
 By default, no labels are copied.
 
+### `default_mainline`
+
+Default: `''` (disabled)
+
+The mainline (parent-number) to use when cherry-picking.
+This allows the action to cherry-pick merge commits.
+See https://git-scm.com/docs/git-cherry-pick for more information.
+By default, the action fails when it encounters a merge commit.
+
 ### `github_token`
 
 Default: `${{ github.token }}`
