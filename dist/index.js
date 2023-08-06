@@ -140,7 +140,7 @@ class Backport {
                             continue;
                         }
                         try {
-                            yield git.cherryPick(commitShas, this.config.pwd);
+                            yield git.cherryPick(commitShas, this.config.pwd, this.config.default_mainline);
                         }
                         catch (error) {
                             const message = this.composeMessageForBackportScriptFailure(target, 4, baseref, headref, branchname);
@@ -419,12 +419,17 @@ function checkout(branch, start, pwd) {
     });
 }
 exports.checkout = checkout;
-function cherryPick(commitShas, pwd) {
+function cherryPick(commitShas, pwd, default_mainline) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode } = yield git("cherry-pick", ["-x", ...commitShas], pwd);
+        const args = ["-x"];
+        if (default_mainline !== undefined) {
+            args.push(`--mainline=${default_mainline}`);
+        }
+        args.push(...commitShas);
+        const { exitCode } = yield git("cherry-pick", args, pwd);
         if (exitCode !== 0) {
             yield git("cherry-pick", ["--abort"], pwd);
-            throw new Error(`'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`);
+            throw new Error(`'git cherry-pick ${args.join(" ")}' failed with exit code ${exitCode}`);
         }
     });
 }
@@ -637,6 +642,7 @@ const github_1 = __nccwpck_require__(5928);
  * Is separated from backport for testing purposes
  */
 function run() {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const token = core.getInput("github_token", { required: true });
         const pwd = core.getInput("github_workspace", { required: true });
@@ -645,14 +651,21 @@ function run() {
         const title = core.getInput("pull_title");
         const copy_labels_pattern = core.getInput("copy_labels_pattern");
         const target_branches = core.getInput("target_branches");
-        const github = new github_1.Github(token);
-        const backport = new backport_1.Backport(github, {
+        const default_mainline = core.getInput("default_mainline");
+        const config = {
             pwd,
             labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
             pull: { description, title },
             copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
             target_branches: target_branches === "" ? undefined : target_branches,
-        });
+            default_mainline: default_mainline === "" ? undefined : Number(default_mainline),
+        };
+        // todo: improve config validation
+        if (isNaN((_a = config.default_mainline) !== null && _a !== void 0 ? _a : -1)) {
+            throw new Error(`When defined, \`default_mainline\` must be a number but it was '${default_mainline}''`);
+        }
+        const github = new github_1.Github(token);
+        const backport = new backport_1.Backport(github, config);
         return backport.run();
     });
 }
