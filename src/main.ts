@@ -1,5 +1,5 @@
 import * as core from "@actions/core";
-import { Backport } from "./backport";
+import { Backport, Config } from "./backport";
 import { Github } from "./github";
 
 /**
@@ -15,9 +15,9 @@ async function run(): Promise<void> {
   const title = core.getInput("pull_title");
   const copy_labels_pattern = core.getInput("copy_labels_pattern");
   const target_branches = core.getInput("target_branches");
+  const default_mainline = core.getInput("default_mainline");
 
-  const github = new Github(token);
-  const backport = new Backport(github, {
+  const config: Config = {
     pwd,
     labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
     pull: { description, title },
@@ -25,7 +25,19 @@ async function run(): Promise<void> {
       copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
     target_branches:
       target_branches === "" ? undefined : (target_branches as string),
-  });
+    default_mainline:
+      default_mainline === "" ? undefined : Number(default_mainline),
+  };
+
+  // todo: improve config validation
+  if (isNaN(config.default_mainline ?? -1)) {
+    throw new Error(
+      `When defined, \`default_mainline\` must be a number but it was '${default_mainline}''`,
+    );
+  }
+
+  const github = new Github(token);
+  const backport = new Backport(github, config);
 
   return backport.run();
 }

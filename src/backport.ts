@@ -11,7 +11,7 @@ type PRContent = {
   body: string;
 };
 
-type Config = {
+export type Config = {
   pwd: string;
   labels: {
     pattern?: RegExp;
@@ -22,6 +22,7 @@ type Config = {
   };
   copy_labels_pattern?: RegExp;
   target_branches?: string;
+  default_mainline?: number;
 };
 
 enum Output {
@@ -148,7 +149,11 @@ export class Backport {
           }
 
           try {
-            await git.cherryPick(commitShas, this.config.pwd);
+            await git.cherryPick(
+              commitShas,
+              this.config.pwd,
+              this.config.default_mainline,
+            );
           } catch (error) {
             const message = this.composeMessageForBackportScriptFailure(
               target,
