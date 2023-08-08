@@ -34,10 +34,10 @@ export class Backport {
   private config;
   private git;
 
-  constructor(github: GithubApi, config: Config) {
+  constructor(github: GithubApi, config: Config, git: Git) {
     this.github = github;
     this.config = config;
-    this.git = new Git();
+    this.git = git;
   }
 
   async run(): Promise<void> {
