@@ -3,7 +3,7 @@ import dedent from "dedent";
 
 import { CreatePullRequestResponse, PullRequest } from "./github";
 import { GithubApi } from "./github";
-import * as git from "./git";
+import { Git, GitRefNotFoundError } from "./git";
 import * as utils from "./utils";
 
 type PRContent = {
@@ -32,10 +32,12 @@ enum Output {
 export class Backport {
   private github;
   private config;
+  private git;
 
   constructor(github: GithubApi, config: Config) {
     this.github = github;
     this.config = config;
+    this.git = new Git();
   }
 
   async run(): Promise<void> {
@@ -70,7 +72,7 @@ export class Backport {
       console.log(
         `Fetching all the commits from the pull request: ${mainpr.commits + 1}`,
       );
-      await git.fetch(
+      await this.git.fetch(
         `refs/pull/${pull_number}/head`,
         this.config.pwd,
         mainpr.commits + 1, // +1 in case this concerns a shallowly cloned repo
@@ -104,9 +106,9 @@ export class Backport {
         console.log(`Backporting to target branch '${target}...'`);
 
         try {
-          await git.fetch(target, this.config.pwd, 1);
+          await this.git.fetch(target, this.config.pwd, 1);
         } catch (error) {
-          if (error instanceof git.GitRefNotFoundError) {
+          if (error instanceof GitRefNotFoundError) {
             const message = this.composeMessageForFetchTargetFailure(error.ref);
             console.error(message);
             successByTarget.set(target, false);
@@ -127,7 +129,11 @@ export class Backport {
 
           console.log(`Start backport to ${branchname}`);
           try {
-            await git.checkout(branchname, `origin/${target}`, this.config.pwd);
+            await this.git.checkout(
+              branchname,
+              `origin/${target}`,
+              this.config.pwd,
+            );
           } catch (error) {
             const message = this.composeMessageForBackportScriptFailure(
               target,
@@ -148,7 +154,7 @@ export class Backport {
           }
 
           try {
-            await git.cherryPick(commitShas, this.config.pwd);
+            await this.git.cherryPick(commitShas, this.config.pwd);
           } catch (error) {
             const message = this.composeMessageForBackportScriptFailure(
               target,
@@ -169,7 +175,7 @@ export class Backport {
           }
 
           console.info(`Push branch to origin`);
-          const pushExitCode = await git.push(branchname, this.config.pwd);
+          const pushExitCode = await this.git.push(branchname, this.config.pwd);
           if (pushExitCode != 0) {
             const message = this.composeMessageForGitPushFailure(
               target,
