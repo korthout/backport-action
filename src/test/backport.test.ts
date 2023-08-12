@@ -1,9 +1,5 @@
 import { findTargetBranches } from "../backport";
 
-jest.mock("execa", () => ({
-  execa: jest.fn(),
-}));
-
 const default_pattern = /^backport ([^ ]+)$/;
 
 describe("find target branches", () => {

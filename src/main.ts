@@ -1,6 +1,8 @@
 import * as core from "@actions/core";
 import { Backport } from "./backport";
 import { Github } from "./github";
+import { Git } from "./git";
+import { execa } from "execa";
 
 /**
  * Called from the action.yml.
@@ -17,7 +19,8 @@ async function run(): Promise<void> {
   const target_branches = core.getInput("target_branches");
 
   const github = new Github(token);
-  const backport = new Backport(github, {
+  const git = new Git(execa);
+  const config = {
     pwd,
     labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
     pull: { description, title },
@@ -25,7 +28,8 @@ async function run(): Promise<void> {
       copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
     target_branches:
       target_branches === "" ? undefined : (target_branches as string),
-  });
+  };
+  const backport = new Backport(github, config, git);
 
   return backport.run();
 }
