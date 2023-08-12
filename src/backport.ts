@@ -78,10 +78,6 @@ export class Backport {
         mainpr.commits + 1, // +1 in case this concerns a shallowly cloned repo
       );
 
-      console.log(
-        "Determining first and last commit shas, so we can cherry-pick the commit range",
-      );
-
       const commitShas = await this.github.getCommits(mainpr);
       console.log(`Found commits: ${commitShas}`);
 
