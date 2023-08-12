@@ -85,6 +85,15 @@ export class Backport {
       const commitShas = await this.github.getCommits(mainpr);
       console.log(`Found commits: ${commitShas}`);
 
+      console.log("Checking for any merge commits");
+      const mergeCommitShas = await this.git.findMergeCommits(
+        commitShas,
+        this.config.pwd,
+      );
+      const nonMergeCommitShas = commitShas.filter(
+        (sha) => !mergeCommitShas.includes(sha),
+      );
+
       let labelsToCopy: string[] = [];
       if (typeof this.config.copy_labels_pattern !== "undefined") {
         let copyLabelsPattern: RegExp = this.config.copy_labels_pattern;
@@ -154,7 +163,7 @@ export class Backport {
           }
 
           try {
-            await this.git.cherryPick(commitShas, this.config.pwd);
+            await this.git.cherryPick(nonMergeCommitShas, this.config.pwd);
           } catch (error) {
             const message = this.composeMessageForBackportScriptFailure(
               target,

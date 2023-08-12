@@ -52,6 +52,27 @@ export class Git {
     }
   }
 
+  public async findMergeCommits(
+    commitShas: string[],
+    pwd: string,
+  ): Promise<string[]> {
+    const range = `${commitShas[0]}^..${commitShas[commitShas.length - 1]}`;
+    const { exitCode, stdout } = await this.git(
+      "rev-list",
+      ["--merges", range],
+      pwd,
+    );
+    if (exitCode !== 0) {
+      throw new Error(
+        `'git rev-list --merges ${range}' failed with exit code ${exitCode}`,
+      );
+    }
+    const mergeCommitShas = stdout
+      .split("\n")
+      .filter((sha) => sha.trim() !== "");
+    return mergeCommitShas;
+  }
+
   public async push(branchname: string, pwd: string) {
     const { exitCode } = await this.git(
       "push",
