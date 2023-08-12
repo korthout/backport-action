@@ -86,9 +86,28 @@ export class Backport {
         commitShas,
         this.config.pwd,
       );
-      const nonMergeCommitShas = commitShas.filter(
-        (sha) => !mergeCommitShas.includes(sha),
-      );
+      if (mergeCommitShas) {
+        const message =
+          "This pull request contains merge commits while this action is configured to fail when encountering merge commit. You can either backport this pull request manually, or configure the action to skip merge commits.";
+        console.error(message);
+        this.github.createComment({
+          owner,
+          repo,
+          issue_number: pull_number,
+          body: message,
+        });
+        return;
+      }
+
+      let commitShasToCherryPick;
+      if (true) {
+        commitShasToCherryPick = commitShas;
+      } else {
+        const nonMergeCommitShas = commitShas.filter(
+          (sha) => !mergeCommitShas.includes(sha),
+        );
+        commitShasToCherryPick = nonMergeCommitShas;
+      }
 
       let labelsToCopy: string[] = [];
       if (typeof this.config.copy_labels_pattern !== "undefined") {
@@ -159,7 +178,7 @@ export class Backport {
           }
 
           try {
-            await this.git.cherryPick(nonMergeCommitShas, this.config.pwd);
+            await this.git.cherryPick(commitShasToCherryPick, this.config.pwd);
           } catch (error) {
             const message = this.composeMessageForBackportScriptFailure(
               target,
