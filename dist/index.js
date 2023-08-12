@@ -45,7 +45,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findTargetBranches = exports.Backport = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const dedent_1 = __importDefault(__nccwpck_require__(5281));
-const git = __importStar(__nccwpck_require__(3374));
+const git_1 = __nccwpck_require__(3374);
 const utils = __importStar(__nccwpck_require__(918));
 var Output;
 (function (Output) {
@@ -53,9 +53,10 @@ var Output;
     Output["wasSuccessfulByTarget"] = "was_successful_by_target";
 })(Output || (Output = {}));
 class Backport {
-    constructor(github, config) {
+    constructor(github, config, git) {
         this.github = github;
         this.config = config;
+        this.git = git;
     }
     run() {
         var _a, _b, _c;
@@ -84,7 +85,7 @@ class Backport {
                     return; // nothing left to do here
                 }
                 console.log(`Fetching all the commits from the pull request: ${mainpr.commits + 1}`);
-                yield git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd, mainpr.commits + 1);
+                yield this.git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd, mainpr.commits + 1);
                 console.log("Determining first and last commit shas, so we can cherry-pick the commit range");
                 const commitShas = yield this.github.getCommits(mainpr);
                 console.log(`Found commits: ${commitShas}`);
@@ -102,10 +103,10 @@ class Backport {
                 for (const target of target_branches) {
                     console.log(`Backporting to target branch '${target}...'`);
                     try {
-                        yield git.fetch(target, this.config.pwd, 1);
+                        yield this.git.fetch(target, this.config.pwd, 1);
                     }
                     catch (error) {
-                        if (error instanceof git.GitRefNotFoundError) {
+                        if (error instanceof git_1.GitRefNotFoundError) {
                             const message = this.composeMessageForFetchTargetFailure(error.ref);
                             console.error(message);
                             successByTarget.set(target, false);
@@ -125,7 +126,7 @@ class Backport {
                         const branchname = `backport-${pull_number}-to-${target}`;
                         console.log(`Start backport to ${branchname}`);
                         try {
-                            yield git.checkout(branchname, `origin/${target}`, this.config.pwd);
+                            yield this.git.checkout(branchname, `origin/${target}`, this.config.pwd);
                         }
                         catch (error) {
                             const message = this.composeMessageForBackportScriptFailure(target, 3, baseref, headref, branchname);
@@ -140,7 +141,7 @@ class Backport {
                             continue;
                         }
                         try {
-                            yield git.cherryPick(commitShas, this.config.pwd);
+                            yield this.git.cherryPick(commitShas, this.config.pwd);
                         }
                         catch (error) {
                             const message = this.composeMessageForBackportScriptFailure(target, 4, baseref, headref, branchname);
@@ -155,7 +156,7 @@ class Backport {
                             continue;
                         }
                         console.info(`Push branch to origin`);
-                        const pushExitCode = yield git.push(branchname, this.config.pwd);
+                        const pushExitCode = yield this.git.push(branchname, this.config.pwd);
                         if (pushExitCode != 0) {
                             const message = this.composeMessageForGitPushFailure(target, pushExitCode);
                             console.error(message);
@@ -343,7 +344,7 @@ function findTargetBranchesFromLabels(labels, config) {
 /***/ }),
 
 /***/ 3374:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ (function(__unused_webpack_module, exports) {
 
 "use strict";
 
@@ -357,8 +358,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.cherryPick = exports.checkout = exports.push = exports.fetch = exports.GitRefNotFoundError = void 0;
-const execa_1 = __nccwpck_require__(9956);
+exports.Git = exports.GitRefNotFoundError = void 0;
 class GitRefNotFoundError extends Error {
     constructor(message, ref) {
         super(message);
@@ -366,69 +366,71 @@ class GitRefNotFoundError extends Error {
     }
 }
 exports.GitRefNotFoundError = GitRefNotFoundError;
-/**
- * Fetches a ref from origin
- *
- * @param ref the sha, branchname, etc to fetch
- * @param pwd the root of the git repository
- * @param depth the number of commits to fetch
- * @throws GitRefNotFoundError when ref not found
- * @throws Error for any other non-zero exit code
- */
-function fetch(ref, pwd, depth) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode } = yield git("fetch", [`--depth=${depth}`, "origin", ref], pwd);
-        if (exitCode === 128) {
-            throw new GitRefNotFoundError(`Expected to fetch '${ref}', but couldn't find it`, ref);
-        }
-        else if (exitCode !== 0) {
-            throw new Error(`'git fetch origin ${ref}' failed with exit code ${exitCode}`);
-        }
-    });
-}
-exports.fetch = fetch;
-function push(branchname, pwd) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode } = yield git("push", ["--set-upstream", "origin", branchname], pwd);
-        return exitCode;
-    });
-}
-exports.push = push;
-function git(command, args, pwd) {
-    var _a;
-    return __awaiter(this, void 0, void 0, function* () {
-        console.log(`git ${command} ${args.join(" ")}`);
-        const child = (0, execa_1.execa)("git", [command, ...args], {
-            cwd: pwd,
-            env: {
-                GIT_COMMITTER_NAME: "github-actions[bot]",
-                GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com",
-            },
-            reject: false,
+class Git {
+    constructor(execa) {
+        this.execa = execa;
+    }
+    git(command, args, pwd) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`git ${command} ${args.join(" ")}`);
+            const child = this.execa("git", [command, ...args], {
+                cwd: pwd,
+                env: {
+                    GIT_COMMITTER_NAME: "github-actions[bot]",
+                    GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com",
+                },
+                reject: false,
+            });
+            (_a = child.stderr) === null || _a === void 0 ? void 0 : _a.pipe(process.stderr);
+            return child;
         });
-        (_a = child.stderr) === null || _a === void 0 ? void 0 : _a.pipe(process.stderr);
-        return child;
-    });
+    }
+    /**
+     * Fetches a ref from origin
+     *
+     * @param ref the sha, branchname, etc to fetch
+     * @param pwd the root of the git repository
+     * @param depth the number of commits to fetch
+     * @throws GitRefNotFoundError when ref not found
+     * @throws Error for any other non-zero exit code
+     */
+    fetch(ref, pwd, depth) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { exitCode } = yield this.git("fetch", [`--depth=${depth}`, "origin", ref], pwd);
+            if (exitCode === 128) {
+                throw new GitRefNotFoundError(`Expected to fetch '${ref}', but couldn't find it`, ref);
+            }
+            else if (exitCode !== 0) {
+                throw new Error(`'git fetch origin ${ref}' failed with exit code ${exitCode}`);
+            }
+        });
+    }
+    push(branchname, pwd) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { exitCode } = yield this.git("push", ["--set-upstream", "origin", branchname], pwd);
+            return exitCode;
+        });
+    }
+    checkout(branch, start, pwd) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { exitCode } = yield this.git("switch", ["-c", branch, start], pwd);
+            if (exitCode !== 0) {
+                throw new Error(`'git switch -c ${branch} ${start}' failed with exit code ${exitCode}`);
+            }
+        });
+    }
+    cherryPick(commitShas, pwd) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { exitCode } = yield this.git("cherry-pick", ["-x", ...commitShas], pwd);
+            if (exitCode !== 0) {
+                yield this.git("cherry-pick", ["--abort"], pwd);
+                throw new Error(`'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`);
+            }
+        });
+    }
 }
-function checkout(branch, start, pwd) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode } = yield git("switch", ["-c", branch, start], pwd);
-        if (exitCode !== 0) {
-            throw new Error(`'git switch -c ${branch} ${start}' failed with exit code ${exitCode}`);
-        }
-    });
-}
-exports.checkout = checkout;
-function cherryPick(commitShas, pwd) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { exitCode } = yield git("cherry-pick", ["-x", ...commitShas], pwd);
-        if (exitCode !== 0) {
-            yield git("cherry-pick", ["--abort"], pwd);
-            throw new Error(`'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`);
-        }
-    });
-}
-exports.cherryPick = cherryPick;
+exports.Git = Git;
 
 
 /***/ }),
@@ -631,6 +633,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const backport_1 = __nccwpck_require__(5859);
 const github_1 = __nccwpck_require__(5928);
+const git_1 = __nccwpck_require__(3374);
+const execa_1 = __nccwpck_require__(9956);
 /**
  * Called from the action.yml.
  *
@@ -646,13 +650,15 @@ function run() {
         const copy_labels_pattern = core.getInput("copy_labels_pattern");
         const target_branches = core.getInput("target_branches");
         const github = new github_1.Github(token);
-        const backport = new backport_1.Backport(github, {
+        const git = new git_1.Git(execa_1.execa);
+        const config = {
             pwd,
             labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
             pull: { description, title },
             copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
             target_branches: target_branches === "" ? undefined : target_branches,
-        });
+        };
+        const backport = new backport_1.Backport(github, config, git);
         return backport.run();
     });
 }
