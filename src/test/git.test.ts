@@ -33,3 +33,14 @@ describe("git.fetch", () => {
     });
   });
 });
+
+describe("git.cherryPick", () => {
+  describe("throws Error", () => {
+    it("when failing with an unexpected non-zero exit code", async () => {
+      response.exitCode = 1;
+      await expect(git.cherryPick(["unknown"], "")).rejects.toThrowError(
+        `'git cherry-pick -x unknown' failed with exit code 1`,
+      );
+    });
+  });
+});
