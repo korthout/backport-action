@@ -11,7 +11,7 @@ type PRContent = {
   body: string;
 };
 
-type Config = {
+export type Config = {
   pwd: string;
   labels: {
     pattern?: RegExp;
@@ -22,6 +22,9 @@ type Config = {
   };
   copy_labels_pattern?: RegExp;
   target_branches?: string;
+  commits: {
+    merge_commits: "fail" | "skip";
+  };
 };
 
 enum Output {
@@ -86,7 +89,12 @@ export class Backport {
         commitShas,
         this.config.pwd,
       );
-      if (mergeCommitShas) {
+      console.log(
+        `Encountered ${
+          mergeCommitShas ? mergeCommitShas.length : "no"
+        } merge commits`,
+      );
+      if (mergeCommitShas && this.config.commits.merge_commits == "fail") {
         const message =
           "This pull request contains merge commits while this action is configured to fail when encountering merge commit. You can either backport this pull request manually, or configure the action to skip merge commits.";
         console.error(message);
@@ -99,15 +107,17 @@ export class Backport {
         return;
       }
 
-      let commitShasToCherryPick;
-      if (true) {
-        commitShasToCherryPick = commitShas;
-      } else {
+      let commitShasToCherryPick = commitShas;
+      if (mergeCommitShas && this.config.commits.merge_commits == "skip") {
+        console.log("Skipping merge commits: " + mergeCommitShas);
         const nonMergeCommitShas = commitShas.filter(
           (sha) => !mergeCommitShas.includes(sha),
         );
         commitShasToCherryPick = nonMergeCommitShas;
       }
+      console.log(
+        "Will cherry-pick the following commits: " + commitShasToCherryPick,
+      );
 
       let labelsToCopy: string[] = [];
       if (typeof this.config.copy_labels_pattern !== "undefined") {

@@ -1,5 +1,5 @@
 import * as core from "@actions/core";
-import { Backport } from "./backport";
+import { Backport, Config } from "./backport";
 import { Github } from "./github";
 import { Git } from "./git";
 import { execa } from "execa";
@@ -20,7 +20,7 @@ async function run(): Promise<void> {
 
   const github = new Github(token);
   const git = new Git(execa);
-  const config = {
+  const config: Config = {
     pwd,
     labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
     pull: { description, title },
@@ -28,6 +28,9 @@ async function run(): Promise<void> {
       copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
     target_branches:
       target_branches === "" ? undefined : (target_branches as string),
+    commits: {
+      merge_commits: "fail",
+    },
   };
   const backport = new Backport(github, config, git);
 
