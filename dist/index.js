@@ -59,7 +59,7 @@ class Backport {
         this.git = git;
     }
     run() {
-        var _a, _b, _c, _d;
+        var _a, _b, _c;
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const payload = this.github.getPayload();
@@ -86,30 +86,9 @@ class Backport {
                 }
                 console.log(`Fetching all the commits from the pull request: ${mainpr.commits + 1}`);
                 yield this.git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd, mainpr.commits + 1);
+                console.log("Determining first and last commit shas, so we can cherry-pick the commit range");
                 const commitShas = yield this.github.getCommits(mainpr);
                 console.log(`Found commits: ${commitShas}`);
-                console.log("Checking the merged pull request for merge commits");
-                const mergeCommitShas = yield this.git.findMergeCommits(commitShas, this.config.pwd);
-                console.log(`Encountered ${(_d = mergeCommitShas === null || mergeCommitShas === void 0 ? void 0 : mergeCommitShas.length) !== null && _d !== void 0 ? _d : "no"} merge commits`);
-                if (mergeCommitShas && this.config.commits.merge_commits == "fail") {
-                    const message = (0, dedent_1.default) `Backport failed because this pull request contains merge commits.\
-          You can either backport this pull request manually, or configure the action to skip merge commits.`;
-                    console.error(message);
-                    this.github.createComment({
-                        owner,
-                        repo,
-                        issue_number: pull_number,
-                        body: message,
-                    });
-                    return;
-                }
-                let commitShasToCherryPick = commitShas;
-                if (mergeCommitShas && this.config.commits.merge_commits == "skip") {
-                    console.log("Skipping merge commits: " + mergeCommitShas);
-                    const nonMergeCommitShas = commitShas.filter((sha) => !mergeCommitShas.includes(sha));
-                    commitShasToCherryPick = nonMergeCommitShas;
-                }
-                console.log("Will cherry-pick the following commits: " + commitShasToCherryPick);
                 let labelsToCopy = [];
                 if (typeof this.config.copy_labels_pattern !== "undefined") {
                     let copyLabelsPattern = this.config.copy_labels_pattern;
@@ -162,7 +141,7 @@ class Backport {
                             continue;
                         }
                         try {
-                            yield this.git.cherryPick(commitShasToCherryPick, this.config.pwd);
+                            yield this.git.cherryPick(commitShas, this.config.pwd);
                         }
                         catch (error) {
                             const message = this.composeMessageForBackportScriptFailure(target, 4, baseref, headref, branchname);
@@ -427,19 +406,6 @@ class Git {
             }
         });
     }
-    findMergeCommits(commitShas, pwd) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const range = `${commitShas[0]}^..${commitShas[commitShas.length - 1]}`;
-            const { exitCode, stdout } = yield this.git("rev-list", ["--merges", range], pwd);
-            if (exitCode !== 0) {
-                throw new Error(`'git rev-list --merges ${range}' failed with exit code ${exitCode}`);
-            }
-            const mergeCommitShas = stdout
-                .split("\n")
-                .filter((sha) => sha.trim() !== "");
-            return mergeCommitShas;
-        });
-    }
     push(branchname, pwd) {
         return __awaiter(this, void 0, void 0, function* () {
             const { exitCode } = yield this.git("push", ["--set-upstream", "origin", branchname], pwd);
@@ -683,13 +649,6 @@ function run() {
         const title = core.getInput("pull_title");
         const copy_labels_pattern = core.getInput("copy_labels_pattern");
         const target_branches = core.getInput("target_branches");
-        const merge_commits = core.getInput("merge_commits");
-        if (merge_commits != "fail" && merge_commits != "skip") {
-            const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
-            console.error(message);
-            core.setFailed(message);
-            return;
-        }
         const github = new github_1.Github(token);
         const git = new git_1.Git(execa_1.execa);
         const config = {
@@ -698,7 +657,6 @@ function run() {
             pull: { description, title },
             copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
             target_branches: target_branches === "" ? undefined : target_branches,
-            commits: { merge_commits },
         };
         const backport = new backport_1.Backport(github, config, git);
         return backport.run();
