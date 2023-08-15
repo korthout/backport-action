@@ -93,7 +93,7 @@ export class Backport {
         `Encountered ${mergeCommitShas?.length ?? "no"} merge commits`,
       );
       if (mergeCommitShas && this.config.commits.merge_commits == "fail") {
-        const message = dedent`Backport failed because this pull request contains merge commits.\
+        const message = dedent`Backport failed because this pull request contains merge commits. \
           You can either backport this pull request manually, or configure the action to skip merge commits.`;
         console.error(message);
         this.github.createComment({
