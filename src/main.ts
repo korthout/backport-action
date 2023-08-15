@@ -34,8 +34,7 @@ async function run(): Promise<void> {
     pull: { description, title },
     copy_labels_pattern:
       copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
-    target_branches:
-      target_branches === "" ? undefined : (target_branches as string),
+    target_branches: target_branches === "" ? undefined : target_branches,
     commits: { merge_commits },
   };
   const backport = new Backport(github, config, git);
