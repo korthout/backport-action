@@ -140,6 +140,16 @@ The action will backport the pull request to each matched target branch.
 Note that the pull request's headref is excluded automatically.
 See [How it works](#how-it-works).
 
+### `merge_commits`
+
+Default: `fail`
+
+Specifies how the action should deal with merge commits on the merged pull request.
+
+- When set to `fail` the backport fails when the action detects one or more merge commits.
+- When set to `skip` the action only cherry-picks non-merge commits, i.e. it ignores merge commits.
+  This can be useful when you [keep your pull requests in sync with the base branch using merge commits](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/keeping-your-pull-request-in-sync-with-the-base-branch).
+
 ### `pull_description`
 
 Default:

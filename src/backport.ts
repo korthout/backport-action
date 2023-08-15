@@ -11,7 +11,7 @@ type PRContent = {
   body: string;
 };
 
-type Config = {
+export type Config = {
   pwd: string;
   labels: {
     pattern?: RegExp;
@@ -22,6 +22,9 @@ type Config = {
   };
   copy_labels_pattern?: RegExp;
   target_branches?: string;
+  commits: {
+    merge_commits: "fail" | "skip";
+  };
 };
 
 enum Output {
@@ -78,12 +81,47 @@ export class Backport {
         mainpr.commits + 1, // +1 in case this concerns a shallowly cloned repo
       );
 
-      console.log(
-        "Determining first and last commit shas, so we can cherry-pick the commit range",
-      );
-
       const commitShas = await this.github.getCommits(mainpr);
       console.log(`Found commits: ${commitShas}`);
+
+      console.log("Checking the merged pull request for merge commits");
+      const mergeCommitShas = await this.git.findMergeCommits(
+        commitShas,
+        this.config.pwd,
+      );
+      console.log(
+        `Encountered ${mergeCommitShas.length ?? "no"} merge commits`,
+      );
+      if (
+        mergeCommitShas.length > 0 &&
+        this.config.commits.merge_commits == "fail"
+      ) {
+        const message = dedent`Backport failed because this pull request contains merge commits. \
+          You can either backport this pull request manually, or configure the action to skip merge commits.`;
+        console.error(message);
+        this.github.createComment({
+          owner,
+          repo,
+          issue_number: pull_number,
+          body: message,
+        });
+        return;
+      }
+
+      let commitShasToCherryPick = commitShas;
+      if (
+        mergeCommitShas.length > 0 &&
+        this.config.commits.merge_commits == "skip"
+      ) {
+        console.log("Skipping merge commits: " + mergeCommitShas);
+        const nonMergeCommitShas = commitShas.filter(
+          (sha) => !mergeCommitShas.includes(sha),
+        );
+        commitShasToCherryPick = nonMergeCommitShas;
+      }
+      console.log(
+        "Will cherry-pick the following commits: " + commitShasToCherryPick,
+      );
 
       let labelsToCopy: string[] = [];
       if (typeof this.config.copy_labels_pattern !== "undefined") {
@@ -154,7 +192,7 @@ export class Backport {
           }
 
           try {
-            await this.git.cherryPick(commitShas, this.config.pwd);
+            await this.git.cherryPick(commitShasToCherryPick, this.config.pwd);
           } catch (error) {
             const message = this.composeMessageForBackportScriptFailure(
               target,
