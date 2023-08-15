@@ -84,19 +84,17 @@ export class Backport {
       const commitShas = await this.github.getCommits(mainpr);
       console.log(`Found commits: ${commitShas}`);
 
-      console.log("Checking for any merge commits");
+      console.log("Checking the merged pull request for merge commits");
       const mergeCommitShas = await this.git.findMergeCommits(
         commitShas,
         this.config.pwd,
       );
       console.log(
-        `Encountered ${
-          mergeCommitShas ? mergeCommitShas.length : "no"
-        } merge commits`,
+        `Encountered ${mergeCommitShas?.length ?? "no"} merge commits`,
       );
       if (mergeCommitShas && this.config.commits.merge_commits == "fail") {
-        const message =
-          "This pull request contains merge commits while this action is configured to fail when encountering merge commit. You can either backport this pull request manually, or configure the action to skip merge commits.";
+        const message = dedent`Backport failed because this pull request contains merge commits.\
+          You can either backport this pull request manually, or configure the action to skip merge commits.`;
         console.error(message);
         this.github.createComment({
           owner,
