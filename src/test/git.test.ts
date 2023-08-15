@@ -44,24 +44,3 @@ describe("git.cherryPick", () => {
     });
   });
 });
-
-describe("git.findMergeCommits", () => {
-  describe("throws Error", () => {
-    it("when failing with an unpexected non-zero exit code", async () => {
-      response.exitCode = 1;
-      await expect(git.findMergeCommits(["unknown"], "")).rejects.toThrowError(
-        `'git rev-list --merges unknown^..unknown' failed with exit code 1`,
-      );
-    });
-  });
-
-  describe("returns all merge commits", () => {
-    it("when git rev-list outputs them", async () => {
-      response.exitCode = 0;
-      response.stdout = "two\nfour";
-      expect(
-        await git.findMergeCommits(["one", "two", "three", "four"], ""),
-      ).toEqual(["two", "four"]);
-    });
-  });
-});
