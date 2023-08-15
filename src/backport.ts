@@ -90,9 +90,12 @@ export class Backport {
         this.config.pwd,
       );
       console.log(
-        `Encountered ${mergeCommitShas?.length ?? "no"} merge commits`,
+        `Encountered ${mergeCommitShas.length ?? "no"} merge commits`,
       );
-      if (mergeCommitShas && this.config.commits.merge_commits == "fail") {
+      if (
+        mergeCommitShas.length > 0 &&
+        this.config.commits.merge_commits == "fail"
+      ) {
         const message = dedent`Backport failed because this pull request contains merge commits. \
           You can either backport this pull request manually, or configure the action to skip merge commits.`;
         console.error(message);
@@ -106,7 +109,10 @@ export class Backport {
       }
 
       let commitShasToCherryPick = commitShas;
-      if (mergeCommitShas && this.config.commits.merge_commits == "skip") {
+      if (
+        mergeCommitShas.length > 0 &&
+        this.config.commits.merge_commits == "skip"
+      ) {
         console.log("Skipping merge commits: " + mergeCommitShas);
         const nonMergeCommitShas = commitShas.filter(
           (sha) => !mergeCommitShas.includes(sha),
