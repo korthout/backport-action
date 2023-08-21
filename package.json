@@ -28,7 +28,7 @@
     "@actions/github": "^5.1.1",
     "@types/dedent": "^0.7.0",
     "dedent": "^1.5.1",
-    "execa": "^7.2.0"
+    "execa": "^8.0.1"
   },
   "devDependencies": {
     "@types/jest": "^27.5.0",
