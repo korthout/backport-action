@@ -46,7 +46,7 @@ jobs:
     # Don't run on closed unmerged pull requests
     if: github.event.pull_request.merged
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Create backport pull requests
         uses: korthout/backport-action@v1
 ```
@@ -93,7 +93,7 @@ jobs:
         contains(github.event.comment.body, '/backport')
       )
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Create backport pull requests
         uses: korthout/backport-action@v1
 ```
