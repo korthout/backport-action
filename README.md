@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Create backport pull requests
-        uses: korthout/backport-action@v1
+        uses: korthout/backport-action@v2
 ```
 
 > **Note**
@@ -95,7 +95,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Create backport pull requests
-        uses: korthout/backport-action@v1
+        uses: korthout/backport-action@v2
 ```
 
 </p>
