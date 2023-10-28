@@ -69,14 +69,6 @@ jobs:
           git push origin v${{ steps.version.outputs.major }} --force
           git push origin v${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }} --force
 
-      - name: Update release-next-preview workflow
-        uses: jacobtomlinson/gha-find-replace@v3
-        with:
-          find: 'v(\d+)\.next-preview'
-          replace: 'v${{ steps.version.outputs.major }}.next-preview'
-          include: ".github/workflows/release-next-preview.yml"
-          regex: true
-
       - name: Commit next development version
         id: commit-next-dev
         uses: EndBug/add-and-commit@v9
