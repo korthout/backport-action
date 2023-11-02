@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Only run when pull request is merged
-    # or when a comment containing `/backport` is created by someone other than the 
+    # or when a comment containing `/backport` is created by someone other than the
     # https://github.com/backport-action bot user (user id: 97796249). Note that if you use your
     # own PAT as `github_token`, that you should replace this id with yours.
     if: >
@@ -184,6 +184,26 @@ See [How it works](#how-it-works).
 
 Can be used in addition to backport labels.
 By default, only backport labels are used to specify the target branches.
+
+
+### `copy_milestone`
+
+Default: `''` (disabled)
+
+Controls wheather the "milestone" of the original pull request should be added to the backports.
+
+### `copy_assignees`
+
+Default: `''` (disabled)
+
+Controls wheather the assignees of the original pull request should be added to the backports.
+
+### `copy_reviewers`
+
+Default: `''` (disabled)
+
+Controls wheather the reviewers of the original pull request should be added to the backports.
+
 
 ## Placeholders
 In the `pull_description` and `pull_title` inputs, placeholders can be used to define variable values.
