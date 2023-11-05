@@ -25,6 +25,9 @@ export type Config = {
   commits: {
     merge_commits: "fail" | "skip";
   };
+  copy_milestone: boolean;
+  copy_assignees: boolean;
+  copy_requested_reviewers: boolean;
 };
 
 enum Output {
@@ -257,6 +260,53 @@ export class Backport {
           }
           const new_pr = new_pr_response.data;
 
+          if (this.config.copy_milestone == true) {
+            const milestone = mainpr.milestone?.number;
+            if (milestone) {
+              console.info("Setting milestone to " + milestone);
+              const set_milestone_response = await this.github.setMilestone(
+                new_pr.number,
+                milestone,
+              );
+              if (set_milestone_response.status != 200) {
+                console.error(JSON.stringify(set_milestone_response));
+              }
+            }
+          }
+
+          if (this.config.copy_assignees == true) {
+            const assignees = mainpr.assignees.map((label) => label.login);
+            if (assignees.length > 0) {
+              console.info("Setting assignees " + assignees);
+              const set_assignee_response = await this.github.setAssignees(
+                new_pr.number,
+                assignees,
+              );
+              if (set_assignee_response.status != 201) {
+                console.error(JSON.stringify(set_assignee_response));
+              }
+            }
+          }
+
+          if (this.config.copy_requested_reviewers == true) {
+            const reviewers = mainpr.requested_reviewers?.map(
+              (reviewer) => reviewer.login,
+            );
+            if (reviewers?.length > 0) {
+              console.info("Setting reviewers " + reviewers);
+              const reviewRequest = {
+                ...this.github.getRepo(),
+                pull_number: new_pr.number,
+                reviewers: reviewers,
+              };
+              const set_reviewers_response =
+                await this.github.requestReviewers(reviewRequest);
+              if (set_reviewers_response.status != 201) {
+                console.error(JSON.stringify(set_reviewers_response));
+              }
+            }
+          }
+
           if (labelsToCopy.length > 0) {
             const label_response = await this.github.labelPR(
               new_pr.number,
@@ -377,7 +427,7 @@ export class Backport {
   private composeMessageForCreatePRFailed(
     response: CreatePullRequestResponse,
   ): string {
-    return dedent`Backport branch created but failed to create PR. 
+    return dedent`Backport branch created but failed to create PR.
                 Request to create PR rejected with status ${response.status}.
 
                 (see action log for full response)`;

@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Only run when pull request is merged
-    # or when a comment containing `/backport` is created by someone other than the 
+    # or when a comment containing `/backport` is created by someone other than the
     # https://github.com/backport-action bot user (user id: 97796249). Note that if you use your
     # own PAT as `github_token`, that you should replace this id with yours.
     if: >
@@ -105,6 +105,13 @@ jobs:
 
 The action can be configured with the following optional [inputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepswith):
 
+### `copy_assignees`
+
+Default: `false` (disabled)
+
+Controls whether to copy the assignees from the original pull request to the backport pull request.
+By default, the assignees are not copied.
+
 ### `copy_labels_pattern`
 
 Default: `''` (disabled)
@@ -112,6 +119,21 @@ Default: `''` (disabled)
 Regex pattern to match github labels which will be copied from the original pull request to the backport pull request.
 Note that labels matching `label_pattern` are excluded.
 By default, no labels are copied.
+
+### `copy_milestone`
+
+Default: `false` (disabled)
+
+Controls whether to copy the milestone from the original pull request to the backport pull request.
+By default, the milestone is not copied.
+
+### `copy_requested_reviewers`
+
+Default: `false` (disabled)
+
+Controls whether to copy the requested reviewers from the original pull request to the backport pull request.
+Note that this does not request reviews from those users who already reviewed the original pull request.
+By default, the requested reviewers are not copied.
 
 ### `github_token`
 

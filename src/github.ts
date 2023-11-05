@@ -20,6 +20,8 @@ export interface GithubApi {
   createPR(pr: CreatePullRequest): Promise<CreatePullRequestResponse>;
   labelPR(pr: number, labels: string[]): Promise<LabelPullRequestResponse>;
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
+  setAssignees(pr: number, assignees: string[]): Promise<GenericResponse>;
+  setMilestone(pr: number, milestone: number): Promise<GenericResponse>;
 }
 
 export class Github implements GithubApi {
@@ -126,6 +128,24 @@ export class Github implements GithubApi {
       labels,
     });
   }
+
+  public async setAssignees(pr: number, assignees: string[]) {
+    console.log(`Set Assignees ${assignees} to #${pr}`);
+    return this.#octokit.rest.issues.addAssignees({
+      ...this.getRepo(),
+      issue_number: pr,
+      assignees,
+    });
+  }
+
+  public async setMilestone(pr: number, milestone: number) {
+    console.log(`Set Milestone ${milestone} to #${pr}`);
+    return this.#octokit.rest.issues.update({
+      ...this.getRepo(),
+      issue_number: pr,
+      milestone: milestone,
+    });
+  }
 }
 
 export type PullRequest = {
@@ -149,6 +169,18 @@ export type PullRequest = {
     login: string;
   }[];
   commits: number;
+  milestone: {
+    number: number;
+    id: number;
+    title: string;
+  };
+  assignees: {
+    login: string;
+    id: number;
+  }[];
+  merged_by: {
+    login: string;
+  };
 };
 export type CreatePullRequestResponse = {
   status: number;
@@ -158,6 +190,11 @@ export type CreatePullRequestResponse = {
   };
 };
 export type RequestReviewersResponse = CreatePullRequestResponse;
+
+export type GenericResponse = {
+  status: number;
+};
+
 export type LabelPullRequestResponse = {
   status: number;
 };
