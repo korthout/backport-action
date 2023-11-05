@@ -59,7 +59,7 @@ class Backport {
         this.git = git;
     }
     run() {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e, _f;
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const payload = this.github.getPayload();
@@ -216,6 +216,37 @@ class Backport {
                             continue;
                         }
                         const new_pr = new_pr_response.data;
+                        if (this.config.copy_milestone == true) {
+                            const milestone = (_e = mainpr.milestone) === null || _e === void 0 ? void 0 : _e.number;
+                            if (milestone) {
+                                console.info("Setting milestone to " + milestone);
+                                const set_milestone_response = yield this.github.setMilestone(new_pr.number, milestone);
+                                if (set_milestone_response.status != 200) {
+                                    console.error(JSON.stringify(set_milestone_response));
+                                }
+                            }
+                        }
+                        if (this.config.copy_assignees == true) {
+                            const assignees = mainpr.assignees.map((label) => label.login);
+                            if (assignees.length > 0) {
+                                console.info("Setting assignees " + assignees);
+                                const set_assignee_response = yield this.github.setAssignees(new_pr.number, assignees);
+                                if (set_assignee_response.status != 201) {
+                                    console.error(JSON.stringify(set_assignee_response));
+                                }
+                            }
+                        }
+                        if (this.config.copy_requested_reviewers == true) {
+                            const reviewers = (_f = mainpr.requested_reviewers) === null || _f === void 0 ? void 0 : _f.map((reviewer) => reviewer.login);
+                            if ((reviewers === null || reviewers === void 0 ? void 0 : reviewers.length) > 0) {
+                                console.info("Setting reviewers " + reviewers);
+                                const reviewRequest = Object.assign(Object.assign({}, this.github.getRepo()), { pull_number: new_pr.number, reviewers: reviewers });
+                                const set_reviewers_response = yield this.github.requestReviewers(reviewRequest);
+                                if (set_reviewers_response.status != 201) {
+                                    console.error(JSON.stringify(set_reviewers_response));
+                                }
+                            }
+                        }
                         if (labelsToCopy.length > 0) {
                             const label_response = yield this.github.labelPR(new_pr.number, labelsToCopy);
                             if (label_response.status != 200) {
@@ -307,7 +338,7 @@ class Backport {
         return (0, dedent_1.default) `Git push to origin failed for ${target} with exitcode ${exitcode}`;
     }
     composeMessageForCreatePRFailed(response) {
-        return (0, dedent_1.default) `Backport branch created but failed to create PR. 
+        return (0, dedent_1.default) `Backport branch created but failed to create PR.
                 Request to create PR rejected with status ${response.status}.
 
                 (see action log for full response)`;
@@ -621,6 +652,18 @@ class Github {
             return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addLabels(Object.assign(Object.assign({}, this.getRepo()), { issue_number: pr, labels }));
         });
     }
+    setAssignees(pr, assignees) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`Set Assignees ${assignees} to #${pr}`);
+            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addAssignees(Object.assign(Object.assign({}, this.getRepo()), { issue_number: pr, assignees }));
+        });
+    }
+    setMilestone(pr, milestone) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(`Set Milestone ${milestone} to #${pr}`);
+            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.update(Object.assign(Object.assign({}, this.getRepo()), { issue_number: pr, milestone: milestone }));
+        });
+    }
 }
 exports.Github = Github;
 _Github_octokit = new WeakMap(), _Github_context = new WeakMap();
@@ -686,6 +729,9 @@ function run() {
         const copy_labels_pattern = core.getInput("copy_labels_pattern");
         const target_branches = core.getInput("target_branches");
         const merge_commits = core.getInput("merge_commits");
+        const copy_assignees = core.getInput("copy_assignees");
+        const copy_milestone = core.getInput("copy_milestone");
+        const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
         if (merge_commits != "fail" && merge_commits != "skip") {
             const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
             console.error(message);
@@ -701,6 +747,9 @@ function run() {
             copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
             target_branches: target_branches === "" ? undefined : target_branches,
             commits: { merge_commits },
+            copy_assignees: copy_assignees === "true",
+            copy_milestone: copy_milestone === "true",
+            copy_requested_reviewers: copy_requested_reviewers === "true",
         };
         const backport = new backport_1.Backport(github, config, git);
         return backport.run();
