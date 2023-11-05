@@ -109,7 +109,8 @@ The action can be configured with the following optional [inputs](https://docs.g
 
 Default: `false` (disabled)
 
-Controls wheather the assignees of the original pull request should be added to the backports.
+Controls whether to copy the assignees from the original pull request to the backport pull request.
+By default, the assignees are not copied.
 
 ### `copy_labels_pattern`
 
@@ -123,13 +124,15 @@ By default, no labels are copied.
 
 Default: `false` (disabled)
 
-Controls wheather the "milestone" of the original pull request should be added to the backports.
+Controls whether to copy the milestone from the original pull request to the backport pull request.
+By default, the milestone is not copied.
 
 ### `copy_reviewers`
 
 Default: `false` (disabled)
 
-Controls wheather the reviewers of the original pull request should be added to the backports.
+Controls whether to copy the reviewers from the original pull request to the backport pull request.
+By default, the reviewers are not copied.
 
 ### `github_token`
 
