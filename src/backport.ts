@@ -269,7 +269,6 @@ export class Backport {
                 milestone,
               );
               if (set_milestone_response.status != 200) {
-                console.error(set_milestone_response.status);
                 console.error(JSON.stringify(set_milestone_response));
               }
             }
@@ -284,7 +283,7 @@ export class Backport {
                 assignees,
               );
               if (set_assignee_response.status != 201) {
-                console.error(set_assignee_response.status);
+                console.error(JSON.stringify(set_assignee_response));
               }
             }
           }
@@ -303,7 +302,7 @@ export class Backport {
               const set_reviewers_response =
                 await this.github.requestReviewers(reviewRequest);
               if (set_reviewers_response.status != 201) {
-                console.error(set_reviewers_response.status);
+                console.error(JSON.stringify(set_reviewers_response));
               }
             }
           }
