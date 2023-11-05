@@ -27,7 +27,7 @@ export type Config = {
   };
   copy_milestone: boolean;
   copy_assignees: boolean;
-  copy_reviewers: boolean;
+  copy_requested_reviewers: boolean;
 };
 
 enum Output {
@@ -289,7 +289,7 @@ export class Backport {
             }
           }
 
-          if (this.config.copy_reviewers == true) {
+          if (this.config.copy_requested_reviewers == true) {
             const reviewers = mainpr.requested_reviewers?.map(
               (reviewer) => reviewer.login,
             );

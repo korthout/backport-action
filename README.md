@@ -127,12 +127,13 @@ Default: `false` (disabled)
 Controls whether to copy the milestone from the original pull request to the backport pull request.
 By default, the milestone is not copied.
 
-### `copy_reviewers`
+### `copy_requested_reviewers`
 
 Default: `false` (disabled)
 
-Controls whether to copy the reviewers from the original pull request to the backport pull request.
-By default, the reviewers are not copied.
+Controls whether to copy the requested reviewers from the original pull request to the backport pull request.
+Note that this does not request reviews from those users who already reviewed the original pull request.
+By default, the requested reviewers are not copied.
 
 ### `github_token`
 
