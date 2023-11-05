@@ -107,7 +107,7 @@ The action can be configured with the following optional [inputs](https://docs.g
 
 ### `copy_assignees`
 
-Default: `''` (disabled)
+Default: `false` (disabled)
 
 Controls wheather the assignees of the original pull request should be added to the backports.
 
@@ -121,13 +121,13 @@ By default, no labels are copied.
 
 ### `copy_milestone`
 
-Default: `''` (disabled)
+Default: `false` (disabled)
 
 Controls wheather the "milestone" of the original pull request should be added to the backports.
 
 ### `copy_reviewers`
 
-Default: `''` (disabled)
+Default: `false` (disabled)
 
 Controls wheather the reviewers of the original pull request should be added to the backports.
 

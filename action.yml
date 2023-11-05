@@ -7,6 +7,7 @@ inputs:
     description: >
       Whether or not to copy the assignees from the original pull request to the backport pull request.
       By default, the assignees are not copied.
+    default: false
   copy_labels_pattern:
     description: >
       Regex pattern to match github labels which will be copied from the original pull request to the backport pull request.
@@ -16,10 +17,12 @@ inputs:
     description: >
       Whether or not to copy the milestone from the original pull request to the backport pull request.
       By default, the milestone is not copied.
+    default: false
   copy_reviewers:
     description: >
       Whether or not to copy the reviewers from the original pull request to the backport pull request.
       By default, the reviewers are not copied.
+    default: false
   github_token:
     description: >
       Token to authenticate requests to GitHub.
