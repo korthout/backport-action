@@ -105,6 +105,12 @@ jobs:
 
 The action can be configured with the following optional [inputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepswith):
 
+### `copy_assignees`
+
+Default: `''` (disabled)
+
+Controls wheather the assignees of the original pull request should be added to the backports.
+
 ### `copy_labels_pattern`
 
 Default: `''` (disabled)
@@ -112,6 +118,18 @@ Default: `''` (disabled)
 Regex pattern to match github labels which will be copied from the original pull request to the backport pull request.
 Note that labels matching `label_pattern` are excluded.
 By default, no labels are copied.
+
+### `copy_milestone`
+
+Default: `''` (disabled)
+
+Controls wheather the "milestone" of the original pull request should be added to the backports.
+
+### `copy_reviewers`
+
+Default: `''` (disabled)
+
+Controls wheather the reviewers of the original pull request should be added to the backports.
 
 ### `github_token`
 
@@ -184,26 +202,6 @@ See [How it works](#how-it-works).
 
 Can be used in addition to backport labels.
 By default, only backport labels are used to specify the target branches.
-
-
-### `copy_milestone`
-
-Default: `''` (disabled)
-
-Controls wheather the "milestone" of the original pull request should be added to the backports.
-
-### `copy_assignees`
-
-Default: `''` (disabled)
-
-Controls wheather the assignees of the original pull request should be added to the backports.
-
-### `copy_reviewers`
-
-Default: `''` (disabled)
-
-Controls wheather the reviewers of the original pull request should be added to the backports.
-
 
 ## Placeholders
 In the `pull_description` and `pull_title` inputs, placeholders can be used to define variable values.
