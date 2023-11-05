@@ -356,7 +356,6 @@ export class Backport {
     }
   }
 
-
   private findTargetBranches(mainpr: PullRequest, config: Config): string[] {
     const labels = mainpr.labels.map((label) => label.name);
     return findTargetBranches(config, labels, mainpr.head.ref);
