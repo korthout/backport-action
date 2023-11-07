@@ -67,8 +67,6 @@ class Backport {
                 const repo = (_b = (_a = payload.repository) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : this.github.getRepo().repo;
                 const pull_number = this.github.getPullNumber();
                 const mainpr = yield this.github.getPullRequest(pull_number);
-                const headref = mainpr.head.sha;
-                const baseref = mainpr.base.sha;
                 if (!(yield this.github.isMerged(mainpr))) {
                     const message = "Only merged pull requests can be backported.";
                     this.github.createComment({
@@ -152,7 +150,7 @@ class Backport {
                             yield this.git.checkout(branchname, `origin/${target}`, this.config.pwd);
                         }
                         catch (error) {
-                            const message = this.composeMessageForBackportScriptFailure(target, 3, baseref, headref, branchname);
+                            const message = this.composeMessageForCheckoutFailure(target, branchname, commitShasToCherryPick);
                             console.error(message);
                             successByTarget.set(target, false);
                             yield this.github.createComment({
@@ -167,7 +165,7 @@ class Backport {
                             yield this.git.cherryPick(commitShasToCherryPick, this.config.pwd);
                         }
                         catch (error) {
-                            const message = this.composeMessageForBackportScriptFailure(target, 4, baseref, headref, branchname);
+                            const message = this.composeMessageForCherryPickFailure(target, branchname, commitShasToCherryPick);
                             console.error(message);
                             successByTarget.set(target, false);
                             yield this.github.createComment({
@@ -306,32 +304,30 @@ class Backport {
         return (0, dedent_1.default) `Backport failed for \`${target}\`: couldn't find remote ref \`${target}\`.
                   Please ensure that this Github repo has a branch named \`${target}\`.`;
     }
-    composeMessageForBackportScriptFailure(target, exitcode, baseref, headref, branchname) {
-        var _a;
-        const reasons = {
-            1: "due to an unknown script error",
-            2: "because it was unable to create/access the git worktree directory",
-            3: "because it was unable to create a new branch",
-            4: "because it was unable to cherry-pick the commit(s)",
-            5: "because 1 or more of the commits are not available",
-            6: "because 1 or more of the commits are not available",
-        };
-        const reason = (_a = reasons[exitcode]) !== null && _a !== void 0 ? _a : "due to an unknown script error";
-        const suggestion = exitcode <= 4
-            ? (0, dedent_1.default) `\`\`\`bash
-                git fetch origin ${target}
-                git worktree add -d .worktree/${branchname} origin/${target}
-                cd .worktree/${branchname}
-                git checkout -b ${branchname}
-                ancref=$(git merge-base ${baseref} ${headref})
-                git cherry-pick -x $ancref..${headref}
-                \`\`\``
-            : (0, dedent_1.default) `Note that rebase and squash merges are not supported at this time.
-                For more information see https://github.com/korthout/backport-action/issues/46.`;
+    composeMessageForCheckoutFailure(target, branchname, commitShasToCherryPick) {
+        const reason = "because it was unable to create a new branch";
+        const suggestion = this.composeSuggestion(target, branchname, commitShasToCherryPick);
         return (0, dedent_1.default) `Backport failed for \`${target}\`, ${reason}.
 
                   Please cherry-pick the changes locally.
                   ${suggestion}`;
+    }
+    composeMessageForCherryPickFailure(target, branchname, commitShasToCherryPick) {
+        const reason = "because it was unable to cherry-pick the commit(s)";
+        const suggestion = this.composeSuggestion(target, branchname, commitShasToCherryPick);
+        return (0, dedent_1.default) `Backport failed for \`${target}\`, ${reason}.
+
+                  Please cherry-pick the changes locally and resolve any conflicts.
+                  ${suggestion}`;
+    }
+    composeSuggestion(target, branchname, commitShasToCherryPick) {
+        return (0, dedent_1.default) `\`\`\`bash
+      git fetch origin ${target}
+      git worktree add -d .worktree/${branchname} origin/${target}
+      cd .worktree/${branchname}
+      git switch --create ${branchname}
+      git cherry-pick -x ${commitShasToCherryPick.join(" ")}
+      \`\`\``;
     }
     composeMessageForGitPushFailure(target, exitcode) {
         //TODO better error messages depending on exit code
