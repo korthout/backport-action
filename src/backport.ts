@@ -417,7 +417,7 @@ export class Backport {
       git fetch origin ${target}
       git worktree add -d .worktree/${branchname} origin/${target}
       cd .worktree/${branchname}
-      git checkout -b ${branchname}
+      git switch --create ${branchname}
       git cherry-pick -x ${commitShasToCherryPick.join(" ")}
       \`\`\``;
   }
