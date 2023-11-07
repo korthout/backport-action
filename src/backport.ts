@@ -404,7 +404,7 @@ export class Backport {
     );
     return dedent`Backport failed for \`${target}\`, ${reason}.
 
-                  Please cherry-pick the changes locally.
+                  Please cherry-pick the changes locally and resolve any conflicts.
                   ${suggestion}`;
   }
 
