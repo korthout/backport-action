@@ -53,8 +53,6 @@ export class Backport {
       const repo = payload.repository?.name ?? this.github.getRepo().repo;
       const pull_number = this.github.getPullNumber();
       const mainpr = await this.github.getPullRequest(pull_number);
-      const headref = mainpr.head.sha;
-      const baseref = mainpr.base.sha;
 
       if (!(await this.github.isMerged(mainpr))) {
         const message = "Only merged pull requests can be backported.";
@@ -176,12 +174,10 @@ export class Backport {
               this.config.pwd,
             );
           } catch (error) {
-            const message = this.composeMessageForBackportScriptFailure(
+            const message = this.composeMessageForCheckoutFailure(
               target,
-              3,
-              baseref,
-              headref,
               branchname,
+              commitShasToCherryPick,
             );
             console.error(message);
             successByTarget.set(target, false);
@@ -197,12 +193,10 @@ export class Backport {
           try {
             await this.git.cherryPick(commitShasToCherryPick, this.config.pwd);
           } catch (error) {
-            const message = this.composeMessageForBackportScriptFailure(
+            const message = this.composeMessageForCherryPickFailure(
               target,
-              4,
-              baseref,
-              headref,
               branchname,
+              commitShasToCherryPick,
             );
             console.error(message);
             successByTarget.set(target, false);
@@ -380,40 +374,52 @@ export class Backport {
                   Please ensure that this Github repo has a branch named \`${target}\`.`;
   }
 
-  private composeMessageForBackportScriptFailure(
+  private composeMessageForCheckoutFailure(
     target: string,
-    exitcode: number,
-    baseref: string,
-    headref: string,
     branchname: string,
+    commitShasToCherryPick: string[],
   ): string {
-    const reasons: { [key: number]: string } = {
-      1: "due to an unknown script error",
-      2: "because it was unable to create/access the git worktree directory",
-      3: "because it was unable to create a new branch",
-      4: "because it was unable to cherry-pick the commit(s)",
-      5: "because 1 or more of the commits are not available",
-      6: "because 1 or more of the commits are not available",
-    };
-    const reason = reasons[exitcode] ?? "due to an unknown script error";
-
-    const suggestion =
-      exitcode <= 4
-        ? dedent`\`\`\`bash
-                git fetch origin ${target}
-                git worktree add -d .worktree/${branchname} origin/${target}
-                cd .worktree/${branchname}
-                git checkout -b ${branchname}
-                ancref=$(git merge-base ${baseref} ${headref})
-                git cherry-pick -x $ancref..${headref}
-                \`\`\``
-        : dedent`Note that rebase and squash merges are not supported at this time.
-                For more information see https://github.com/korthout/backport-action/issues/46.`;
-
+    const reason = "because it was unable to create a new branch";
+    const suggestion = this.composeSuggestion(
+      target,
+      branchname,
+      commitShasToCherryPick,
+    );
     return dedent`Backport failed for \`${target}\`, ${reason}.
 
                   Please cherry-pick the changes locally.
                   ${suggestion}`;
+  }
+
+  private composeMessageForCherryPickFailure(
+    target: string,
+    branchname: string,
+    commitShasToCherryPick: string[],
+  ): string {
+    const reason = "because it was unable to cherry-pick the commit(s)";
+    const suggestion = this.composeSuggestion(
+      target,
+      branchname,
+      commitShasToCherryPick,
+    );
+    return dedent`Backport failed for \`${target}\`, ${reason}.
+
+                  Please cherry-pick the changes locally and resolve any conflicts.
+                  ${suggestion}`;
+  }
+
+  private composeSuggestion(
+    target: string,
+    branchname: string,
+    commitShasToCherryPick: string[],
+  ) {
+    return dedent`\`\`\`bash
+      git fetch origin ${target}
+      git worktree add -d .worktree/${branchname} origin/${target}
+      cd .worktree/${branchname}
+      git switch --create ${branchname}
+      git cherry-pick -x ${commitShasToCherryPick.join(" ")}
+      \`\`\``;
   }
 
   private composeMessageForGitPushFailure(
