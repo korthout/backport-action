@@ -22,6 +22,8 @@ export interface GithubApi {
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
   setAssignees(pr: number, assignees: string[]): Promise<GenericResponse>;
   setMilestone(pr: number, milestone: number): Promise<GenericResponse>;
+  isSquashed(pull: PullRequest): Promise<boolean>;
+  getMergeCommitSha(pull: PullRequest): Promise<string | null>;
 }
 
 export class Github implements GithubApi {
@@ -146,12 +148,103 @@ export class Github implements GithubApi {
       milestone: milestone,
     });
   }
+
+  /**
+   * Retrieves the SHA of the merge commit for a given pull request.
+   * @param pull - The pull request object.
+   * @returns The SHA of the merge commit.
+   */
+  public async getMergeCommitSha(pull: PullRequest) {
+    return pull.merge_commit_sha;
+  }
+
+  /**
+   * Retrieves a commit from the repository.
+   * @param sha - The SHA of the commit to retrieve.
+   * @returns A promise that resolves to the retrieved commit.
+   */
+  public async getCommit(sha: string) {
+    const commit = this.#octokit.rest.repos.getCommit({
+      ...this.getRepo(),
+      ref: sha,
+    });
+    return commit;
+  }
+
+  /**
+   * Retrieves the parent commit SHA of a given commit.
+   * If the commit is a merge commit, it returns the SHA of the first parent commit.
+   * @param sha - The SHA of the commit.
+   * @returns The SHA of the parent commit.
+   */
+  public async getParent(sha: string) {
+    const commit = await this.getCommit(sha);
+    // a commit has a parent. If it has more than one parent it is an indication
+    // that it is a merge commit. The first parent is the commit that was merged
+    // we can safely ignore the second parent as we're checking if the commit isn't a
+    // merge commit before.
+    return commit.data.parents[0].sha;
+  }
+
+  /**
+   * Retrieves the pull requests associated with a specific commit.
+   * @param sha The SHA of the commit.
+   * @returns A promise that resolves to the pull requests associated with the commit.
+   */
+  public async getPullRequestsAssociatedWithCommit(sha: string) {
+    const pr = this.#octokit.rest.repos.listPullRequestsAssociatedWithCommit({
+      ...this.getRepo(),
+      commit_sha: sha,
+    });
+    return pr;
+  }
+
+  /**
+   * Checks if a given SHA is associated with a specific pull request.
+   * @param sha - The SHA of the commit.
+   * @param pull - The pull request to check against.
+   * @returns A boolean indicating whether the SHA is associated with the pull request.
+   */
+  public async isShaAssociatedWithPullRequest(sha: string, pull: PullRequest) {
+    const assoc_pr = await this.getPullRequestsAssociatedWithCommit(sha);
+    const assoc_pr_data = assoc_pr.data;
+    // commits can be associated with multiple PRs
+    // checks if any of the assoc_prs is the same as the pull
+    return assoc_pr_data.some((pr) => pr.number == pull.number);
+  }
+
+  /**
+   * Checks if a pull request is "squashed and merged"
+   * or "rebased and merged"
+   * @param pull - The pull request to check.
+   * @returns A promise that resolves to a boolean indicating whether the pull request is squashed and merged.
+   */
+  public async isSquashed(pull: PullRequest): Promise<boolean> {
+    const merge_commit_sha = await this.getMergeCommitSha(pull);
+    if (!merge_commit_sha) {
+      console.log("likely not merged yet.");
+      return false;
+    }
+    // To detect if this was a rebase and merge, we can verify
+    // that the parent of the merge commit is associated with the pull request
+    // if it is, we have a "rebase and merge".
+    // if it is not, we have a "squash and merge".
+    const parent_commit = await this.getParent(merge_commit_sha);
+    const is_associated =
+      (await this.isShaAssociatedWithPullRequest(parent_commit, pull)) &&
+      (await this.isShaAssociatedWithPullRequest(merge_commit_sha, pull));
+    if (is_associated) {
+      return false;
+    }
+    return true;
+  }
 }
 
 export type PullRequest = {
   number: number;
   title: string;
   body: string | null;
+  merge_commit_sha: string | null;
   head: {
     sha: string;
     ref: string;

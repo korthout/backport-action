@@ -83,6 +83,22 @@ export class Backport {
       );
 
       const commitShas = await this.github.getCommits(mainpr);
+
+      let commitShasToCherryPick: string[];
+
+      // find out if "squashed and merged" or "rebased and merged"
+      if (await this.github.isSquashed(mainpr) || mainpr.commits == 1) {
+        console.log("PR was squashed and merged");
+        // if squashed, then use the merge_commit_sha
+        commitShasToCherryPick = [
+          await this.github.getMergeCommitSha(mainpr),
+        ]?.filter(Boolean) as string[];
+      } else {
+        // if rebased, then use all the commits from the original PR
+        console.log("PR was rebased and merged");
+        commitShasToCherryPick = commitShas;
+      }
+
       console.log(`Found commits: ${commitShas}`);
 
       console.log("Checking the merged pull request for merge commits");
@@ -109,7 +125,6 @@ export class Backport {
         return;
       }
 
-      let commitShasToCherryPick = commitShas;
       if (
         mergeCommitShas.length > 0 &&
         this.config.commits.merge_commits == "skip"
@@ -145,7 +160,7 @@ export class Backport {
         console.log(`Backporting to target branch '${target}...'`);
 
         try {
-          await this.git.fetch(target, this.config.pwd, 1);
+          await this.git.fetch(target, this.config.pwd, 2);
         } catch (error) {
           if (error instanceof GitRefNotFoundError) {
             const message = this.composeMessageForFetchTargetFailure(error.ref);
