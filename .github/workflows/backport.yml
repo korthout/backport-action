@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Only run when pull request is merged
-    # or when a comment containing `/backport` is created
+    # or when a comment starting with `/backport` is created
     if: >
       (
         github.event_name == 'pull_request' &&
