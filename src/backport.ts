@@ -1,7 +1,11 @@
 import * as core from "@actions/core";
 import dedent from "dedent";
 
-import { CreatePullRequestResponse, PullRequest } from "./github";
+import {
+  CreatePullRequestResponse,
+  PullRequest,
+  MergeStrategy,
+} from "./github";
 import { GithubApi } from "./github";
 import { Git, GitRefNotFoundError } from "./git";
 import * as utils from "./utils";
@@ -86,19 +90,48 @@ export class Backport {
 
       let commitShasToCherryPick: string[];
 
-      // find out if "squashed and merged" or "rebased and merged"
-      if (await this.github.isSquashed(mainpr) || mainpr.commits == 1) {
-        console.log("PR was squashed and merged");
-        // if squashed, then use the merge_commit_sha
-        commitShasToCherryPick = [
-          await this.github.getMergeCommitSha(mainpr),
-        ]?.filter(Boolean) as string[];
-      } else {
-        // if rebased, then use all the commits from the original PR
-        console.log("PR was rebased and merged");
-        commitShasToCherryPick = commitShas;
-      }
+      /*
 
+      squashed:
+        - > single parent
+        - > the parent of the `merge_commit_sha` is NOT associated with the PR
+
+        => use merge_commit_sha
+
+      rebased single-commit:
+        - > single parent
+        - > the parent of the `merge_commit_sha` is associated with the PR
+
+        => use commits associated with the PR
+
+      rebased multi-commit:
+        - > single parent,
+        - > the parent of the `merge_commit_sha` is associated with the PR
+
+        => use commits associated with the PR
+
+      merge-commit:
+        - > multiple parents
+
+        => use commits associated with the PR
+      */
+      // switch case to check if it is a squash, rebase, or merge commit
+      switch (await this.github.mergeStrategy(mainpr)) {
+        case MergeStrategy.SQUASHED:
+          commitShasToCherryPick = [
+            await this.github.getMergeCommitSha(mainpr),
+          ]?.filter(Boolean) as string[];
+        case MergeStrategy.REBASED:
+          commitShasToCherryPick = commitShas;
+        case MergeStrategy.MERGECOMMIT:
+          commitShasToCherryPick = commitShas;
+        case MergeStrategy.UNKNOWN:
+          // probably write a comment
+          console.log("Could not detect merge strategy.");
+          return;
+        default:
+          commitShasToCherryPick = [];
+      }
       console.log(`Found commits: ${commitShas}`);
 
       console.log("Checking the merged pull request for merge commits");
