@@ -90,49 +90,34 @@ export class Backport {
 
       let commitShasToCherryPick: string[];
 
-      /*
-
-      squashed:
-        - > single parent
-        - > the parent of the `merge_commit_sha` is NOT associated with the PR
-
-        => use merge_commit_sha
-
-      rebased single-commit:
-        - > single parent
-        - > the parent of the `merge_commit_sha` is associated with the PR
-
-        => use commits associated with the PR
-
-      rebased multi-commit:
-        - > single parent,
-        - > the parent of the `merge_commit_sha` is associated with the PR
-
-        => use commits associated with the PR
-
-      merge-commit:
-        - > multiple parents
-
-        => use commits associated with the PR
-      */
       // switch case to check if it is a squash, rebase, or merge commit
       switch (await this.github.mergeStrategy(mainpr)) {
         case MergeStrategy.SQUASHED:
           commitShasToCherryPick = [
             await this.github.getMergeCommitSha(mainpr),
           ]?.filter(Boolean) as string[];
+          break;
         case MergeStrategy.REBASED:
           commitShasToCherryPick = commitShas;
+          break;
         case MergeStrategy.MERGECOMMIT:
           commitShasToCherryPick = commitShas;
+          break;
         case MergeStrategy.UNKNOWN:
-          // probably write a comment
-          console.log("Could not detect merge strategy.");
-          return;
+          console.log(
+            "Could not detect merge strategy. Using commits from the Pull Request.",
+          );
+          commitShasToCherryPick = commitShas;
+          break;
         default:
-          commitShasToCherryPick = [];
+          console.log(
+            "Could not detect merge strategy. Using commits from the Pull Request.",
+          );
+          commitShasToCherryPick = commitShas;
+          break;
       }
-      console.log(`Found commits: ${commitShas}`);
+
+      console.log(`Found commits to backport: ${commitShasToCherryPick}`);
 
       console.log("Checking the merged pull request for merge commits");
       const mergeCommitShas = await this.git.findMergeCommits(
