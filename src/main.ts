@@ -21,6 +21,7 @@ async function run(): Promise<void> {
   const copy_assignees = core.getInput("copy_assignees");
   const copy_milestone = core.getInput("copy_milestone");
   const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
+  const detect_merge_method = core.getInput("detect_merge_method");
 
   if (merge_commits != "fail" && merge_commits != "skip") {
     const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
@@ -42,6 +43,7 @@ async function run(): Promise<void> {
     copy_assignees: copy_assignees === "true",
     copy_milestone: copy_milestone === "true",
     copy_requested_reviewers: copy_requested_reviewers === "true",
+    detect_merge_method: detect_merge_method === "true",
   };
   const backport = new Backport(github, config, git);
 

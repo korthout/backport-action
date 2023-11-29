@@ -24,6 +24,15 @@ inputs:
       Note that this does not request reviews from those users who already reviewed the original pull request.
       By default, the requested reviewers are not copied.
     default: false
+  detect_merge_method:
+    description: >
+      Controls whether to detect the merge method used on the merged pull request.
+      When set to `true` the action will detect the merge method used on the merged pull request. The behavior of the action will depend on the merge method used.
+      For "Squash and merge", the action will cherry-pick the newly created commit.
+      For "Rebase and merge", the action will cherry-pick the commits from the pull request.
+      For "Create a merge commit", the action will cherry-pick the commits from the pull request.
+      When set to `false` the action will not detect the merge method used and always assume the merge method was `rebase`.
+    default: "false"
   github_token:
     description: >
       Token to authenticate requests to GitHub.
@@ -69,6 +78,7 @@ inputs:
       Note that the pull request's headref is excluded automatically.
       Can be used in addition to backport labels.
       By default, only backport labels are used to specify the target branches.
+
 outputs:
   was_successful:
     description: >

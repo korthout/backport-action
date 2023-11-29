@@ -32,6 +32,7 @@ export type Config = {
   copy_milestone: boolean;
   copy_assignees: boolean;
   copy_requested_reviewers: boolean;
+  detect_merge_method: boolean;
 };
 
 enum Output {
@@ -88,35 +89,41 @@ export class Backport {
 
       const commitShas = await this.github.getCommits(mainpr);
 
-      let commitShasToCherryPick: string[];
+      let commitShasToCherryPick;
 
-      // switch case to check if it is a squash, rebase, or merge commit
-      switch (await this.github.mergeStrategy(mainpr)) {
-        case MergeStrategy.SQUASHED:
-          commitShasToCherryPick = [
-            await this.github.getMergeCommitSha(mainpr),
-          ]?.filter(Boolean) as string[];
-          break;
-        case MergeStrategy.REBASED:
-          commitShasToCherryPick = commitShas;
-          break;
-        case MergeStrategy.MERGECOMMIT:
-          commitShasToCherryPick = commitShas;
-          break;
-        case MergeStrategy.UNKNOWN:
-          console.log(
-            "Could not detect merge strategy. Using commits from the Pull Request.",
-          );
-          commitShasToCherryPick = commitShas;
-          break;
-        default:
-          console.log(
-            "Could not detect merge strategy. Using commits from the Pull Request.",
-          );
-          commitShasToCherryPick = commitShas;
-          break;
+      if (this.config.detect_merge_method) {
+        // switch case to check if it is a squash, rebase, or merge commit
+        switch (await this.github.mergeStrategy(mainpr)) {
+          case MergeStrategy.SQUASHED:
+            commitShasToCherryPick = [
+              await this.github.getMergeCommitSha(mainpr),
+            ]?.filter(Boolean) as string[];
+            break;
+          case MergeStrategy.REBASED:
+            commitShasToCherryPick = commitShas;
+            break;
+          case MergeStrategy.MERGECOMMIT:
+            commitShasToCherryPick = commitShas;
+            break;
+          case MergeStrategy.UNKNOWN:
+            console.log(
+              "Could not detect merge strategy. Using commits from the Pull Request.",
+            );
+            commitShasToCherryPick = commitShas;
+            break;
+          default:
+            console.log(
+              "Could not detect merge strategy. Using commits from the Pull Request.",
+            );
+            commitShasToCherryPick = commitShas;
+            break;
+        }
+      } else {
+        console.log(
+          "Not detecting merge strategy. Using commits from the Pull Request.",
+        );
+        commitShasToCherryPick = commitShas;
       }
-
       console.log(`Found commits to backport: ${commitShasToCherryPick}`);
 
       console.log("Checking the merged pull request for merge commits");
