@@ -24,15 +24,23 @@ inputs:
       Note that this does not request reviews from those users who already reviewed the original pull request.
       By default, the requested reviewers are not copied.
     default: false
-  detect_merge_method:
+  experimental:
     description: >
-      Controls whether to detect the merge method used on the merged pull request.
-      When set to `true` the action will detect the merge method used on the merged pull request. The behavior of the action will depend on the merge method used.
-      For "Squash and merge", the action will cherry-pick the newly created commit.
-      For "Rebase and merge", the action will cherry-pick the commits from the pull request.
-      For "Create a merge commit", the action will cherry-pick the commits from the pull request.
-      When set to `false` the action will not detect the merge method used and always assume the merge method was `rebase`.
-    default: "false"
+      Configure experimental features by passing a JSON object.
+      The following properties can be specified:
+
+      #### `detect_merge_method`
+
+      When enabled, the action detects the method used to merge the pull request.
+      - For "Squash and merge", the action cherry-picks the squashed commit.
+      - For "Rebase and merge", the action cherry-picks the commits from the pull request.
+      - For "Merged as a merge commit", the action cherry-picks the commits from the pull request.
+
+      By default, the action always cherry-picks the commits from the pull request.
+    default: >
+      {
+        "detect_merge_method": false
+      }
   github_token:
     description: >
       Token to authenticate requests to GitHub.
