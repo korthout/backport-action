@@ -221,21 +221,6 @@ export class Github implements GithubApi {
   }
 
   /**
-   * Retrieves the merge commit SHA and its parents for a given pull request.
-   * @param pull The pull request object.
-   * @returns An object containing the merge commit SHA and its parents, or null if the merge commit is not found.
-   */
-  public async getMergeCommitShaAndParents(pull: PullRequest) {
-    const merge_commit_sha = await this.getMergeCommitSha(pull);
-    if (!merge_commit_sha) {
-      console.log("likely not merged yet.");
-      return null;
-    }
-    const parents = await this.getParents(merge_commit_sha);
-    return { merge_commit_sha, parents };
-  }
-
-  /**
    * Checks if a commit is a merge commit.
    * @param parents - An array of parent commit hashes.
    * @returns A promise that resolves to a boolean indicating whether the commit is a merge commit.
