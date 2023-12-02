@@ -106,7 +106,12 @@ export class Backport {
         switch (await this.github.mergeStrategy(mainpr, merge_commit_sha)) {
           case MergeStrategy.SQUASHED:
             // If merged via a squash merge_commit_sha represents the SHA of the squashed commit on
-            // the base branch.
+            // the base branch. We must fetch it and its parent in case of a shallowly cloned repo
+            await this.git.fetch(
+              merge_commit_sha!,
+              this.config.pwd,
+              2, // +1 in case this concerns a shallowly cloned repo
+            );
             commitShasToCherryPick = [merge_commit_sha!];
             break;
           case MergeStrategy.REBASED:
@@ -205,7 +210,7 @@ export class Backport {
         console.log(`Backporting to target branch '${target}...'`);
 
         try {
-          await this.git.fetch(target, this.config.pwd, 2);
+          await this.git.fetch(target, this.config.pwd, 1);
         } catch (error) {
           if (error instanceof GitRefNotFoundError) {
             const message = this.composeMessageForFetchTargetFailure(error.ref);
