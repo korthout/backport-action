@@ -105,10 +105,22 @@ export class Backport {
         // switch case to check if it is a squash, rebase, or merge commit
         switch (await this.github.mergeStrategy(mainpr, merge_commit_sha)) {
           case MergeStrategy.SQUASHED:
+            // If merged via a squash merge_commit_sha represents the SHA of the squashed commit on
+            // the base branch.
             commitShasToCherryPick = [merge_commit_sha!];
             break;
           case MergeStrategy.REBASED:
-            commitShasToCherryPick = commitShas;
+            // If rebased merge_commit_sha represents the commit that the base branch was updated to
+            await this.git.fetch(
+              merge_commit_sha!,
+              this.config.pwd,
+              mainpr.commits + 1, // +1 in case this concerns a shallowly cloned repo
+            );
+            const range = `${merge_commit_sha}~${mainpr.commits}..${merge_commit_sha}`;
+            commitShasToCherryPick = await this.git.findCommitsInRange(
+              range,
+              this.config.pwd,
+            );
             break;
           case MergeStrategy.MERGECOMMIT:
             commitShasToCherryPick = commitShas;
@@ -126,7 +138,6 @@ export class Backport {
             commitShasToCherryPick = commitShas;
             break;
         }
-
       } else {
         console.log(
           "Not detecting merge strategy. Using commits from the Pull Request.",
