@@ -154,6 +154,15 @@ export class Github implements GithubApi {
 
   /**
    * Retrieves the SHA of the merge commit for a given pull request.
+   *
+   * After merging a pull request, the `merge_commit_sha` attribute changes depending on how you merged the pull request:
+   *
+   * - If merged as a merge commit, `merge_commit_sha` represents the SHA of the merge commit.
+   * - If merged via a squash, `merge_commit_sha` represents the SHA of the squashed commit on the base branch.
+   * - If rebased, `merge_commit_sha` represents the commit that the base branch was updated to.
+   *
+   * See: https://docs.github.com/en/free-pro-team@latest/rest/pulls/pulls?apiVersion=2022-11-28#get-a-pull-request
+   *
    * @param pull - The pull request object.
    * @returns The SHA of the merge commit.
    */
