@@ -100,12 +100,12 @@ export class Backport {
       let commitShasToCherryPick;
 
       if (this.config.experimental.detect_merge_method) {
+        const merge_commit_sha = await this.github.getMergeCommitSha(mainpr);
+
         // switch case to check if it is a squash, rebase, or merge commit
-        switch (await this.github.mergeStrategy(mainpr)) {
+        switch (await this.github.mergeStrategy(mainpr, merge_commit_sha)) {
           case MergeStrategy.SQUASHED:
-            commitShasToCherryPick = [
-              await this.github.getMergeCommitSha(mainpr),
-            ]?.filter(Boolean) as string[];
+            commitShasToCherryPick = [merge_commit_sha!];
             break;
           case MergeStrategy.REBASED:
             commitShasToCherryPick = commitShas;
@@ -126,6 +126,7 @@ export class Backport {
             commitShasToCherryPick = commitShas;
             break;
         }
+
       } else {
         console.log(
           "Not detecting merge strategy. Using commits from the Pull Request.",
