@@ -32,8 +32,16 @@ export type Config = {
   copy_milestone: boolean;
   copy_assignees: boolean;
   copy_requested_reviewers: boolean;
+  experimental: Experimental;
+};
+
+type Experimental = {
   detect_merge_method: boolean;
 };
+const experimentalDefaults: Experimental = {
+  detect_merge_method: false,
+};
+export { experimentalDefaults };
 
 enum Output {
   wasSuccessful = "was_successful",
@@ -91,7 +99,7 @@ export class Backport {
 
       let commitShasToCherryPick;
 
-      if (this.config.detect_merge_method) {
+      if (this.config.experimental.detect_merge_method) {
         // switch case to check if it is a squash, rebase, or merge commit
         switch (await this.github.mergeStrategy(mainpr)) {
           case MergeStrategy.SQUASHED:
