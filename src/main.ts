@@ -3,6 +3,7 @@ import { Backport, Config, experimentalDefaults } from "./backport";
 import { Github } from "./github";
 import { Git } from "./git";
 import { execa } from "execa";
+import dedent from "dedent";
 
 /**
  * Called from the action.yml.
@@ -28,6 +29,14 @@ async function run(): Promise<void> {
     console.error(message);
     core.setFailed(message);
     return;
+  }
+
+  for (const key in experimental) {
+    if (!(key in experimentalDefaults)) {
+      console.warn(dedent`Encountered unexpected key in input 'experimental'.\
+        No experimental config options known for key '${key}'.\
+        Please check the documentation for details about experimental features.`);
+    }
   }
 
   const github = new Github(token);
