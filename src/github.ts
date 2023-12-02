@@ -22,7 +22,10 @@ export interface GithubApi {
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
   setAssignees(pr: number, assignees: string[]): Promise<GenericResponse>;
   setMilestone(pr: number, milestone: number): Promise<GenericResponse>;
-  mergeStrategy(pull: PullRequest): Promise<string | null>;
+  mergeStrategy(
+    pull: PullRequest,
+    merge_commit_sha: string | null,
+  ): Promise<string | null>;
   getMergeCommitSha(pull: PullRequest): Promise<string | null>;
 }
 
@@ -266,11 +269,18 @@ export class Github implements GithubApi {
    * @param pull - The pull request to analyze.
    * @returns The merge strategy used for the pull request.
    */
-  public async mergeStrategy(pull: PullRequest) {
-    const result = await this.getMergeCommitShaAndParents(pull);
-    if (!result) return null;
+  public async mergeStrategy(
+    pull: PullRequest,
+    merge_commit_sha: string | null,
+  ) {
+    if (merge_commit_sha == null) {
+      console.log(
+        "PR was merged without merge_commit_sha unable to detect merge method",
+      );
+      return MergeStrategy.UNKNOWN;
+    }
 
-    const { merge_commit_sha, parents } = result;
+    const parents = await this.getParents(merge_commit_sha);
 
     if (await this.isMergeCommit(parents)) {
       console.log("PR was merged using a merge commit");
