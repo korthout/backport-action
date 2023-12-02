@@ -52,6 +52,24 @@ export class Git {
     }
   }
 
+  public async findCommitsInRange(
+    range: string,
+    pwd: string,
+  ): Promise<string[]> {
+    const { exitCode, stdout } = await this.git(
+      "log",
+      ['--pretty=format:"%H"', range],
+      pwd,
+    );
+    if (exitCode !== 0) {
+      throw new Error(
+        `'git log --pretty=format:"%H" ${range}' failed with exit code ${exitCode}`,
+      );
+    }
+    const commitShas = stdout.split("\n").filter((sha) => sha.trim() !== "");
+    return commitShas;
+  }
+
   public async findMergeCommits(
     commitShas: string[],
     pwd: string,
