@@ -156,7 +156,7 @@ export class Backport {
 
       console.log("Checking the merged pull request for merge commits");
       const mergeCommitShas = await this.git.findMergeCommits(
-        commitShas,
+        commitShasToCherryPick,
         this.config.pwd,
       );
       console.log(
@@ -183,7 +183,7 @@ export class Backport {
         this.config.commits.merge_commits == "skip"
       ) {
         console.log("Skipping merge commits: " + mergeCommitShas);
-        const nonMergeCommitShas = commitShas.filter(
+        const nonMergeCommitShas = commitShasToCherryPick.filter(
           (sha) => !mergeCommitShas.includes(sha),
         );
         commitShasToCherryPick = nonMergeCommitShas;
