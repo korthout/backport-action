@@ -66,7 +66,10 @@ export class Git {
         `'git log --pretty=format:"%H" ${range}' failed with exit code ${exitCode}`,
       );
     }
-    const commitShas = stdout.split("\n").filter((sha) => sha.trim() !== "");
+    const commitShas = stdout
+      .split("\n")
+      .map((sha) => sha.replace(/"/g, ""))
+      .filter((sha) => sha.trim() !== "");
     return commitShas;
   }
 
