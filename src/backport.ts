@@ -107,8 +107,9 @@ export class Backport {
           case MergeStrategy.SQUASHED:
             // If merged via a squash merge_commit_sha represents the SHA of the squashed commit on
             // the base branch. We must fetch it and its parent in case of a shallowly cloned repo
+            // To store the fetched commits indefinitely we save them to a remote ref using the sha
             await this.git.fetch(
-              merge_commit_sha!,
+              `+${merge_commit_sha}:refs/remotes/origin/${merge_commit_sha}`,
               this.config.pwd,
               2, // +1 in case this concerns a shallowly cloned repo
             );
@@ -116,8 +117,10 @@ export class Backport {
             break;
           case MergeStrategy.REBASED:
             // If rebased merge_commit_sha represents the commit that the base branch was updated to
+            // We must fetch it, its parents, and one extra parent in case of a shallowly cloned repo
+            // To store the fetched commits indefinitely we save them to a remote ref using the sha
             await this.git.fetch(
-              merge_commit_sha!,
+              `+${merge_commit_sha}:refs/remotes/origin/${merge_commit_sha}`,
               this.config.pwd,
               mainpr.commits + 1, // +1 in case this concerns a shallowly cloned repo
             );
