@@ -84,7 +84,7 @@ jobs:
     # own PAT as `github_token`, that you should replace this id with yours.
     if: >
       (
-        github.event_name == 'pull_request' &&
+        github.event_name == 'pull_request_target' &&
         github.event.pull_request.merged
       ) || (
         github.event_name == 'issue_comment' &&
