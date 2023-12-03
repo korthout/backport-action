@@ -58,7 +58,7 @@ export class Git {
   ): Promise<string[]> {
     const { exitCode, stdout } = await this.git(
       "log",
-      ['--pretty=format:"%H"', range],
+      ['--pretty=format:"%H"', "--reverse", range],
       pwd,
     );
     if (exitCode !== 0) {
