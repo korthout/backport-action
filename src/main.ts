@@ -1,8 +1,9 @@
 import * as core from "@actions/core";
-import { Backport, Config } from "./backport";
+import { Backport, Config, experimentalDefaults } from "./backport";
 import { Github } from "./github";
 import { Git } from "./git";
 import { execa } from "execa";
+import dedent from "dedent";
 
 /**
  * Called from the action.yml.
@@ -21,12 +22,21 @@ async function run(): Promise<void> {
   const copy_assignees = core.getInput("copy_assignees");
   const copy_milestone = core.getInput("copy_milestone");
   const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
+  const experimental = JSON.parse(core.getInput("experimental"));
 
   if (merge_commits != "fail" && merge_commits != "skip") {
     const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
     console.error(message);
     core.setFailed(message);
     return;
+  }
+
+  for (const key in experimental) {
+    if (!(key in experimentalDefaults)) {
+      console.warn(dedent`Encountered unexpected key in input 'experimental'.\
+        No experimental config options known for key '${key}'.\
+        Please check the documentation for details about experimental features.`);
+    }
   }
 
   const github = new Github(token);
@@ -42,6 +52,7 @@ async function run(): Promise<void> {
     copy_assignees: copy_assignees === "true",
     copy_milestone: copy_milestone === "true",
     copy_requested_reviewers: copy_requested_reviewers === "true",
+    experimental: { ...experimentalDefaults, ...experimental },
   };
   const backport = new Backport(github, config, git);
 

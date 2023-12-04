@@ -135,6 +135,30 @@ Controls whether to copy the requested reviewers from the original pull request 
 Note that this does not request reviews from those users who already reviewed the original pull request.
 By default, the requested reviewers are not copied.
 
+### `experimental`
+
+Default:
+
+```json
+{
+  "detect_merge_method": false
+}
+```
+
+Configure experimental features by passing a JSON object.
+The following properties can be specified:
+
+#### `detect_merge_method`
+
+Default: `false`
+
+When enabled, the action detects the method used to merge the pull request.
+- For "Squash and merge", the action cherry-picks the squashed commit.
+- For "Rebase and merge", the action cherry-picks the rebased commits.
+- For "Merged as a merge commit", the action cherry-picks the commits from the pull request.
+
+By default, the action always cherry-picks the commits from the pull request.
+
 ### `github_token`
 
 Default: `${{ github.token }}`
