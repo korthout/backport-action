@@ -252,3 +252,4 @@ Output | Description
 -------|------------
 `was_successful` | Whether or not the changes could be backported successfully to all targets. Either `true` or `false`.
 `was_successful_by_target` | Whether or not the changes could be backported successfully to all targets - broken down by target. Follows the pattern `{{label}}=true\|false`.
+`successful_prs` | Space separated list of the newly created PRs.

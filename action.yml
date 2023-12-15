@@ -96,6 +96,9 @@ outputs:
     description: >
       Whether or not the changes could be backported successfully to all targets - broken down by target.
       Follows the pattern '{{label}}=true|false'.
+  successful_prs:
+    description: >
+      Space separated list of the newly created PRs.
 runs:
   using: "node20"
   main: "dist/index.js"

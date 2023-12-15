@@ -527,7 +527,7 @@ export class Backport {
     );
     core.setOutput(Output.wasSuccessfulByTarget, byTargetOutput);
 
-    const successPRsOutput = successPRs.join("\n");
+    const successPRsOutput = successPRs.join(" ");
     core.setOutput(Output.successfulPRs, successPRsOutput);
   }
 }
