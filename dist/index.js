@@ -56,6 +56,7 @@ var Output;
 (function (Output) {
     Output["wasSuccessful"] = "was_successful";
     Output["wasSuccessfulByTarget"] = "was_successful_by_target";
+    Output["successfulPRs"] = "successful_prs";
 })(Output || (Output = {}));
 class Backport {
     constructor(github, config, git) {
@@ -162,6 +163,7 @@ class Backport {
                 }
                 console.log(`Will copy labels matching ${this.config.copy_labels_pattern}. Found matching labels: ${labelsToCopy}`);
                 const successByTarget = new Map();
+                const successPRs = new Array();
                 for (const target of target_branches) {
                     console.log(`Backporting to target branch '${target}...'`);
                     try {
@@ -295,6 +297,7 @@ class Backport {
                         }
                         const message = this.composeMessageForSuccess(new_pr.number, target);
                         successByTarget.set(target, true);
+                        successPRs.push(new_pr.number);
                         yield this.github.createComment({
                             owner,
                             repo,
@@ -318,7 +321,7 @@ class Backport {
                         }
                     }
                 }
-                this.createOutput(successByTarget);
+                this.createOutput(successByTarget, successPRs);
             }
             catch (error) {
                 if (error instanceof Error) {
@@ -384,11 +387,13 @@ class Backport {
         return (0, dedent_1.default) `Successfully created backport PR for \`${target}\`:
                   - #${pr_number}`;
     }
-    createOutput(successByTarget) {
+    createOutput(successByTarget, successPRs) {
         const anyTargetFailed = Array.from(successByTarget.values()).includes(false);
         core.setOutput(Output.wasSuccessful, !anyTargetFailed);
         const byTargetOutput = Array.from(successByTarget.entries()).reduce((i, [target, result]) => `${i}${target}=${result}\n`, "");
         core.setOutput(Output.wasSuccessfulByTarget, byTargetOutput);
+        const successPRsOutput = successPRs.join(" ");
+        core.setOutput(Output.successfulPRs, successPRsOutput);
     }
 }
 exports.Backport = Backport;
