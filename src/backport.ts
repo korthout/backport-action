@@ -515,7 +515,10 @@ export class Backport {
                   - #${pr_number}`;
   }
 
-  private createOutput(successByTarget: Map<string, boolean>, successPRs: Array<number>) {
+  private createOutput(
+    successByTarget: Map<string, boolean>,
+    successPRs: Array<number>,
+  ) {
     const anyTargetFailed = Array.from(successByTarget.values()).includes(
       false,
     );
