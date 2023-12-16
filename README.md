@@ -250,5 +250,6 @@ The action provides the following [outputs](https://docs.github.com/en/actions/u
 
 Output | Description
 -------|------------
+`created_pull_numbers` | Space-separated list containing the identifying number of each created pull request. Or empty when the action created no pull requests. For example, `123` or `123 124 125`.
 `was_successful` | Whether or not the changes could be backported successfully to all targets. Either `true` or `false`.
 `was_successful_by_target` | Whether or not the changes could be backported successfully to all targets - broken down by target. Follows the pattern `{{label}}=true\|false`.

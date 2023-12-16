@@ -46,6 +46,7 @@ export { experimentalDefaults };
 enum Output {
   wasSuccessful = "was_successful",
   wasSuccessfulByTarget = "was_successful_by_target",
+  created_pull_numbers = "created_pull_numbers",
 }
 
 export class Backport {
@@ -209,6 +210,7 @@ export class Backport {
       );
 
       const successByTarget = new Map<string, boolean>();
+      const createdPullRequestNumbers = new Array<number>();
       for (const target of target_branches) {
         console.log(`Backporting to target branch '${target}...'`);
 
@@ -382,6 +384,7 @@ export class Backport {
 
           const message = this.composeMessageForSuccess(new_pr.number, target);
           successByTarget.set(target, true);
+          createdPullRequestNumbers.push(new_pr.number);
           await this.github.createComment({
             owner,
             repo,
@@ -404,7 +407,7 @@ export class Backport {
         }
       }
 
-      this.createOutput(successByTarget);
+      this.createOutput(successByTarget, createdPullRequestNumbers);
     } catch (error) {
       if (error instanceof Error) {
         console.error(error.message);
@@ -512,7 +515,10 @@ export class Backport {
                   - #${pr_number}`;
   }
 
-  private createOutput(successByTarget: Map<string, boolean>) {
+  private createOutput(
+    successByTarget: Map<string, boolean>,
+    createdPullRequestNumbers: Array<number>,
+  ) {
     const anyTargetFailed = Array.from(successByTarget.values()).includes(
       false,
     );
@@ -523,6 +529,9 @@ export class Backport {
       "",
     );
     core.setOutput(Output.wasSuccessfulByTarget, byTargetOutput);
+
+    const createdPullNumbersOutput = createdPullRequestNumbers.join(" ");
+    core.setOutput(Output.created_pull_numbers, createdPullNumbersOutput);
   }
 }
 
