@@ -1,6 +1,6 @@
 {
   "name": "backport-action",
-  "version": "2.3.0-SNAPSHOT",
+  "version": "2.3.0",
   "private": false,
   "description": "GitHub action to automatically backport pull requests",
   "main": "lib/main.js",
