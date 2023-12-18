@@ -24,6 +24,8 @@ async function run(): Promise<void> {
   const copy_milestone = core.getInput("copy_milestone");
   const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
   const experimental = JSON.parse(core.getInput("experimental"));
+  const target_owner = core.getInput("target_owner");
+  const target_repo = core.getInput("target_repo");
 
   if (merge_commits != "fail" && merge_commits != "skip") {
     const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
@@ -41,7 +43,7 @@ async function run(): Promise<void> {
   }
 
   const github = new Github(token);
-  const git = new Git(execa);
+  const git = new Git(execa, token);
   const config: Config = {
     pwd,
     labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
@@ -54,6 +56,8 @@ async function run(): Promise<void> {
     copy_milestone: copy_milestone === "true",
     copy_requested_reviewers: copy_requested_reviewers === "true",
     experimental: { ...experimentalDefaults, ...experimental },
+    target_repo: target_repo === "" ? undefined : target_repo,
+    target_owner: target_owner === "" ? undefined : target_owner
   };
   const backport = new Backport(github, config, git);
 

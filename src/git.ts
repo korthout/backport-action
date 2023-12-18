@@ -9,7 +9,7 @@ export class GitRefNotFoundError extends Error {
 }
 
 export class Git {
-  constructor(private execa: Execa) {}
+  constructor(private execa: Execa, private token: string) {}
 
   private async git(command: string, args: string[], pwd: string) {
     console.log(`git ${command} ${args.join(" ")}`);
@@ -31,13 +31,14 @@ export class Git {
    * @param ref the sha, branchname, etc to fetch
    * @param pwd the root of the git repository
    * @param depth the number of commits to fetch
+   * @param remote
    * @throws GitRefNotFoundError when ref not found
    * @throws Error for any other non-zero exit code
    */
-  public async fetch(ref: string, pwd: string, depth: number) {
+  public async fetch(ref: string, pwd: string, depth: number, remote: string = "origin") {
     const { exitCode } = await this.git(
       "fetch",
-      [`--depth=${depth}`, "origin", ref],
+      depth > 0 ? [`--depth=${depth}`, remote, ref] : [remote, ref],
       pwd,
     );
     if (exitCode === 128) {
@@ -48,6 +49,32 @@ export class Git {
     } else if (exitCode !== 0) {
       throw new Error(
         `'git fetch origin ${ref}' failed with exit code ${exitCode}`,
+      );
+    }
+  }
+
+  public async clone(pwd: string, owner: string, repo:string) {
+    const { exitCode } = await this.git(
+        "clone",
+        [`https://x-access-token:${this.token}@github.com/${owner}/${repo}.git`],
+        pwd,
+    );
+    if (exitCode !== 0) {
+      throw new Error(
+          `'git clone ${owner}/${repo}' failed with exit code ${exitCode}`,
+      );
+    }
+  }
+
+  public async remoteAdd(pwd: string, source: string, owner: string, repo:string) {
+    const { exitCode } = await this.git(
+        "remote",
+        ["add", source, `https://x-access-token:${this.token}@github.com/${owner}/${repo}.git`],
+        pwd,
+    );
+    if (exitCode !== 0) {
+      throw new Error(
+          `'git remote add ${owner}/${repo}' failed with exit code ${exitCode}`,
       );
     }
   }
