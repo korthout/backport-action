@@ -243,6 +243,7 @@ Placeholder | Replaced with
 `pull_number` | The number of the original pull request that is backported, e.g. `123`
 `pull_title` | The title of the original pull request that is backported, e.g. `fix: some error`
 `target_branch`| The branchname to which the pull request is backported, e.g. `release-0.23`
+`pull_description`| The original description of the pull request you created the backport from, e.g. `Summary: This patch was created to..`
 
 ## Outputs
 
