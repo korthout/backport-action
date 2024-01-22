@@ -990,11 +990,13 @@ exports.getMentionedIssueRefs = exports.replacePlaceholders = void 0;
  * @returns Description that can be used in the backport pull request
  */
 function replacePlaceholders(template, main, target) {
+    var _a;
     const issues = getMentionedIssueRefs(main.body);
     return template
         .replace("${pull_author}", main.user.login)
         .replace("${pull_number}", main.number.toString())
         .replace("${pull_title}", main.title)
+        .replace("${pull_description", (_a = main.body) !== null && _a !== void 0 ? _a : "")
         .replace("${target_branch}", target)
         .replace("${issue_refs}", issues.join(" "));
 }
