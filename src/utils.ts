@@ -16,7 +16,7 @@ export function replacePlaceholders(
     .replace("${pull_author}", main.user.login)
     .replace("${pull_number}", main.number.toString())
     .replace("${pull_title}", main.title)
-    .replace("${pull_description", main.body ?? "")
+    .replace("${pull_description}", main.body ?? "")
     .replace("${target_branch}", target)
     .replace("${issue_refs}", issues.join(" "));
 }
