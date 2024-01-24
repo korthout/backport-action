@@ -34,16 +34,18 @@ export type Config = {
   copy_milestone: boolean;
   copy_assignees: boolean;
   copy_requested_reviewers: boolean;
-  experimental: Experimental,
-  target_repo?: string,
-  target_owner?: string;
+  experimental: Experimental;
 };
 
 type Experimental = {
   detect_merge_method: boolean;
+  remote_repo?: string;
+  remote_owner?: string;
 };
 const experimentalDefaults: Experimental = {
   detect_merge_method: false,
+  remote_repo: undefined,
+  remote_owner: undefined,
 };
 export { experimentalDefaults };
 
@@ -58,10 +60,23 @@ export class Backport {
   private config;
   private git;
 
+  private remoteOwner;
+  private remoteRepo;
+  private remoteBackport;
+
   constructor(github: GithubApi, config: Config, git: Git) {
     this.github = github;
     this.config = config;
     this.git = git;
+
+    this.remoteOwner = this.config.experimental.remote_owner ?? undefined;
+    this.remoteRepo = this.config.experimental.remote_repo ?? undefined;
+
+    this.remoteBackport = !!this.remoteOwner && !!this.remoteRepo;
+  }
+
+  getUpstream(): "target" | "origin" {
+    return this.remoteBackport ? "target" : "origin";
   }
 
   async run(): Promise<void> {
@@ -213,15 +228,13 @@ export class Backport {
         `Will copy labels matching ${this.config.copy_labels_pattern}. Found matching labels: ${labelsToCopy}`,
       );
 
-      let pwd = this.config.pwd;
-      if (this.config.target_repo && this.config.target_owner) {
-        await this.git.clone(this.config.pwd, this.config.target_owner, this.config.target_repo);
-
-        // Change PWD to cloned target repo.
-        pwd = this.config.pwd + `/${this.config.target_repo}`;
-
-        await this.git.remoteAdd(pwd, "source", owner, repo);
-        await this.git.fetch(mainpr.head.ref, pwd, 0, "source");
+      if (this.remoteBackport) {
+        await this.git.remoteAdd(
+          this.config.pwd,
+          "target",
+          this.remoteOwner,
+          this.remoteRepo,
+        );
       }
 
       const successByTarget = new Map<string, boolean>();
@@ -230,7 +243,7 @@ export class Backport {
         console.log(`Backporting to target branch '${target}...'`);
 
         try {
-          await this.git.fetch(target, pwd, 1);
+          await this.git.fetch(target, this.config.pwd, 1, this.getUpstream());
         } catch (error) {
           if (error instanceof GitRefNotFoundError) {
             const message = this.composeMessageForFetchTargetFailure(error.ref);
@@ -249,14 +262,17 @@ export class Backport {
         }
 
         try {
-          const { title, body, branchname} = this.composePRContent(target, mainpr);
+          const { title, body, branchname } = this.composePRContent(
+            target,
+            mainpr,
+          );
 
           console.log(`Start backport to ${branchname}`);
           try {
             await this.git.checkout(
               branchname,
-              `origin/${target}`,
-                pwd,
+              `${this.getUpstream()}/${target}`,
+              this.config.pwd,
             );
           } catch (error) {
             const message = this.composeMessageForCheckoutFailure(
@@ -276,7 +292,7 @@ export class Backport {
           }
 
           try {
-            await this.git.cherryPick(commitShasToCherryPick, pwd);
+            await this.git.cherryPick(commitShasToCherryPick, this.config.pwd);
           } catch (error) {
             const message = this.composeMessageForCherryPickFailure(
               target,
@@ -295,7 +311,11 @@ export class Backport {
           }
 
           console.info(`Push branch to origin`);
-          const pushExitCode = await this.git.push(branchname, pwd);
+          const pushExitCode = await this.git.push(
+            branchname,
+            this.getUpstream(),
+            this.config.pwd,
+          );
           if (pushExitCode != 0) {
             const message = this.composeMessageForGitPushFailure(
               target,
@@ -314,8 +334,8 @@ export class Backport {
 
           console.info(`Create PR for ${branchname}`);
           const new_pr_response = await this.github.createPR({
-            owner: this.config.target_owner ?? owner,
-            repo:  this.config.target_repo ?? repo,
+            owner: this.remoteOwner ?? owner,
+            repo: this.remoteRepo ?? repo,
             title,
             body,
             head: branchname,
@@ -360,9 +380,9 @@ export class Backport {
                 new_pr.number,
                 assignees,
                 {
-                  owner: this.config.target_owner ?? owner,
-                  repo:  this.config.target_repo ?? repo,
-                }
+                  owner: this.remoteOwner ?? owner,
+                  repo: this.remoteRepo ?? repo,
+                },
               );
               if (set_assignee_response.status != 201) {
                 console.error(JSON.stringify(set_assignee_response));
@@ -377,8 +397,8 @@ export class Backport {
             if (reviewers?.length > 0) {
               console.info("Setting reviewers " + reviewers);
               const reviewRequest = {
-                owner: this.config.target_owner ?? owner,
-                repo:  this.config.target_repo ?? repo,
+                owner: this.remoteOwner ?? owner,
+                repo: this.remoteRepo ?? repo,
                 pull_number: new_pr.number,
                 reviewers: reviewers,
               };
@@ -395,9 +415,9 @@ export class Backport {
               new_pr.number,
               labelsToCopy,
               {
-                owner: this.config.target_owner ?? owner,
-                repo:  this.config.target_repo ?? repo
-              }
+                owner: this.remoteOwner ?? owner,
+                repo: this.remoteRepo ?? repo,
+              },
             );
             if (label_response.status != 200) {
               console.error(JSON.stringify(label_response));
@@ -461,9 +481,9 @@ export class Backport {
       target,
     );
     const branchname = utils.replacePlaceholders(
-        this.config.pull.branchname,
-        main,
-        target,
+      this.config.pull.branchname,
+      main,
+      target,
     );
     return { title, body, branchname };
   }
@@ -539,7 +559,9 @@ export class Backport {
   }
 
   private composeMessageForSuccess(pr_number: number, target: string) {
-    const repo = this.config.target_owner && this.config.target_repo ? `${this.config.target_owner}/${this.config.target_repo}` : '';
+    const repo = this.remoteBackport
+      ? `${this.remoteOwner}/${this.remoteRepo}`
+      : "";
     return dedent`Successfully created backport PR for \`${target}\`:
                   - ${repo}#${pr_number}`;
   }

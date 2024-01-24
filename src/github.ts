@@ -18,9 +18,17 @@ export interface GithubApi {
   isMerged(pull: PullRequest): Promise<boolean>;
   getCommits(pull: PullRequest): Promise<string[]>;
   createPR(pr: CreatePullRequest): Promise<CreatePullRequestResponse>;
-  labelPR(pr: number, labels: string[], repo: Repo): Promise<LabelPullRequestResponse>;
+  labelPR(
+    pr: number,
+    labels: string[],
+    repo: Repo,
+  ): Promise<LabelPullRequestResponse>;
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
-  setAssignees(pr: number, assignees: string[], repo: Repo): Promise<GenericResponse>;
+  setAssignees(
+    pr: number,
+    assignees: string[],
+    repo: Repo,
+  ): Promise<GenericResponse>;
   setMilestone(pr: number, milestone: number): Promise<GenericResponse>;
   mergeStrategy(
     pull: PullRequest,
@@ -331,9 +339,9 @@ export enum MergeStrategy {
 }
 
 export type Repo = {
-  owner: string,
+  owner: string;
   repo: string;
-}
+};
 
 export type PullRequest = {
   number: number;
