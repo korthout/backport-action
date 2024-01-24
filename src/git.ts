@@ -9,7 +9,7 @@ export class GitRefNotFoundError extends Error {
 }
 
 export class Git {
-  constructor(private execa: Execa, private token: string) {}
+  constructor(private execa: Execa) {}
 
   private async git(command: string, args: string[], pwd: string) {
     console.log(`git ${command} ${args.join(" ")}`);
@@ -35,10 +35,15 @@ export class Git {
    * @throws GitRefNotFoundError when ref not found
    * @throws Error for any other non-zero exit code
    */
-  public async fetch(ref: string, pwd: string, depth: number, remote: string = "origin") {
+  public async fetch(
+    ref: string,
+    pwd: string,
+    depth: number,
+    remote: string = "origin",
+  ) {
     const { exitCode } = await this.git(
       "fetch",
-      depth > 0 ? [`--depth=${depth}`, remote, ref] : [remote, ref],
+      [`--depth=${depth}`, remote, ref],
       pwd,
     );
     if (exitCode === 128) {
@@ -53,28 +58,20 @@ export class Git {
     }
   }
 
-  public async clone(pwd: string, owner: string, repo:string) {
+  public async remoteAdd(
+    pwd: string,
+    source: string,
+    owner: string | undefined,
+    repo: string | undefined,
+  ) {
     const { exitCode } = await this.git(
-        "clone",
-        [`https://x-access-token:${this.token}@github.com/${owner}/${repo}.git`],
-        pwd,
+      "remote",
+      ["add", source, `https://github.com/${owner}/${repo}.git`],
+      pwd,
     );
     if (exitCode !== 0) {
       throw new Error(
-          `'git clone ${owner}/${repo}' failed with exit code ${exitCode}`,
-      );
-    }
-  }
-
-  public async remoteAdd(pwd: string, source: string, owner: string, repo:string) {
-    const { exitCode } = await this.git(
-        "remote",
-        ["add", source, `https://x-access-token:${this.token}@github.com/${owner}/${repo}.git`],
-        pwd,
-    );
-    if (exitCode !== 0) {
-      throw new Error(
-          `'git remote add ${owner}/${repo}' failed with exit code ${exitCode}`,
+        `'git remote add ${owner}/${repo}' failed with exit code ${exitCode}`,
       );
     }
   }
@@ -121,10 +118,10 @@ export class Git {
     return mergeCommitShas;
   }
 
-  public async push(branchname: string, pwd: string) {
+  public async push(branchname: string, upstream: string, pwd: string) {
     const { exitCode } = await this.git(
       "push",
-      ["--set-upstream", "origin", branchname],
+      ["--set-upstream", upstream, branchname],
       pwd,
     );
     return exitCode;
