@@ -10,7 +10,7 @@
 import * as github from "@actions/github";
 
 export interface GithubApi {
-  getRepo(): { owner: string; repo: string };
+  getRepo(): Repo;
   getPayload(): Payload;
   getPullNumber(): number;
   createComment(comment: Comment): Promise<{}>;
@@ -18,9 +18,17 @@ export interface GithubApi {
   isMerged(pull: PullRequest): Promise<boolean>;
   getCommits(pull: PullRequest): Promise<string[]>;
   createPR(pr: CreatePullRequest): Promise<CreatePullRequestResponse>;
-  labelPR(pr: number, labels: string[]): Promise<LabelPullRequestResponse>;
+  labelPR(
+    pr: number,
+    labels: string[],
+    repo: Repo,
+  ): Promise<LabelPullRequestResponse>;
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
-  setAssignees(pr: number, assignees: string[]): Promise<GenericResponse>;
+  setAssignees(
+    pr: number,
+    assignees: string[],
+    repo: Repo,
+  ): Promise<GenericResponse>;
   setMilestone(pr: number, milestone: number): Promise<GenericResponse>;
   mergeStrategy(
     pull: PullRequest,
@@ -125,19 +133,19 @@ export class Github implements GithubApi {
     return this.#octokit.rest.pulls.requestReviewers(request);
   }
 
-  public async labelPR(pr: number, labels: string[]) {
+  public async labelPR(pr: number, labels: string[], repo: Repo) {
     console.log(`Label PR #${pr} with labels: ${labels}`);
     return this.#octokit.rest.issues.addLabels({
-      ...this.getRepo(),
+      ...repo,
       issue_number: pr,
       labels,
     });
   }
 
-  public async setAssignees(pr: number, assignees: string[]) {
+  public async setAssignees(pr: number, assignees: string[], repo: Repo) {
     console.log(`Set Assignees ${assignees} to #${pr}`);
     return this.#octokit.rest.issues.addAssignees({
-      ...this.getRepo(),
+      ...repo,
       issue_number: pr,
       assignees,
     });
@@ -329,6 +337,11 @@ export enum MergeStrategy {
   MERGECOMMIT = "mergecommit",
   UNKNOWN = "unknown",
 }
+
+export type Repo = {
+  owner: string;
+  repo: string;
+};
 
 export type PullRequest = {
   number: number;

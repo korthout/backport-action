@@ -31,13 +31,19 @@ export class Git {
    * @param ref the sha, branchname, etc to fetch
    * @param pwd the root of the git repository
    * @param depth the number of commits to fetch
+   * @param remote
    * @throws GitRefNotFoundError when ref not found
    * @throws Error for any other non-zero exit code
    */
-  public async fetch(ref: string, pwd: string, depth: number) {
+  public async fetch(
+    ref: string,
+    pwd: string,
+    depth: number,
+    remote: string = "origin",
+  ) {
     const { exitCode } = await this.git(
       "fetch",
-      [`--depth=${depth}`, "origin", ref],
+      [`--depth=${depth}`, remote, ref],
       pwd,
     );
     if (exitCode === 128) {
@@ -48,6 +54,24 @@ export class Git {
     } else if (exitCode !== 0) {
       throw new Error(
         `'git fetch origin ${ref}' failed with exit code ${exitCode}`,
+      );
+    }
+  }
+
+  public async remoteAdd(
+    pwd: string,
+    source: string,
+    owner: string | undefined,
+    repo: string | undefined,
+  ) {
+    const { exitCode } = await this.git(
+      "remote",
+      ["add", source, `https://github.com/${owner}/${repo}.git`],
+      pwd,
+    );
+    if (exitCode !== 0) {
+      throw new Error(
+        `'git remote add ${owner}/${repo}' failed with exit code ${exitCode}`,
       );
     }
   }
@@ -94,10 +118,10 @@ export class Git {
     return mergeCommitShas;
   }
 
-  public async push(branchname: string, pwd: string) {
+  public async push(branchname: string, upstream: string, pwd: string) {
     const { exitCode } = await this.git(
       "push",
-      ["--set-upstream", "origin", branchname],
+      ["--set-upstream", upstream, branchname],
       pwd,
     );
     return exitCode;

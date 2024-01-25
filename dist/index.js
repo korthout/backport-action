@@ -50,6 +50,8 @@ const git_1 = __nccwpck_require__(3374);
 const utils = __importStar(__nccwpck_require__(918));
 const experimentalDefaults = {
     detect_merge_method: false,
+    remote_repo: undefined,
+    remote_owner: undefined,
 };
 exports.experimentalDefaults = experimentalDefaults;
 var Output;
@@ -60,12 +62,19 @@ var Output;
 })(Output || (Output = {}));
 class Backport {
     constructor(github, config, git) {
+        var _a, _b;
         this.github = github;
         this.config = config;
         this.git = git;
+        this.remoteOwner = (_a = this.config.experimental.remote_owner) !== null && _a !== void 0 ? _a : undefined;
+        this.remoteRepo = (_b = this.config.experimental.remote_repo) !== null && _b !== void 0 ? _b : undefined;
+        this.remoteBackport = !!this.remoteOwner && !!this.remoteRepo;
+    }
+    getUpstream() {
+        return this.remoteBackport ? "target" : "origin";
     }
     run() {
-        var _a, _b, _c, _d, _e, _f;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const payload = this.github.getPayload();
@@ -162,12 +171,15 @@ class Backport {
                             !label.match(this.config.labels.pattern)));
                 }
                 console.log(`Will copy labels matching ${this.config.copy_labels_pattern}. Found matching labels: ${labelsToCopy}`);
+                if (this.remoteBackport) {
+                    yield this.git.remoteAdd(this.config.pwd, "target", this.remoteOwner, this.remoteRepo);
+                }
                 const successByTarget = new Map();
                 const createdPullRequestNumbers = new Array();
                 for (const target of target_branches) {
                     console.log(`Backporting to target branch '${target}...'`);
                     try {
-                        yield this.git.fetch(target, this.config.pwd, 1);
+                        yield this.git.fetch(target, this.config.pwd, 1, this.getUpstream());
                     }
                     catch (error) {
                         if (error instanceof git_1.GitRefNotFoundError) {
@@ -187,10 +199,10 @@ class Backport {
                         }
                     }
                     try {
-                        const branchname = `backport-${pull_number}-to-${target}`;
+                        const { title, body, branchname } = this.composePRContent(target, mainpr);
                         console.log(`Start backport to ${branchname}`);
                         try {
-                            yield this.git.checkout(branchname, `origin/${target}`, this.config.pwd);
+                            yield this.git.checkout(branchname, `${this.getUpstream()}/${target}`, this.config.pwd);
                         }
                         catch (error) {
                             const message = this.composeMessageForCheckoutFailure(target, branchname, commitShasToCherryPick);
@@ -220,7 +232,7 @@ class Backport {
                             continue;
                         }
                         console.info(`Push branch to origin`);
-                        const pushExitCode = yield this.git.push(branchname, this.config.pwd);
+                        const pushExitCode = yield this.git.push(branchname, this.getUpstream(), this.config.pwd);
                         if (pushExitCode != 0) {
                             const message = this.composeMessageForGitPushFailure(target, pushExitCode);
                             console.error(message);
@@ -234,10 +246,9 @@ class Backport {
                             continue;
                         }
                         console.info(`Create PR for ${branchname}`);
-                        const { title, body } = this.composePRContent(target, mainpr);
                         const new_pr_response = yield this.github.createPR({
-                            owner,
-                            repo,
+                            owner: (_e = this.remoteOwner) !== null && _e !== void 0 ? _e : owner,
+                            repo: (_f = this.remoteRepo) !== null && _f !== void 0 ? _f : repo,
                             title,
                             body,
                             head: branchname,
@@ -258,7 +269,7 @@ class Backport {
                         }
                         const new_pr = new_pr_response.data;
                         if (this.config.copy_milestone == true) {
-                            const milestone = (_e = mainpr.milestone) === null || _e === void 0 ? void 0 : _e.number;
+                            const milestone = (_g = mainpr.milestone) === null || _g === void 0 ? void 0 : _g.number;
                             if (milestone) {
                                 console.info("Setting milestone to " + milestone);
                                 const set_milestone_response = yield this.github.setMilestone(new_pr.number, milestone);
@@ -271,17 +282,25 @@ class Backport {
                             const assignees = mainpr.assignees.map((label) => label.login);
                             if (assignees.length > 0) {
                                 console.info("Setting assignees " + assignees);
-                                const set_assignee_response = yield this.github.setAssignees(new_pr.number, assignees);
+                                const set_assignee_response = yield this.github.setAssignees(new_pr.number, assignees, {
+                                    owner: (_h = this.remoteOwner) !== null && _h !== void 0 ? _h : owner,
+                                    repo: (_j = this.remoteRepo) !== null && _j !== void 0 ? _j : repo,
+                                });
                                 if (set_assignee_response.status != 201) {
                                     console.error(JSON.stringify(set_assignee_response));
                                 }
                             }
                         }
                         if (this.config.copy_requested_reviewers == true) {
-                            const reviewers = (_f = mainpr.requested_reviewers) === null || _f === void 0 ? void 0 : _f.map((reviewer) => reviewer.login);
+                            const reviewers = (_k = mainpr.requested_reviewers) === null || _k === void 0 ? void 0 : _k.map((reviewer) => reviewer.login);
                             if ((reviewers === null || reviewers === void 0 ? void 0 : reviewers.length) > 0) {
                                 console.info("Setting reviewers " + reviewers);
-                                const reviewRequest = Object.assign(Object.assign({}, this.github.getRepo()), { pull_number: new_pr.number, reviewers: reviewers });
+                                const reviewRequest = {
+                                    owner: (_l = this.remoteOwner) !== null && _l !== void 0 ? _l : owner,
+                                    repo: (_m = this.remoteRepo) !== null && _m !== void 0 ? _m : repo,
+                                    pull_number: new_pr.number,
+                                    reviewers: reviewers,
+                                };
                                 const set_reviewers_response = yield this.github.requestReviewers(reviewRequest);
                                 if (set_reviewers_response.status != 201) {
                                     console.error(JSON.stringify(set_reviewers_response));
@@ -289,7 +308,10 @@ class Backport {
                             }
                         }
                         if (labelsToCopy.length > 0) {
-                            const label_response = yield this.github.labelPR(new_pr.number, labelsToCopy);
+                            const label_response = yield this.github.labelPR(new_pr.number, labelsToCopy, {
+                                owner: (_o = this.remoteOwner) !== null && _o !== void 0 ? _o : owner,
+                                repo: (_p = this.remoteRepo) !== null && _p !== void 0 ? _p : repo,
+                            });
                             if (label_response.status != 200) {
                                 console.error(JSON.stringify(label_response));
                                 // The PR was still created so let's still comment on the original.
@@ -342,7 +364,8 @@ class Backport {
     composePRContent(target, main) {
         const title = utils.replacePlaceholders(this.config.pull.title, main, target);
         const body = utils.replacePlaceholders(this.config.pull.description, main, target);
-        return { title, body };
+        const branchname = utils.replacePlaceholders(this.config.pull.branchname, main, target);
+        return { title, body, branchname };
     }
     composeMessageForFetchTargetFailure(target) {
         return (0, dedent_1.default) `Backport failed for \`${target}\`: couldn't find remote ref \`${target}\`.
@@ -384,8 +407,11 @@ class Backport {
                 (see action log for full response)`;
     }
     composeMessageForSuccess(pr_number, target) {
+        const repo = this.remoteBackport
+            ? `${this.remoteOwner}/${this.remoteRepo}`
+            : "";
         return (0, dedent_1.default) `Successfully created backport PR for \`${target}\`:
-                  - #${pr_number}`;
+                  - ${repo}#${pr_number}`;
     }
     createOutput(successByTarget, createdPullRequestNumbers) {
         const anyTargetFailed = Array.from(successByTarget.values()).includes(false);
@@ -488,17 +514,26 @@ class Git {
      * @param ref the sha, branchname, etc to fetch
      * @param pwd the root of the git repository
      * @param depth the number of commits to fetch
+     * @param remote
      * @throws GitRefNotFoundError when ref not found
      * @throws Error for any other non-zero exit code
      */
-    fetch(ref, pwd, depth) {
+    fetch(ref, pwd, depth, remote = "origin") {
         return __awaiter(this, void 0, void 0, function* () {
-            const { exitCode } = yield this.git("fetch", [`--depth=${depth}`, "origin", ref], pwd);
+            const { exitCode } = yield this.git("fetch", [`--depth=${depth}`, remote, ref], pwd);
             if (exitCode === 128) {
                 throw new GitRefNotFoundError(`Expected to fetch '${ref}', but couldn't find it`, ref);
             }
             else if (exitCode !== 0) {
                 throw new Error(`'git fetch origin ${ref}' failed with exit code ${exitCode}`);
+            }
+        });
+    }
+    remoteAdd(pwd, source, owner, repo) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { exitCode } = yield this.git("remote", ["add", source, `https://github.com/${owner}/${repo}.git`], pwd);
+            if (exitCode !== 0) {
+                throw new Error(`'git remote add ${owner}/${repo}' failed with exit code ${exitCode}`);
             }
         });
     }
@@ -528,9 +563,9 @@ class Git {
             return mergeCommitShas;
         });
     }
-    push(branchname, pwd) {
+    push(branchname, upstream, pwd) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { exitCode } = yield this.git("push", ["--set-upstream", "origin", branchname], pwd);
+            const { exitCode } = yield this.git("push", ["--set-upstream", upstream, branchname], pwd);
             return exitCode;
         });
     }
@@ -701,16 +736,16 @@ class Github {
             return __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls.requestReviewers(request);
         });
     }
-    labelPR(pr, labels) {
+    labelPR(pr, labels, repo) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log(`Label PR #${pr} with labels: ${labels}`);
-            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addLabels(Object.assign(Object.assign({}, this.getRepo()), { issue_number: pr, labels }));
+            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addLabels(Object.assign(Object.assign({}, repo), { issue_number: pr, labels }));
         });
     }
-    setAssignees(pr, assignees) {
+    setAssignees(pr, assignees, repo) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log(`Set Assignees ${assignees} to #${pr}`);
-            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addAssignees(Object.assign(Object.assign({}, this.getRepo()), { issue_number: pr, assignees }));
+            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addAssignees(Object.assign(Object.assign({}, repo), { issue_number: pr, assignees }));
         });
     }
     setMilestone(pr, milestone) {
@@ -932,6 +967,7 @@ function run() {
         const pattern = core.getInput("label_pattern");
         const description = core.getInput("pull_description");
         const title = core.getInput("pull_title");
+        const branchname = core.getInput("pull_branchname");
         const copy_labels_pattern = core.getInput("copy_labels_pattern");
         const target_branches = core.getInput("target_branches");
         const merge_commits = core.getInput("merge_commits");
@@ -957,7 +993,7 @@ function run() {
         const config = {
             pwd,
             labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
-            pull: { description, title },
+            pull: { description, title, branchname },
             copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
             target_branches: target_branches === "" ? undefined : target_branches,
             commits: { merge_commits },
