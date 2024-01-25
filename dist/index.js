@@ -50,6 +50,7 @@ const git_1 = __nccwpck_require__(3374);
 const utils = __importStar(__nccwpck_require__(918));
 const experimentalDefaults = {
     detect_merge_method: false,
+    allow_unmerged: false,
 };
 exports.experimentalDefaults = experimentalDefaults;
 var Output;
@@ -73,7 +74,8 @@ class Backport {
                 const repo = (_b = (_a = payload.repository) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : this.github.getRepo().repo;
                 const pull_number = this.github.getPullNumber();
                 const mainpr = yield this.github.getPullRequest(pull_number);
-                if (!(yield this.github.isMerged(mainpr))) {
+                if (!this.config.experimental.allow_unmerged &&
+                    !(yield this.github.isMerged(mainpr))) {
                     const message = "Only merged pull requests can be backported.";
                     this.github.createComment({
                         owner,

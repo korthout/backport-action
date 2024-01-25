@@ -37,9 +37,14 @@ inputs:
       - For "Merged as a merge commit", the action cherry-picks the commits from the pull request.
 
       By default, the action always cherry-picks the commits from the pull request.
+      
+      #### `allow_unmerged`
+      
+      ...
     default: >
       {
-        "detect_merge_method": false
+        "detect_merge_method": false,
+        "allow_unmerged": false
       }
   github_token:
     description: >

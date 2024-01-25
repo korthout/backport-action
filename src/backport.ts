@@ -37,9 +37,11 @@ export type Config = {
 
 type Experimental = {
   detect_merge_method: boolean;
+  allow_unmerged: boolean;
 };
 const experimentalDefaults: Experimental = {
   detect_merge_method: false,
+  allow_unmerged: false,
 };
 export { experimentalDefaults };
 
@@ -68,7 +70,10 @@ export class Backport {
       const pull_number = this.github.getPullNumber();
       const mainpr = await this.github.getPullRequest(pull_number);
 
-      if (!(await this.github.isMerged(mainpr))) {
+      if (
+        !this.config.experimental.allow_unmerged &&
+        !(await this.github.isMerged(mainpr))
+      ) {
         const message = "Only merged pull requests can be backported.";
         this.github.createComment({
           owner,
