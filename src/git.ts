@@ -8,6 +8,12 @@ export class GitRefNotFoundError extends Error {
   }
 }
 
+export enum PushResult {
+  success = "success",
+  permission_denied = "permission_denied",
+  unknown_failure = "unknown_failure",
+}
+
 export class Git {
   constructor(private execa: Execa) {}
 
@@ -126,13 +132,26 @@ export class Git {
     return mergeCommitShas;
   }
 
-  public async push(branchname: string, remote: string, pwd: string) {
-    const { exitCode } = await this.git(
+  public async push(
+    branchname: string,
+    remote: string,
+    pwd: string,
+  ): Promise<PushResult> {
+    const { exitCode, stdout, stderr } = await this.git(
       "push",
       ["--set-upstream", remote, branchname],
       pwd,
     );
-    return exitCode;
+    if (exitCode === 0) {
+      return PushResult.success;
+    }
+    if (
+      stdout.includes("permission denied") ||
+      stderr.includes("permission denied")
+    ) {
+      return PushResult.permission_denied;
+    }
+    return PushResult.unknown_failure;
   }
 
   public async checkout(branch: string, start: string, pwd: string) {

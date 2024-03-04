@@ -1,13 +1,14 @@
 import * as core from "@actions/core";
 import dedent from "dedent";
 
+import { comments, MessageType } from "./comments";
+import { Git, GitRefNotFoundError, PushResult } from "./git";
 import {
   CreatePullRequestResponse,
-  PullRequest,
+  GithubApi,
   MergeStrategy,
+  PullRequest,
 } from "./github";
-import { GithubApi } from "./github";
-import { Git, GitRefNotFoundError } from "./git";
 import * as utils from "./utils";
 
 type PRContent = {
@@ -52,7 +53,7 @@ const experimentalDefaults: Experimental = {
   downstream_repo: undefined,
   downstream_owner: undefined,
 };
-export { experimentalDefaults, deprecatedExperimental };
+export { deprecatedExperimental, experimentalDefaults };
 
 enum Output {
   wasSuccessful = "was_successful",
@@ -88,6 +89,8 @@ export class Backport {
 
   async run(): Promise<void> {
     try {
+      const run_id = this.github.getRunId();
+      const run_url = this.github.getRunUrl();
       const payload = this.github.getPayload();
 
       const workflowOwner = this.github.getRepo().owner;
@@ -333,18 +336,20 @@ export class Backport {
           }
 
           console.info(`Push branch to ${this.getRemote()}`);
-          const pushExitCode = await this.git.push(
+          const push_result = await this.git.push(
             branchname,
             this.getRemote(),
             this.config.pwd,
           );
-          if (pushExitCode != 0) {
-            const message = this.composeMessageForGitPushFailure(
-              target,
-              pushExitCode,
-            );
-            console.error(message);
+          if (push_result != PushResult.success) {
+            console.error(`Failed to push '${target}' due to ${push_result}`);
             successByTarget.set(target, false);
+            const message = comments.compose(MessageType.failed_to_push, {
+              run_id,
+              run_url,
+              push_result,
+              target,
+            });
             await this.github.createComment({
               owner: workflowOwner,
               repo: workflowRepo,
@@ -633,14 +638,6 @@ export class Backport {
       git cherry-pick -x ${commitShasToCherryPick.join(" ")}
       \`\`\``;
     }
-  }
-
-  private composeMessageForGitPushFailure(
-    target: string,
-    exitcode: number,
-  ): string {
-    //TODO better error messages depending on exit code
-    return dedent`Git push to origin failed for ${target} with exitcode ${exitcode}`;
   }
 
   private composeMessageForCreatePRFailed(

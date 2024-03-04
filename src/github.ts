@@ -12,6 +12,8 @@ import * as github from "@actions/github";
 export interface GithubApi {
   getRepo(): Repo;
   getPayload(): Payload;
+  getRunId(): number;
+  getRunUrl(): string;
   getPullNumber(): number;
   createComment(comment: Comment): Promise<{}>;
   getPullRequest(pull_number: number): Promise<PullRequest>;
@@ -52,6 +54,17 @@ export class Github implements GithubApi {
 
   public getPayload() {
     return this.#context.payload;
+  }
+
+  public getRunId() {
+    return this.#context.runId;
+  }
+
+  public getRunUrl() {
+    const owner = this.#context.repo.owner;
+    const repo = this.#context.repo.repo;
+    const run_id = this.getRunId();
+    return `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
   }
 
   public getPullNumber() {
