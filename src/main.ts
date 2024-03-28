@@ -16,6 +16,7 @@ async function run(): Promise<void> {
   const pattern = core.getInput("label_pattern");
   const description = core.getInput("pull_description");
   const title = core.getInput("pull_title");
+  const branch_name = core.getInput("branch_name");
   const copy_labels_pattern = core.getInput("copy_labels_pattern");
   const target_branches = core.getInput("target_branches");
   const merge_commits = core.getInput("merge_commits");
@@ -44,7 +45,7 @@ async function run(): Promise<void> {
   const config: Config = {
     pwd,
     labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
-    pull: { description, title },
+    pull: { description, title, branch_name },
     copy_labels_pattern:
       copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
     target_branches: target_branches === "" ? undefined : target_branches,

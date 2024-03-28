@@ -80,6 +80,13 @@ inputs:
       Please refer to this action's README for all available placeholders.
     default: >-
       [Backport ${target_branch}] ${pull_title}
+  branch_name:
+    description: >
+      Branch name to use for automatically created branches. 
+      Placeholders can be used to define variable values.
+      These are indicated by a dollar sign and curly braces (`${placeholder}`).
+      Please refer to this action's README for all available placeholders.
+    default: backport-${pull_number}-to-${target_branch}
   target_branches:
     description: >
       The action will backport the pull request to each specified target branch (space-delimited).
