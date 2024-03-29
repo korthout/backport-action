@@ -105,6 +105,16 @@ jobs:
 
 The action can be configured with the following optional [inputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepswith):
 
+### `branch_name`
+
+Default: `backport-${pull_number}-to-${target_branch}`
+
+Template used as the name for branches created by this action. 
+
+Placeholders can be used to define variable values.
+These are indicated by a dollar sign and curly braces (`${placeholder}`).
+Please refer to this action's README for all available [placeholders](#placeholders).
+
 ### `copy_assignees`
 
 Default: `false` (disabled)
