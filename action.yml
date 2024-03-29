@@ -82,7 +82,7 @@ inputs:
       [Backport ${target_branch}] ${pull_title}
   branch_name:
     description: >
-      Branch name to use for automatically created branches. 
+      Template used as the name for branches created by this action. 
       Placeholders can be used to define variable values.
       These are indicated by a dollar sign and curly braces (`${placeholder}`).
       Please refer to this action's README for all available placeholders.
