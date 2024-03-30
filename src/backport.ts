@@ -235,13 +235,12 @@ export class Backport {
         }
 
         try {
-
           const branchname = utils.replacePlaceholders(
             this.config.pull.branch_name,
             mainpr,
             target,
           );
-          
+
           console.log(`Start backport to ${branchname}`);
           try {
             await this.git.checkout(
