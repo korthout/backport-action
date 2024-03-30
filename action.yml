@@ -3,6 +3,13 @@ description: >
   Fast and flexible action to cherry-pick commits from labeled pull requests
 author: korthout
 inputs:
+  branch_name:
+    description: >
+      Template used as the name for branches created by this action. 
+      Placeholders can be used to define variable values.
+      These are indicated by a dollar sign and curly braces (`${placeholder}`).
+      Please refer to this action's README for all available placeholders.
+    default: backport-${pull_number}-to-${target_branch}
   copy_assignees:
     description: >
       Controls whether to copy the assignees from the original pull request to the backport pull request.

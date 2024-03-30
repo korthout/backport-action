@@ -1,5 +1,6 @@
 lib
 .vscode/
+.vs/
 
 # Modified from https://www.toptal.com/developers/gitignore/api/node,intellij+all,visualstudiocode,macos,windows
 #dist # removed because this action requires the dist to be available in the repo

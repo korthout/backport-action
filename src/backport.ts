@@ -23,6 +23,7 @@ export type Config = {
   pull: {
     description: string;
     title: string;
+    branch_name: string;
   };
   copy_labels_pattern?: RegExp;
   target_branches?: string;
@@ -234,7 +235,11 @@ export class Backport {
         }
 
         try {
-          const branchname = `backport-${pull_number}-to-${target}`;
+          const branchname = utils.replacePlaceholders(
+            this.config.pull.branch_name,
+            mainpr,
+            target,
+          );
 
           console.log(`Start backport to ${branchname}`);
           try {

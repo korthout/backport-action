@@ -187,7 +187,7 @@ class Backport {
                         }
                     }
                     try {
-                        const branchname = `backport-${pull_number}-to-${target}`;
+                        const branchname = utils.replacePlaceholders(this.config.pull.branch_name, mainpr, target);
                         console.log(`Start backport to ${branchname}`);
                         try {
                             yield this.git.checkout(branchname, `origin/${target}`, this.config.pwd);
@@ -932,6 +932,7 @@ function run() {
         const pattern = core.getInput("label_pattern");
         const description = core.getInput("pull_description");
         const title = core.getInput("pull_title");
+        const branch_name = core.getInput("branch_name");
         const copy_labels_pattern = core.getInput("copy_labels_pattern");
         const target_branches = core.getInput("target_branches");
         const merge_commits = core.getInput("merge_commits");
@@ -957,7 +958,7 @@ function run() {
         const config = {
             pwd,
             labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
-            pull: { description, title },
+            pull: { description, title, branch_name },
             copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
             target_branches: target_branches === "" ? undefined : target_branches,
             commits: { merge_commits },
