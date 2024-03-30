@@ -38,9 +38,11 @@ export type Config = {
 
 type Experimental = {
   detect_merge_method: boolean;
+  backport_on_conflicts: boolean;
 };
 const experimentalDefaults: Experimental = {
   detect_merge_method: false,
+  backport_on_conflicts: false,
 };
 export { experimentalDefaults };
 
@@ -265,8 +267,14 @@ export class Backport {
             continue;
           }
 
+          let uncommitedShas: string[] | null;
+
           try {
-            await this.git.cherryPick(commitShasToCherryPick, this.config.pwd);
+            uncommitedShas = await this.git.cherryPick(
+              commitShasToCherryPick,
+              this.config.experimental.backport_on_conflicts,
+              this.config.pwd,
+            );
           } catch (error) {
             const message = this.composeMessageForCherryPickFailure(
               target,
@@ -312,6 +320,7 @@ export class Backport {
             head: branchname,
             base: target,
             maintainer_can_modify: true,
+            draft: uncommitedShas !== null,
           });
 
           if (new_pr_response.status != 201) {
@@ -387,15 +396,42 @@ export class Backport {
             }
           }
 
-          const message = this.composeMessageForSuccess(new_pr.number, target);
-          successByTarget.set(target, true);
-          createdPullRequestNumbers.push(new_pr.number);
-          await this.github.createComment({
-            owner,
-            repo,
-            issue_number: pull_number,
-            body: message,
-          });
+          // post success message to original pr
+          {
+            const message =
+              uncommitedShas !== null
+                ? this.composeMessageForSuccessWithConflicts(
+                  new_pr.number,
+                  target,
+                  branchname,
+                  uncommitedShas,
+                )
+                : this.composeMessageForSuccess(new_pr.number, target);
+
+            successByTarget.set(target, true);
+            createdPullRequestNumbers.push(new_pr.number);
+            await this.github.createComment({
+              owner,
+              repo,
+              issue_number: pull_number,
+              body: message,
+            });
+          }
+          // post message to new pr to resolve conflict
+          if (uncommitedShas !== null) {
+            const message: string = this.composeMessageToResolveConflicts(
+              target,
+              branchname,
+              uncommitedShas,
+              true,)
+
+            await this.github.createComment({
+              owner,
+              repo,
+              issue_number: new_pr.number,
+              body: message,
+            });
+          }
         } catch (error) {
           if (error instanceof Error) {
             console.error(error.message);
@@ -460,6 +496,7 @@ export class Backport {
       target,
       branchname,
       commitShasToCherryPick,
+      false,
     );
     return dedent`Backport failed for \`${target}\`, ${reason}.
 
@@ -473,14 +510,31 @@ export class Backport {
     commitShasToCherryPick: string[],
   ): string {
     const reason = "because it was unable to cherry-pick the commit(s)";
+    const suggestionToResolve = this.composeMessageToResolveConflicts(
+      target,
+      branchname,
+      commitShasToCherryPick,
+      false,
+    );
+    return dedent`Backport failed for \`${target}\`, ${reason}.
+
+                  ${suggestionToResolve}`;
+  }
+
+  private composeMessageToResolveConflicts(
+    target: string,
+    branchname: string,
+    commitShasToCherryPick: string[],
+    branchExist: boolean,
+  ): string {
     const suggestion = this.composeSuggestion(
       target,
       branchname,
       commitShasToCherryPick,
+      branchExist,
     );
-    return dedent`Backport failed for \`${target}\`, ${reason}.
 
-                  Please cherry-pick the changes locally and resolve any conflicts.
+    return dedent`Please cherry-pick the changes locally and resolve any conflicts.
                   ${suggestion}`;
   }
 
@@ -488,8 +542,17 @@ export class Backport {
     target: string,
     branchname: string,
     commitShasToCherryPick: string[],
+    branchExist: boolean,
   ) {
-    return dedent`\`\`\`bash
+    return branchExist
+      ? dedent`\`\`\`bash
+      git fetch origin ${target}
+      git worktree add -d .worktree/${branchname} origin/${target}
+      cd .worktree/${branchname}
+      git switch ${branchname}
+      git cherry-pick -x ${commitShasToCherryPick.join(" ")}
+      \`\`\``
+      : dedent`\`\`\`bash
       git fetch origin ${target}
       git worktree add -d .worktree/${branchname} origin/${target}
       cd .worktree/${branchname}
@@ -518,6 +581,24 @@ export class Backport {
   private composeMessageForSuccess(pr_number: number, target: string) {
     return dedent`Successfully created backport PR for \`${target}\`:
                   - #${pr_number}`;
+  }
+
+  private composeMessageForSuccessWithConflicts(
+    pr_number: number,
+    target: string,
+    branchname: string,
+    commitShasToCherryPick: string[],
+  ): string {
+    const suggestionToResolve = this.composeMessageToResolveConflicts(
+      target,
+      branchname,
+      commitShasToCherryPick,
+      true,
+    );
+    return dedent`Created backport PR for \`${target}\`:
+                  - #${pr_number} with remaining conflicts!
+                  
+                  ${suggestionToResolve}`;
   }
 
   private createOutput(

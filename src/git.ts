@@ -9,7 +9,7 @@ export class GitRefNotFoundError extends Error {
 }
 
 export class Git {
-  constructor(private execa: Execa) {}
+  constructor(private execa: Execa) { }
 
   private async git(command: string, args: string[], pwd: string) {
     console.log(`git ${command} ${args.join(" ")}`);
@@ -112,17 +112,58 @@ export class Git {
     }
   }
 
-  public async cherryPick(commitShas: string[], pwd: string) {
-    const { exitCode } = await this.git(
-      "cherry-pick",
-      ["-x", ...commitShas],
-      pwd,
-    );
-    if (exitCode !== 0) {
+  public async cherryPick(
+    commitShas: string[],
+    allowPartialCherryPick: boolean,
+    pwd: string,
+  ): Promise<string[] | null> {
+    const abortCherryPickAndThrow = async (
+      commitShas: string[],
+      exitCode: number,
+    ) => {
       await this.git("cherry-pick", ["--abort"], pwd);
       throw new Error(
         `'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`,
       );
+    };
+
+    if (!allowPartialCherryPick) {
+      const { exitCode } = await this.git(
+        "cherry-pick",
+        ["-x", ...commitShas],
+        pwd,
+      );
+
+      if (exitCode !== 0) {
+        await abortCherryPickAndThrow(commitShas, exitCode);
+      }
+
+      return null;
+    } else {
+      let uncommitedShas: string[] = [...commitShas];
+
+      // Cherry-pick commit one by one.
+      for (const sha of commitShas) {
+        const { exitCode } = await this.git("cherry-pick", ["-x", sha], pwd);
+
+        if (exitCode !== 0) {
+          if (exitCode === 1) {
+            // conflict encountered
+            // abort conflict cherry-pick
+            await this.git("cherry-pick", ["--abort"], pwd);
+
+            return uncommitedShas;
+          } else {
+            // other fail reasons
+            await abortCherryPickAndThrow([sha], exitCode);
+          }
+        }
+
+        // pop sha
+        uncommitedShas.shift();
+      }
+
+      return null;
     }
   }
 }

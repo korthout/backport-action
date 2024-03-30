@@ -397,6 +397,7 @@ export type CreatePullRequest = {
   head: string;
   base: string;
   maintainer_can_modify: boolean;
+  draft: boolean;
 };
 
 export type ReviewRequest = {

@@ -44,9 +44,18 @@ inputs:
       - For "Merged as a merge commit", the action cherry-picks the commits from the pull request.
 
       By default, the action always cherry-picks the commits from the pull request.
+
+      #### `backport_on_conflicts`
+
+      When enabled, the action will create the pull request even if conflict are detected during the cherry-pick.
+      The first conflict encountered will be committed and the remaining of the cherry-pick will need to be done by the users.
+      Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
+
+      By default, the action fails on the first conflict encountered and the pull request is not created.
     default: >
       {
-        "detect_merge_method": false
+        "detect_merge_method": false,
+        "backport_on_conflicts": false
       }
   github_token:
     description: >
@@ -112,5 +121,5 @@ runs:
   using: "node20"
   main: "dist/index.js"
 branding:
-  icon: 'copy'
-  color: 'yellow'
+  icon: "copy"
+  color: "yellow"

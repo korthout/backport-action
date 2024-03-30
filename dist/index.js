@@ -50,6 +50,7 @@ const git_1 = __nccwpck_require__(3374);
 const utils = __importStar(__nccwpck_require__(918));
 const experimentalDefaults = {
     detect_merge_method: false,
+    backport_on_conflicts: false,
 };
 exports.experimentalDefaults = experimentalDefaults;
 var Output;
@@ -204,8 +205,9 @@ class Backport {
                             });
                             continue;
                         }
+                        let uncommitedShas;
                         try {
-                            yield this.git.cherryPick(commitShasToCherryPick, this.config.pwd);
+                            uncommitedShas = yield this.git.cherryPick(commitShasToCherryPick, this.config.experimental.backport_on_conflicts, this.config.pwd);
                         }
                         catch (error) {
                             const message = this.composeMessageForCherryPickFailure(target, branchname, commitShasToCherryPick);
@@ -243,6 +245,7 @@ class Backport {
                             head: branchname,
                             base: target,
                             maintainer_can_modify: true,
+                            draft: uncommitedShas !== null,
                         });
                         if (new_pr_response.status != 201) {
                             console.error(JSON.stringify(new_pr_response));
@@ -295,15 +298,30 @@ class Backport {
                                 // The PR was still created so let's still comment on the original.
                             }
                         }
-                        const message = this.composeMessageForSuccess(new_pr.number, target);
-                        successByTarget.set(target, true);
-                        createdPullRequestNumbers.push(new_pr.number);
-                        yield this.github.createComment({
-                            owner,
-                            repo,
-                            issue_number: pull_number,
-                            body: message,
-                        });
+                        // post success message to original pr
+                        {
+                            const message = uncommitedShas !== null
+                                ? this.composeMessageForSuccessWithConflicts(new_pr.number, target, branchname, uncommitedShas)
+                                : this.composeMessageForSuccess(new_pr.number, target);
+                            successByTarget.set(target, true);
+                            createdPullRequestNumbers.push(new_pr.number);
+                            yield this.github.createComment({
+                                owner,
+                                repo,
+                                issue_number: pull_number,
+                                body: message,
+                            });
+                        }
+                        // post message to new pr to resolve conflict
+                        if (uncommitedShas !== null) {
+                            const message = this.composeMessageToResolveConflicts(target, branchname, uncommitedShas, true);
+                            yield this.github.createComment({
+                                owner,
+                                repo,
+                                issue_number: new_pr.number,
+                                body: message,
+                            });
+                        }
                     }
                     catch (error) {
                         if (error instanceof Error) {
@@ -350,7 +368,7 @@ class Backport {
     }
     composeMessageForCheckoutFailure(target, branchname, commitShasToCherryPick) {
         const reason = "because it was unable to create a new branch";
-        const suggestion = this.composeSuggestion(target, branchname, commitShasToCherryPick);
+        const suggestion = this.composeSuggestion(target, branchname, commitShasToCherryPick, false);
         return (0, dedent_1.default) `Backport failed for \`${target}\`, ${reason}.
 
                   Please cherry-pick the changes locally.
@@ -358,14 +376,26 @@ class Backport {
     }
     composeMessageForCherryPickFailure(target, branchname, commitShasToCherryPick) {
         const reason = "because it was unable to cherry-pick the commit(s)";
-        const suggestion = this.composeSuggestion(target, branchname, commitShasToCherryPick);
+        const suggestionToResolve = this.composeMessageToResolveConflicts(target, branchname, commitShasToCherryPick, false);
         return (0, dedent_1.default) `Backport failed for \`${target}\`, ${reason}.
 
-                  Please cherry-pick the changes locally and resolve any conflicts.
+                  ${suggestionToResolve}`;
+    }
+    composeMessageToResolveConflicts(target, branchname, commitShasToCherryPick, branchExist) {
+        const suggestion = this.composeSuggestion(target, branchname, commitShasToCherryPick, branchExist);
+        return (0, dedent_1.default) `Please cherry-pick the changes locally and resolve any conflicts.
                   ${suggestion}`;
     }
-    composeSuggestion(target, branchname, commitShasToCherryPick) {
-        return (0, dedent_1.default) `\`\`\`bash
+    composeSuggestion(target, branchname, commitShasToCherryPick, branchExist) {
+        return branchExist
+            ? (0, dedent_1.default) `\`\`\`bash
+      git fetch origin ${target}
+      git worktree add -d .worktree/${branchname} origin/${target}
+      cd .worktree/${branchname}
+      git switch ${branchname}
+      git cherry-pick -x ${commitShasToCherryPick.join(" ")}
+      \`\`\``
+            : (0, dedent_1.default) `\`\`\`bash
       git fetch origin ${target}
       git worktree add -d .worktree/${branchname} origin/${target}
       cd .worktree/${branchname}
@@ -386,6 +416,13 @@ class Backport {
     composeMessageForSuccess(pr_number, target) {
         return (0, dedent_1.default) `Successfully created backport PR for \`${target}\`:
                   - #${pr_number}`;
+    }
+    composeMessageForSuccessWithConflicts(pr_number, target, branchname, commitShasToCherryPick) {
+        const suggestionToResolve = this.composeMessageToResolveConflicts(target, branchname, commitShasToCherryPick, true);
+        return (0, dedent_1.default) `Created backport PR for \`${target}\`:
+                  - #${pr_number} with remaining conflicts!
+                  
+                  ${suggestionToResolve}`;
     }
     createOutput(successByTarget, createdPullRequestNumbers) {
         const anyTargetFailed = Array.from(successByTarget.values()).includes(false);
@@ -542,12 +579,40 @@ class Git {
             }
         });
     }
-    cherryPick(commitShas, pwd) {
+    cherryPick(commitShas, allowPartialCherryPick, pwd) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { exitCode } = yield this.git("cherry-pick", ["-x", ...commitShas], pwd);
-            if (exitCode !== 0) {
+            const abortCherryPickAndThrow = (commitShas, exitCode) => __awaiter(this, void 0, void 0, function* () {
                 yield this.git("cherry-pick", ["--abort"], pwd);
                 throw new Error(`'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`);
+            });
+            if (!allowPartialCherryPick) {
+                const { exitCode } = yield this.git("cherry-pick", ["-x", ...commitShas], pwd);
+                if (exitCode !== 0) {
+                    yield abortCherryPickAndThrow(commitShas, exitCode);
+                }
+                return null;
+            }
+            else {
+                let uncommitedShas = [...commitShas];
+                // Cherry-pick commit one by one.
+                for (const sha of commitShas) {
+                    const { exitCode } = yield this.git("cherry-pick", ["-x", sha], pwd);
+                    if (exitCode !== 0) {
+                        if (exitCode === 1) {
+                            // conflict encountered
+                            // abort conflict cherry-pick
+                            yield this.git("cherry-pick", ["--abort"], pwd);
+                            return uncommitedShas;
+                        }
+                        else {
+                            // other fail reasons
+                            yield abortCherryPickAndThrow([sha], exitCode);
+                        }
+                    }
+                    // pop sha
+                    uncommitedShas.shift();
+                }
+                return null;
             }
         });
     }
