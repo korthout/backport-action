@@ -401,11 +401,11 @@ export class Backport {
             const message =
               uncommitedShas !== null
                 ? this.composeMessageForSuccessWithConflicts(
-                  new_pr.number,
-                  target,
-                  branchname,
-                  uncommitedShas,
-                )
+                    new_pr.number,
+                    target,
+                    branchname,
+                    uncommitedShas,
+                  )
                 : this.composeMessageForSuccess(new_pr.number, target);
 
             successByTarget.set(target, true);
@@ -423,7 +423,8 @@ export class Backport {
               target,
               branchname,
               uncommitedShas,
-              true,)
+              true,
+            );
 
             await this.github.createComment({
               owner,
