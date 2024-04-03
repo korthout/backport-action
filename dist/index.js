@@ -50,7 +50,7 @@ const git_1 = __nccwpck_require__(3374);
 const utils = __importStar(__nccwpck_require__(918));
 const experimentalDefaults = {
     detect_merge_method: false,
-    backport_on_conflicts: false,
+    conflict_resolution: `fail`,
 };
 exports.experimentalDefaults = experimentalDefaults;
 var Output;
@@ -207,7 +207,7 @@ class Backport {
                         }
                         let uncommitedShas;
                         try {
-                            uncommitedShas = yield this.git.cherryPick(commitShasToCherryPick, this.config.experimental.backport_on_conflicts, this.config.pwd);
+                            uncommitedShas = yield this.git.cherryPick(commitShasToCherryPick, this.config.experimental.conflict_resolution, this.config.pwd);
                         }
                         catch (error) {
                             const message = this.composeMessageForCherryPickFailure(target, branchname, commitShasToCherryPick);
@@ -301,7 +301,7 @@ class Backport {
                         // post success message to original pr
                         {
                             const message = uncommitedShas !== null
-                                ? this.composeMessageForSuccessWithConflicts(new_pr.number, target, branchname, uncommitedShas)
+                                ? this.composeMessageForSuccessWithConflicts(new_pr.number, target, branchname, uncommitedShas, this.config.experimental.conflict_resolution)
                                 : this.composeMessageForSuccess(new_pr.number, target);
                             successByTarget.set(target, true);
                             createdPullRequestNumbers.push(new_pr.number);
@@ -314,7 +314,7 @@ class Backport {
                         }
                         // post message to new pr to resolve conflict
                         if (uncommitedShas !== null) {
-                            const message = this.composeMessageToResolveConflicts(target, branchname, uncommitedShas, true);
+                            const message = this.composeMessageToResolveCommittedConflicts(target, branchname, uncommitedShas, this.config.experimental.conflict_resolution);
                             yield this.github.createComment({
                                 owner,
                                 repo,
@@ -368,7 +368,7 @@ class Backport {
     }
     composeMessageForCheckoutFailure(target, branchname, commitShasToCherryPick) {
         const reason = "because it was unable to create a new branch";
-        const suggestion = this.composeSuggestion(target, branchname, commitShasToCherryPick, false);
+        const suggestion = this.composeSuggestion(target, branchname, commitShasToCherryPick, false, "fail");
         return (0, dedent_1.default) `Backport failed for \`${target}\`, ${reason}.
 
                   Please cherry-pick the changes locally.
@@ -376,32 +376,43 @@ class Backport {
     }
     composeMessageForCherryPickFailure(target, branchname, commitShasToCherryPick) {
         const reason = "because it was unable to cherry-pick the commit(s)";
-        const suggestionToResolve = this.composeMessageToResolveConflicts(target, branchname, commitShasToCherryPick, false);
+        const suggestion = this.composeSuggestion(target, branchname, commitShasToCherryPick, false, "fail");
         return (0, dedent_1.default) `Backport failed for \`${target}\`, ${reason}.
 
-                  ${suggestionToResolve}`;
+                  Please cherry-pick the changes locally and resolve any conflicts.
+                  ${suggestion}`;
     }
-    composeMessageToResolveConflicts(target, branchname, commitShasToCherryPick, branchExist) {
-        const suggestion = this.composeSuggestion(target, branchname, commitShasToCherryPick, branchExist);
+    composeMessageToResolveCommittedConflicts(target, branchname, commitShasToCherryPick, confictResolution) {
+        const suggestion = this.composeSuggestion(target, branchname, commitShasToCherryPick, true, confictResolution);
         return (0, dedent_1.default) `Please cherry-pick the changes locally and resolve any conflicts.
                   ${suggestion}`;
     }
-    composeSuggestion(target, branchname, commitShasToCherryPick, branchExist) {
-        return branchExist
-            ? (0, dedent_1.default) `\`\`\`bash
-      git fetch origin ${target}
-      git worktree add -d .worktree/${branchname} origin/${target}
-      cd .worktree/${branchname}
-      git switch ${branchname}
-      git cherry-pick -x ${commitShasToCherryPick.join(" ")}
-      \`\`\``
-            : (0, dedent_1.default) `\`\`\`bash
+    composeSuggestion(target, branchname, commitShasToCherryPick, branchExist, confictResolution = "fail") {
+        if (branchExist) {
+            if (confictResolution === "draft_commit_conflicts") {
+                return (0, dedent_1.default) `\`\`\`bash
+        git fetch origin ${target}
+        git worktree add -d .worktree/${branchname} origin/${target}
+        cd .worktree/${branchname}
+        git switch ${branchname}
+        git reset --hard HEAD^
+        git cherry-pick -x ${commitShasToCherryPick.join(" ")}
+        git push --force
+        \`\`\``;
+            }
+            else {
+                return "";
+            }
+        }
+        else {
+            return (0, dedent_1.default) `\`\`\`bash
       git fetch origin ${target}
       git worktree add -d .worktree/${branchname} origin/${target}
       cd .worktree/${branchname}
       git switch --create ${branchname}
       git cherry-pick -x ${commitShasToCherryPick.join(" ")}
       \`\`\``;
+        }
     }
     composeMessageForGitPushFailure(target, exitcode) {
         //TODO better error messages depending on exit code
@@ -417,8 +428,8 @@ class Backport {
         return (0, dedent_1.default) `Successfully created backport PR for \`${target}\`:
                   - #${pr_number}`;
     }
-    composeMessageForSuccessWithConflicts(pr_number, target, branchname, commitShasToCherryPick) {
-        const suggestionToResolve = this.composeMessageToResolveConflicts(target, branchname, commitShasToCherryPick, true);
+    composeMessageForSuccessWithConflicts(pr_number, target, branchname, commitShasToCherryPick, conflictResolution) {
+        const suggestionToResolve = this.composeMessageToResolveCommittedConflicts(target, branchname, commitShasToCherryPick, conflictResolution);
         return (0, dedent_1.default) `Created backport PR for \`${target}\`:
                   - #${pr_number} with remaining conflicts!
                   
@@ -579,13 +590,13 @@ class Git {
             }
         });
     }
-    cherryPick(commitShas, allowPartialCherryPick, pwd) {
+    cherryPick(commitShas, conflictResolution, pwd) {
         return __awaiter(this, void 0, void 0, function* () {
             const abortCherryPickAndThrow = (commitShas, exitCode) => __awaiter(this, void 0, void 0, function* () {
                 yield this.git("cherry-pick", ["--abort"], pwd);
                 throw new Error(`'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`);
             });
-            if (!allowPartialCherryPick) {
+            if (conflictResolution === `fail`) {
                 const { exitCode } = yield this.git("cherry-pick", ["-x", ...commitShas], pwd);
                 if (exitCode !== 0) {
                     yield abortCherryPickAndThrow(commitShas, exitCode);
@@ -600,9 +611,18 @@ class Git {
                     if (exitCode !== 0) {
                         if (exitCode === 1) {
                             // conflict encountered
-                            // abort conflict cherry-pick
-                            yield this.git("cherry-pick", ["--abort"], pwd);
-                            return uncommitedShas;
+                            if (conflictResolution === `draft_commit_conflicts`) {
+                                // Commit the conflict, resolution of this commit is left to the user.
+                                // Allow creating PR for cherry-pick with only 1 commit and it results in a conflict.
+                                const { exitCode } = yield this.git("commit", ["--all", `-m "BACKPORT-CONFLICT"`], pwd);
+                                if (exitCode !== 0) {
+                                    yield abortCherryPickAndThrow(commitShas, exitCode);
+                                }
+                                return uncommitedShas;
+                            }
+                            else {
+                                throw new Error(`'Unsupported conflict_resolution method ${conflictResolution}`);
+                            }
                         }
                         else {
                             // other fail reasons
@@ -1016,6 +1036,15 @@ function run() {
                 console.warn((0, dedent_1.default) `Encountered unexpected key in input 'experimental'.\
         No experimental config options known for key '${key}'.\
         Please check the documentation for details about experimental features.`);
+            }
+            if (key == "conflict_resolution") {
+                if (experimental[key] !== "fail" &&
+                    experimental[key] !== "draft_commit_conflicts") {
+                    const message = `Expected input 'conflict_resolution' to be either 'fail' or 'draft_commit_conflicts', but was '${experimental[key]}'`;
+                    console.error(message);
+                    core.setFailed(message);
+                    return;
+                }
             }
         }
         const github = new github_1.Github(token);

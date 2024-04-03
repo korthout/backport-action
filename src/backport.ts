@@ -38,11 +38,11 @@ export type Config = {
 
 type Experimental = {
   detect_merge_method: boolean;
-  backport_on_conflicts: boolean;
+  conflict_resolution: "fail" | "draft_commit_conflicts";
 };
 const experimentalDefaults: Experimental = {
   detect_merge_method: false,
-  backport_on_conflicts: false,
+  conflict_resolution: `fail`,
 };
 export { experimentalDefaults };
 
@@ -272,7 +272,7 @@ export class Backport {
           try {
             uncommitedShas = await this.git.cherryPick(
               commitShasToCherryPick,
-              this.config.experimental.backport_on_conflicts,
+              this.config.experimental.conflict_resolution,
               this.config.pwd,
             );
           } catch (error) {
@@ -405,6 +405,7 @@ export class Backport {
                     target,
                     branchname,
                     uncommitedShas,
+                    this.config.experimental.conflict_resolution,
                   )
                 : this.composeMessageForSuccess(new_pr.number, target);
 
@@ -419,12 +420,13 @@ export class Backport {
           }
           // post message to new pr to resolve conflict
           if (uncommitedShas !== null) {
-            const message: string = this.composeMessageToResolveConflicts(
-              target,
-              branchname,
-              uncommitedShas,
-              true,
-            );
+            const message: string =
+              this.composeMessageToResolveCommittedConflicts(
+                target,
+                branchname,
+                uncommitedShas,
+                this.config.experimental.conflict_resolution,
+              );
 
             await this.github.createComment({
               owner,
@@ -498,6 +500,7 @@ export class Backport {
       branchname,
       commitShasToCherryPick,
       false,
+      "fail",
     );
     return dedent`Backport failed for \`${target}\`, ${reason}.
 
@@ -511,28 +514,33 @@ export class Backport {
     commitShasToCherryPick: string[],
   ): string {
     const reason = "because it was unable to cherry-pick the commit(s)";
-    const suggestionToResolve = this.composeMessageToResolveConflicts(
+
+    const suggestion = this.composeSuggestion(
       target,
       branchname,
       commitShasToCherryPick,
       false,
+      "fail",
     );
+
     return dedent`Backport failed for \`${target}\`, ${reason}.
 
-                  ${suggestionToResolve}`;
+                  Please cherry-pick the changes locally and resolve any conflicts.
+                  ${suggestion}`;
   }
 
-  private composeMessageToResolveConflicts(
+  private composeMessageToResolveCommittedConflicts(
     target: string,
     branchname: string,
     commitShasToCherryPick: string[],
-    branchExist: boolean,
+    confictResolution: string,
   ): string {
     const suggestion = this.composeSuggestion(
       target,
       branchname,
       commitShasToCherryPick,
-      branchExist,
+      true,
+      confictResolution,
     );
 
     return dedent`Please cherry-pick the changes locally and resolve any conflicts.
@@ -544,22 +552,31 @@ export class Backport {
     branchname: string,
     commitShasToCherryPick: string[],
     branchExist: boolean,
+    confictResolution: string = "fail",
   ) {
-    return branchExist
-      ? dedent`\`\`\`bash
-      git fetch origin ${target}
-      git worktree add -d .worktree/${branchname} origin/${target}
-      cd .worktree/${branchname}
-      git switch ${branchname}
-      git cherry-pick -x ${commitShasToCherryPick.join(" ")}
-      \`\`\``
-      : dedent`\`\`\`bash
+    if (branchExist) {
+      if (confictResolution === "draft_commit_conflicts") {
+        return dedent`\`\`\`bash
+        git fetch origin ${target}
+        git worktree add -d .worktree/${branchname} origin/${target}
+        cd .worktree/${branchname}
+        git switch ${branchname}
+        git reset --hard HEAD^
+        git cherry-pick -x ${commitShasToCherryPick.join(" ")}
+        git push --force
+        \`\`\``;
+      } else {
+        return "";
+      }
+    } else {
+      return dedent`\`\`\`bash
       git fetch origin ${target}
       git worktree add -d .worktree/${branchname} origin/${target}
       cd .worktree/${branchname}
       git switch --create ${branchname}
       git cherry-pick -x ${commitShasToCherryPick.join(" ")}
       \`\`\``;
+    }
   }
 
   private composeMessageForGitPushFailure(
@@ -589,12 +606,13 @@ export class Backport {
     target: string,
     branchname: string,
     commitShasToCherryPick: string[],
+    conflictResolution: string,
   ): string {
-    const suggestionToResolve = this.composeMessageToResolveConflicts(
+    const suggestionToResolve = this.composeMessageToResolveCommittedConflicts(
       target,
       branchname,
       commitShasToCherryPick,
-      true,
+      conflictResolution,
     );
     return dedent`Created backport PR for \`${target}\`:
                   - #${pr_number} with remaining conflicts!

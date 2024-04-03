@@ -38,6 +38,18 @@ async function run(): Promise<void> {
         No experimental config options known for key '${key}'.\
         Please check the documentation for details about experimental features.`);
     }
+
+    if (key == "conflict_resolution") {
+      if (
+        experimental[key] !== "fail" &&
+        experimental[key] !== "draft_commit_conflicts"
+      ) {
+        const message = `Expected input 'conflict_resolution' to be either 'fail' or 'draft_commit_conflicts', but was '${experimental[key]}'`;
+        console.error(message);
+        core.setFailed(message);
+        return;
+      }
+    }
   }
 
   const github = new Github(token);

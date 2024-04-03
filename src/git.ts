@@ -114,7 +114,7 @@ export class Git {
 
   public async cherryPick(
     commitShas: string[],
-    allowPartialCherryPick: boolean,
+    conflictResolution: string,
     pwd: string,
   ): Promise<string[] | null> {
     const abortCherryPickAndThrow = async (
@@ -127,7 +127,7 @@ export class Git {
       );
     };
 
-    if (!allowPartialCherryPick) {
+    if (conflictResolution === `fail`) {
       const { exitCode } = await this.git(
         "cherry-pick",
         ["-x", ...commitShas],
@@ -149,10 +149,25 @@ export class Git {
         if (exitCode !== 0) {
           if (exitCode === 1) {
             // conflict encountered
-            // abort conflict cherry-pick
-            await this.git("cherry-pick", ["--abort"], pwd);
+            if (conflictResolution === `draft_commit_conflicts`) {
+              // Commit the conflict, resolution of this commit is left to the user.
+              // Allow creating PR for cherry-pick with only 1 commit and it results in a conflict.
+              const { exitCode } = await this.git(
+                "commit",
+                ["--all", `-m "BACKPORT-CONFLICT"`],
+                pwd,
+              );
 
-            return uncommitedShas;
+              if (exitCode !== 0) {
+                await abortCherryPickAndThrow(commitShas, exitCode);
+              }
+
+              return uncommitedShas;
+            } else {
+              throw new Error(
+                `'Unsupported conflict_resolution method ${conflictResolution}`,
+              );
+            }
           } else {
             // other fail reasons
             await abortCherryPickAndThrow([sha], exitCode);

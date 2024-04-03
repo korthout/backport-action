@@ -45,17 +45,20 @@ inputs:
 
       By default, the action always cherry-picks the commits from the pull request.
 
-      #### `backport_on_conflicts`
+      #### `conflict_resolution`
 
-      When enabled, the action will create the pull request even if conflict are detected during the cherry-pick.
-      The first conflict encountered will be committed and the remaining of the cherry-pick will need to be done by the users.
+      Specifies how the action will handle a conflict occuring during the cherry-pick. 
+      In all cases, the action will stop the cherry-pick at the first conflict encountered.
+
+      Behavior is defined by the option selected.
+      - When set to `fail` the backport fails when the cherry-pick encounters a conflict.
+      - When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed.
+
       Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
-
-      By default, the action fails on the first conflict encountered and the pull request is not created.
     default: >
       {
         "detect_merge_method": false,
-        "backport_on_conflicts": false
+        "conflict_resolution": draft_commit_conflicts
       }
   github_token:
     description: >
