@@ -31,7 +31,7 @@ export class Git {
    * @param ref the sha, branchname, etc to fetch
    * @param pwd the root of the git repository
    * @param depth the number of commits to fetch
-   * @param remote
+   * @param remote the shortname of the repository from where to fetch commits
    * @throws GitRefNotFoundError when ref not found
    * @throws Error for any other non-zero exit code
    */
@@ -58,15 +58,23 @@ export class Git {
     }
   }
 
+  /**
+   * Adds a new remote Git repository as a shortname.
+   *
+   * @param pwd the root of the git repository
+   * @param shortname the shortname referencing the repository
+   * @param owner the owner of the GitHub repository
+   * @param repo the name of the repository
+   */
   public async remoteAdd(
     pwd: string,
-    source: string,
+    shortname: string,
     owner: string | undefined,
     repo: string | undefined,
   ) {
     const { exitCode } = await this.git(
       "remote",
-      ["add", source, `https://github.com/${owner}/${repo}.git`],
+      ["add", shortname, `https://github.com/${owner}/${repo}.git`],
       pwd,
     );
     if (exitCode !== 0) {
@@ -118,10 +126,10 @@ export class Git {
     return mergeCommitShas;
   }
 
-  public async push(branchname: string, upstream: string, pwd: string) {
+  public async push(branchname: string, remote: string, pwd: string) {
     const { exitCode } = await this.git(
       "push",
-      ["--set-upstream", upstream, branchname],
+      ["--set-upstream", remote, branchname],
       pwd,
     );
     return exitCode;

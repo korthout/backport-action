@@ -45,18 +45,19 @@ inputs:
 
       By default, the action always cherry-picks the commits from the pull request.
       
-      #### `remote_owner`
+      #### `downstream_repo`
       
-      ...
+      Define if you want to backport to another repository then the workflow runs on.
       
-      #### `remote_repo`
+      #### `downstream_owner`
       
-      ....
+      Define if you want to backport to another owner then the owner of the repository the workflow runs on.
+      
+      Only specify together with the `downstream_repo` property.
+      If undefined, uses the owner of the repository the workflow runs on.
     default: >
       {
-        "detect_merge_method": false,
-        "remote_owner": "my-owner",
-        "remote_repo": "my-repo"
+        "detect_merge_method": false
       }
   github_token:
     description: >
@@ -97,10 +98,6 @@ inputs:
       Please refer to this action's README for all available placeholders.
     default: >-
       [Backport ${target_branch}] ${pull_title}
-  pull_branchname:
-    description: ""
-    default: >-
-      backport-${pull_number}-to-${target_branch}
   target_branches:
     description: >
       The action will backport the pull request to each specified target branch (space-delimited).
