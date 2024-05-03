@@ -48,12 +48,12 @@ export class Git {
     );
     if (exitCode === 128) {
       throw new GitRefNotFoundError(
-        `Expected to fetch '${ref}', but couldn't find it`,
+        `Expected to fetch '${ref}' from '${remote}', but couldn't find it`,
         ref,
       );
     } else if (exitCode !== 0) {
       throw new Error(
-        `'git fetch origin ${ref}' failed with exit code ${exitCode}`,
+        `'git fetch ${remote} ${ref}' failed with exit code ${exitCode}`,
       );
     }
   }
