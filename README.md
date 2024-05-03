@@ -169,20 +169,18 @@ When enabled, the action detects the method used to merge the pull request.
 
 By default, the action always cherry-picks the commits from the pull request.
 
-### Backport to a downstream
-
-Backport PR to another repository then the workflow runs on.
-
 ##### `downstream_repo`
 
-Define if you want to backport to another repository then the workflow runs on.
+Define if you want to backport to a repository other than where the workflow runs.
+
+By default, the action always backports to the repository in which the workflow runs.
 
 ##### `downstream_owner`
 
-Define if you want to backport to another owner then the owner of the repository the workflow runs on.
+Define if you want to backport to another owner than the owner of the repository the workflow runs on.
+Only takes effect if the `downstream_repo` property is also defined.
 
-Only specify together with the `downstream_repo` property.
-If undefined, uses the owner of the repository the workflow runs on.
+By default, uses the owner of the repository in which the workflow runs.
 
 ### `github_token`
 
