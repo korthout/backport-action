@@ -31,23 +31,55 @@ export class Git {
    * @param ref the sha, branchname, etc to fetch
    * @param pwd the root of the git repository
    * @param depth the number of commits to fetch
+   * @param remote the shortname of the repository from where to fetch commits
    * @throws GitRefNotFoundError when ref not found
    * @throws Error for any other non-zero exit code
    */
-  public async fetch(ref: string, pwd: string, depth: number) {
+  public async fetch(
+    ref: string,
+    pwd: string,
+    depth: number,
+    remote: string = "origin",
+  ) {
     const { exitCode } = await this.git(
       "fetch",
-      [`--depth=${depth}`, "origin", ref],
+      [`--depth=${depth}`, remote, ref],
       pwd,
     );
     if (exitCode === 128) {
       throw new GitRefNotFoundError(
-        `Expected to fetch '${ref}', but couldn't find it`,
+        `Expected to fetch '${ref}' from '${remote}', but couldn't find it`,
         ref,
       );
     } else if (exitCode !== 0) {
       throw new Error(
-        `'git fetch origin ${ref}' failed with exit code ${exitCode}`,
+        `'git fetch ${remote} ${ref}' failed with exit code ${exitCode}`,
+      );
+    }
+  }
+
+  /**
+   * Adds a new remote Git repository as a shortname.
+   *
+   * @param pwd the root of the git repository
+   * @param shortname the shortname referencing the repository
+   * @param owner the owner of the GitHub repository
+   * @param repo the name of the repository
+   */
+  public async remoteAdd(
+    pwd: string,
+    shortname: string,
+    owner: string | undefined,
+    repo: string | undefined,
+  ) {
+    const { exitCode } = await this.git(
+      "remote",
+      ["add", shortname, `https://github.com/${owner}/${repo}.git`],
+      pwd,
+    );
+    if (exitCode !== 0) {
+      throw new Error(
+        `'git remote add ${owner}/${repo}' failed with exit code ${exitCode}`,
       );
     }
   }
@@ -94,10 +126,10 @@ export class Git {
     return mergeCommitShas;
   }
 
-  public async push(branchname: string, pwd: string) {
+  public async push(branchname: string, remote: string, pwd: string) {
     const { exitCode } = await this.git(
       "push",
-      ["--set-upstream", "origin", branchname],
+      ["--set-upstream", remote, branchname],
       pwd,
     );
     return exitCode;
