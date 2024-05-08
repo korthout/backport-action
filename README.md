@@ -169,13 +169,13 @@ When enabled, the action detects the method used to merge the pull request.
 
 By default, the action always cherry-picks the commits from the pull request.
 
-##### `downstream_repo`
+#### `downstream_repo`
 
 Define if you want to backport to a repository other than where the workflow runs.
 
 By default, the action always backports to the repository in which the workflow runs.
 
-##### `downstream_owner`
+#### `downstream_owner`
 
 Define if you want to backport to another owner than the owner of the repository the workflow runs on.
 Only takes effect if the `downstream_repo` property is also defined.
