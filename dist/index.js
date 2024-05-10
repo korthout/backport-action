@@ -655,10 +655,10 @@ class Git {
                 return null;
             }
             else {
-                let uncommitedShas = [...commitShas];
+                let uncommittedShas = [...commitShas];
                 // Cherry-pick commit one by one.
-                for (const sha of commitShas) {
-                    const { exitCode } = yield this.git("cherry-pick", ["-x", sha], pwd);
+                while (uncommittedShas.length > 0) {
+                    const { exitCode } = yield this.git("cherry-pick", ["-x", uncommittedShas[0]], pwd);
                     if (exitCode !== 0) {
                         if (exitCode === 1) {
                             // conflict encountered
@@ -669,7 +669,7 @@ class Git {
                                 if (exitCode !== 0) {
                                     yield abortCherryPickAndThrow(commitShas, exitCode);
                                 }
-                                return uncommitedShas;
+                                return uncommittedShas;
                             }
                             else {
                                 throw new Error(`'Unsupported conflict_resolution method ${conflictResolution}`);
@@ -677,11 +677,11 @@ class Git {
                         }
                         else {
                             // other fail reasons
-                            yield abortCherryPickAndThrow([sha], exitCode);
+                            yield abortCherryPickAndThrow([uncommittedShas[0]], exitCode);
                         }
                     }
                     // pop sha
-                    uncommitedShas.shift();
+                    uncommittedShas.shift();
                 }
                 return null;
             }

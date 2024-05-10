@@ -457,9 +457,11 @@ export class Backport {
                     uncommitedShas,
                     this.config.experimental.conflict_resolution,
                   )
-                : this.composeMessageForSuccess(new_pr.number,
-                   target,
-                   this.shouldUseDownstreamRepo() ? `${owner}/${repo}` : "",);
+                : this.composeMessageForSuccess(
+                    new_pr.number,
+                    target,
+                    this.shouldUseDownstreamRepo() ? `${owner}/${repo}` : "",
+                  );
 
             successByTarget.set(target, true);
             createdPullRequestNumbers.push(new_pr.number);
