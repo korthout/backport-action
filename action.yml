@@ -36,15 +36,6 @@ inputs:
       Configure experimental features by passing a JSON object.
       The following properties can be specified:
 
-      #### `detect_merge_method`
-
-      When enabled, the action detects the method used to merge the pull request.
-      - For "Squash and merge", the action cherry-picks the squashed commit.
-      - For "Rebase and merge", the action cherry-picks the rebased commits.
-      - For "Merged as a merge commit", the action cherry-picks the commits from the pull request.
-
-      By default, the action always cherry-picks the commits from the pull request.
-
       #### `conflict_resolution`
 
       Specifies how the action will handle a conflict occuring during the cherry-pick. 
@@ -55,6 +46,28 @@ inputs:
       - When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed.
 
       Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
+
+      #### `detect_merge_method`
+
+      When enabled, the action detects the method used to merge the pull request.
+      - For "Squash and merge", the action cherry-picks the squashed commit.
+      - For "Rebase and merge", the action cherry-picks the rebased commits.
+      - For "Merged as a merge commit", the action cherry-picks the commits from the pull request.
+
+      By default, the action always cherry-picks the commits from the pull request.
+      
+      #### `downstream_repo`
+      
+      Define if you want to backport to a repository other than where the workflow runs.
+
+      By default, the action always backports to the repository in which the workflow runs.
+      
+      #### `downstream_owner`
+      
+      Define if you want to backport to another owner than the owner of the repository the workflow runs on.
+      Only takes effect if the `downstream_repo` property is also defined.
+
+      By default, uses the owner of the repository in which the workflow runs.
     default: >
       {
         "detect_merge_method": false,

@@ -27,7 +27,7 @@ describe("git.fetch", () => {
         expect(error).toBeInstanceOf(GitRefNotFoundError);
         expect(error).toHaveProperty(
           "message",
-          "Expected to fetch 'unknown', but couldn't find it",
+          "Expected to fetch 'unknown' from 'origin', but couldn't find it",
         );
         expect(error).toHaveProperty("ref", "unknown");
       });
