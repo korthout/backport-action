@@ -431,7 +431,7 @@ class Backport {
         git switch ${branchname}
         git reset --hard HEAD^
         git cherry-pick -x ${commitShasToCherryPick.join(" ")}
-        git push --force
+        git push --force-with-lease
         \`\`\``;
             }
             else {
@@ -665,7 +665,7 @@ class Git {
                             if (conflictResolution === `draft_commit_conflicts`) {
                                 // Commit the conflict, resolution of this commit is left to the user.
                                 // Allow creating PR for cherry-pick with only 1 commit and it results in a conflict.
-                                const { exitCode } = yield this.git("commit", ["--all", `-m "BACKPORT-CONFLICT"`], pwd);
+                                const { exitCode } = yield this.git("commit", ["--all", `-m BACKPORT-CONFLICT`], pwd);
                                 if (exitCode !== 0) {
                                     yield abortCherryPickAndThrow(commitShas, exitCode);
                                 }

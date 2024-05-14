@@ -190,7 +190,7 @@ export class Git {
               // Allow creating PR for cherry-pick with only 1 commit and it results in a conflict.
               const { exitCode } = await this.git(
                 "commit",
-                ["--all", `-m "BACKPORT-CONFLICT"`],
+                ["--all", `-m BACKPORT-CONFLICT`],
                 pwd,
               );
 
