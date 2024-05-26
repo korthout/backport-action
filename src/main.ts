@@ -19,11 +19,19 @@ async function run(): Promise<void> {
   const branch_name = core.getInput("branch_name");
   const copy_labels_pattern = core.getInput("copy_labels_pattern");
   const target_branches = core.getInput("target_branches");
+  const cherry_picking = core.getInput("cherry_picking");
   const merge_commits = core.getInput("merge_commits");
   const copy_assignees = core.getInput("copy_assignees");
   const copy_milestone = core.getInput("copy_milestone");
   const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
   const experimental = JSON.parse(core.getInput("experimental"));
+
+  if (cherry_picking !== "auto" && cherry_picking !== "pull_request_head") {
+    const message = `Expected input 'cherry_picking' to be either 'auto' or 'pull_request_head', but was '${cherry_picking}'`;
+    console.error(message);
+    core.setFailed(message);
+    return;
+  }
 
   if (merge_commits != "fail" && merge_commits != "skip") {
     const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
@@ -61,7 +69,7 @@ async function run(): Promise<void> {
     copy_labels_pattern:
       copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
     target_branches: target_branches === "" ? undefined : target_branches,
-    commits: { merge_commits },
+    commits: { cherry_picking, merge_commits },
     copy_assignees: copy_assignees === "true",
     copy_milestone: copy_milestone === "true",
     copy_requested_reviewers: copy_requested_reviewers === "true",

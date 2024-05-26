@@ -115,6 +115,22 @@ Placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 Please refer to this action's README for all available [placeholders](#placeholders).
 
+### `cherry_picking`
+
+Default: `auto`
+
+Determines which commits are cherry-picked.
+
+When set to `auto`, the action cherry-picks the commits based on the method used to merge the pull request.
+- For "Squash and merge", the action cherry-picks the squashed commit.
+- For "Rebase and merge", the action cherry-picks the rebased commits.
+- For "Merged as a merge commit", the action cherry-picks the commits from the pull request.
+
+When set to `pull_request_head`, the action cherry-picks the commits from the pull request.
+Specifically, those reachable from the pull request's head and not reachable from the pull request's base.
+
+By default, the action cherry-picks the commits based on the method used to merge the pull request.
+
 ### `copy_assignees`
 
 Default: `false` (disabled)

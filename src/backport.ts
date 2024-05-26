@@ -28,6 +28,7 @@ export type Config = {
   copy_labels_pattern?: RegExp;
   target_branches?: string;
   commits: {
+    cherry_picking: "auto" | "pull_request_head";
     merge_commits: "fail" | "skip";
   };
   copy_milestone: boolean;
