@@ -50,5 +50,5 @@ jobs:
             startsWith(github.event.pull_request.base.ref, 'release')
           )
         run: |
-          git tag v2.next-preview --force
-          git push origin v2.next-preview --force
+          git tag v3.next-preview --force
+          git push origin v3.next-preview --force
