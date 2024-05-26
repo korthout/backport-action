@@ -23,9 +23,11 @@ You can select the branches to backport merged pull requests in two ways:
 
 For each selected branch, the backport action takes the following steps:
 1. fetch and checkout a new branch from the target branch
-2. cherry-pick the merged pull request's commits
+2. cherry-pick commits containing the merged pull request's changes, using the [`cherry_picking`](#cherry_picking) input
 3. create a pull request to merge the new branch into the target branch
 4. comment on the original pull request about its success
+
+The commits are cherry-picked with the [`-x`](https://git-scm.com/docs/git-cherry-pick#Documentation/git-cherry-pick.txt--x) flag.
 
 ## Usage
 
