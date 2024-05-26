@@ -189,17 +189,6 @@ Behavior is defined by the option selected.
 
 Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
 
-#### `detect_merge_method`
-
-Default: `false`
-
-When enabled, the action detects the method used to merge the pull request.
-- For "Squash and merge", the action cherry-picks the squashed commit.
-- For "Rebase and merge", the action cherry-picks the rebased commits.
-- For "Merged as a merge commit", the action cherry-picks the commits from the pull request.
-
-By default, the action always cherry-picks the commits from the pull request.
-
 #### `downstream_repo`
 
 Define if you want to backport to a repository other than where the workflow runs.
