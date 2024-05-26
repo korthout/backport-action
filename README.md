@@ -158,6 +158,19 @@ Default:
 Configure experimental features by passing a JSON object.
 The following properties can be specified:
 
+#### `conflict_resolution`
+
+Default: `fail`
+
+Specifies how the action will handle a conflict occuring during the cherry-pick. 
+In all cases, the action will stop the cherry-pick at the first conflict encountered.
+
+Behavior is defined by the option selected.
+- When set to `fail` the backport fails when the cherry-pick encounters a conflict.
+- When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed.
+
+Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
+
 #### `detect_merge_method`
 
 Default: `false`

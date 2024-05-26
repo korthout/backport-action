@@ -3,9 +3,19 @@ import { execa } from "execa";
 
 const git = new Git(execa);
 let response = { exitCode: 0, stdout: "" };
+let responseCommit = { exitCode: 0, stdout: "" };
 
 jest.mock("execa", () => ({
-  execa: jest.fn(() => response),
+  execa: jest.fn((command: string, args?: readonly string[] | undefined) => {
+    if (command === "git" && args) {
+      const subCommand = args[0];
+      if (subCommand === "commit") {
+        // Mock behavior for "git commit"
+        return responseCommit;
+      }
+    }
+    return response;
+  }),
 }));
 
 describe("git.fetch", () => {
@@ -35,12 +45,67 @@ describe("git.fetch", () => {
 });
 
 describe("git.cherryPick", () => {
-  describe("throws Error", () => {
-    it("when failing with an unexpected non-zero exit code", async () => {
-      response.exitCode = 1;
-      await expect(git.cherryPick(["unknown"], "")).rejects.toThrowError(
-        `'git cherry-pick -x unknown' failed with exit code 1`,
-      );
+  describe("with conflict_resolution to fail", () => {
+    describe("throws Error", () => {
+      it("when failing with an unexpected non-zero exit code", async () => {
+        response.exitCode = 1;
+        await expect(
+          git.cherryPick(["unknown"], `fail`, ""),
+        ).rejects.toThrowError(
+          `'git cherry-pick -x unknown' failed with exit code 1`,
+        );
+      });
+    });
+
+    describe("returns null", () => {
+      it("when success", async () => {
+        response.exitCode = 0;
+        await expect(
+          git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
+        ).resolves.toBe(null);
+      });
+    });
+  });
+
+  describe("with conflict_resolution to draft_commit_conflicts", () => {
+    describe("throw Error", () => {
+      it("when failing with an unexpected non-zero and non-one exit code", async () => {
+        response.exitCode = 128;
+        await expect(
+          git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
+        ).rejects.toThrowError(
+          `'git cherry-pick -x unknown' failed with exit code 128`,
+        );
+      });
+
+      it("when failing cherry-pick with exit code 1 and commit unsuccessful", async () => {
+        response.exitCode = 1;
+        responseCommit.exitCode = 1;
+        await expect(
+          git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
+        ).rejects.toThrowError(
+          `'git cherry-pick -x unknown' failed with exit code 1`,
+        );
+      });
+
+      describe("returns uncomitted shas", () => {
+        it("when failing cherry-pick with exit code 1 and commit successful", async () => {
+          response.exitCode = 1;
+          responseCommit.exitCode = 0;
+          await expect(
+            git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
+          ).resolves.toEqual(["unknown"]);
+        });
+      });
+
+      describe("returns null", () => {
+        it("when success", async () => {
+          response.exitCode = 0;
+          await expect(
+            git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
+          ).resolves.toBe(null);
+        });
+      });
     });
   });
 });

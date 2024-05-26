@@ -36,6 +36,17 @@ inputs:
       Configure experimental features by passing a JSON object.
       The following properties can be specified:
 
+      #### `conflict_resolution`
+
+      Specifies how the action will handle a conflict occuring during the cherry-pick. 
+      In all cases, the action will stop the cherry-pick at the first conflict encountered.
+
+      Behavior is defined by the option selected.
+      - When set to `fail` the backport fails when the cherry-pick encounters a conflict.
+      - When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed.
+
+      Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
+
       #### `detect_merge_method`
 
       When enabled, the action detects the method used to merge the pull request.
@@ -59,7 +70,8 @@ inputs:
       By default, uses the owner of the repository in which the workflow runs.
     default: >
       {
-        "detect_merge_method": false
+        "detect_merge_method": false,
+        "conflict_resolution": "fail"
       }
   github_token:
     description: >
@@ -125,5 +137,5 @@ runs:
   using: "node20"
   main: "dist/index.js"
 branding:
-  icon: 'copy'
-  color: 'yellow'
+  icon: "copy"
+  color: "yellow"

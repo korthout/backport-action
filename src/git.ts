@@ -144,17 +144,77 @@ export class Git {
     }
   }
 
-  public async cherryPick(commitShas: string[], pwd: string) {
-    const { exitCode } = await this.git(
-      "cherry-pick",
-      ["-x", ...commitShas],
-      pwd,
-    );
-    if (exitCode !== 0) {
+  public async cherryPick(
+    commitShas: string[],
+    conflictResolution: string,
+    pwd: string,
+  ): Promise<string[] | null> {
+    const abortCherryPickAndThrow = async (
+      commitShas: string[],
+      exitCode: number,
+    ) => {
       await this.git("cherry-pick", ["--abort"], pwd);
       throw new Error(
         `'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`,
       );
+    };
+
+    if (conflictResolution === `fail`) {
+      const { exitCode } = await this.git(
+        "cherry-pick",
+        ["-x", ...commitShas],
+        pwd,
+      );
+
+      if (exitCode !== 0) {
+        await abortCherryPickAndThrow(commitShas, exitCode);
+      }
+
+      return null;
+    } else {
+      let uncommittedShas: string[] = [...commitShas];
+
+      // Cherry-pick commit one by one.
+      while (uncommittedShas.length > 0) {
+        const { exitCode } = await this.git(
+          "cherry-pick",
+          ["-x", uncommittedShas[0]],
+          pwd,
+        );
+
+        if (exitCode !== 0) {
+          if (exitCode === 1) {
+            // conflict encountered
+            if (conflictResolution === `draft_commit_conflicts`) {
+              // Commit the conflict, resolution of this commit is left to the user.
+              // Allow creating PR for cherry-pick with only 1 commit and it results in a conflict.
+              const { exitCode } = await this.git(
+                "commit",
+                ["--all", `-m BACKPORT-CONFLICT`],
+                pwd,
+              );
+
+              if (exitCode !== 0) {
+                await abortCherryPickAndThrow(commitShas, exitCode);
+              }
+
+              return uncommittedShas;
+            } else {
+              throw new Error(
+                `'Unsupported conflict_resolution method ${conflictResolution}`,
+              );
+            }
+          } else {
+            // other fail reasons
+            await abortCherryPickAndThrow([uncommittedShas[0]], exitCode);
+          }
+        }
+
+        // pop sha
+        uncommittedShas.shift();
+      }
+
+      return null;
     }
   }
 }
