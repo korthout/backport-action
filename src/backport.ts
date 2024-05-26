@@ -136,7 +136,7 @@ export class Backport {
 
       let commitShasToCherryPick;
 
-      if (this.config.experimental.detect_merge_method) {
+      if (this.config.commits.cherry_picking === "auto") {
         const merge_commit_sha = await this.github.getMergeCommitSha(mainpr);
 
         // switch case to check if it is a squash, rebase, or merge commit
