@@ -554,7 +554,6 @@ export class Backport {
       branchname,
       commitShasToCherryPick,
       false,
-      "fail",
     );
     return dedent`Backport failed for \`${target}\`, ${reason}.
 
