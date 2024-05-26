@@ -37,19 +37,22 @@ export type Config = {
   experimental: Experimental;
 };
 
+type DeprecatedExperimental = {
+  detect_merge_method?: boolean;
+};
+const deprecatedExperimental: DeprecatedExperimental = {};
 type Experimental = {
-  detect_merge_method: boolean;
   conflict_resolution: "fail" | "draft_commit_conflicts";
   downstream_repo?: string;
   downstream_owner?: string;
-};
+} & DeprecatedExperimental;
 const experimentalDefaults: Experimental = {
-  detect_merge_method: false,
+  detect_merge_method: undefined,
   conflict_resolution: `fail`,
   downstream_repo: undefined,
   downstream_owner: undefined,
 };
-export { experimentalDefaults };
+export { experimentalDefaults, deprecatedExperimental };
 
 enum Output {
   wasSuccessful = "was_successful",

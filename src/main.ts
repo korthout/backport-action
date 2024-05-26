@@ -1,5 +1,10 @@
 import * as core from "@actions/core";
-import { Backport, Config, experimentalDefaults } from "./backport";
+import {
+  Backport,
+  Config,
+  experimentalDefaults,
+  deprecatedExperimental,
+} from "./backport";
 import { Github } from "./github";
 import { Git } from "./git";
 import { execa } from "execa";
@@ -45,6 +50,12 @@ async function run(): Promise<void> {
       console.warn(dedent`Encountered unexpected key in input 'experimental'.\
         No experimental config options known for key '${key}'.\
         Please check the documentation for details about experimental features.`);
+    }
+
+    if (key in deprecatedExperimental) {
+      console.warn(dedent`Encountered deprecated key in input 'experimental'.\
+        Key '${key}' is no longer used. You should remove it from your workflow.\
+        Please check the release notes or the documentation for more details.`);
     }
 
     if (key == "conflict_resolution") {
