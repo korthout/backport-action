@@ -28,6 +28,7 @@ export type Config = {
   copy_labels_pattern?: RegExp;
   target_branches?: string;
   commits: {
+    cherry_picking: "auto" | "pull_request_head";
     merge_commits: "fail" | "skip";
   };
   copy_milestone: boolean;
@@ -36,19 +37,22 @@ export type Config = {
   experimental: Experimental;
 };
 
+type DeprecatedExperimental = {
+  detect_merge_method?: boolean;
+};
+const deprecatedExperimental: DeprecatedExperimental = {};
 type Experimental = {
-  detect_merge_method: boolean;
   conflict_resolution: "fail" | "draft_commit_conflicts";
   downstream_repo?: string;
   downstream_owner?: string;
-};
+} & DeprecatedExperimental;
 const experimentalDefaults: Experimental = {
-  detect_merge_method: false,
+  detect_merge_method: undefined,
   conflict_resolution: `fail`,
   downstream_repo: undefined,
   downstream_owner: undefined,
 };
-export { experimentalDefaults };
+export { experimentalDefaults, deprecatedExperimental };
 
 enum Output {
   wasSuccessful = "was_successful",
@@ -135,7 +139,7 @@ export class Backport {
 
       let commitShasToCherryPick;
 
-      if (this.config.experimental.detect_merge_method) {
+      if (this.config.commits.cherry_picking === "auto") {
         const merge_commit_sha = await this.github.getMergeCommitSha(mainpr);
 
         // switch case to check if it is a squash, rebase, or merge commit

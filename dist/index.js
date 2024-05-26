@@ -42,14 +42,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.findTargetBranches = exports.Backport = exports.experimentalDefaults = void 0;
+exports.findTargetBranches = exports.Backport = exports.deprecatedExperimental = exports.experimentalDefaults = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const dedent_1 = __importDefault(__nccwpck_require__(8333));
 const github_1 = __nccwpck_require__(5928);
 const git_1 = __nccwpck_require__(3374);
 const utils = __importStar(__nccwpck_require__(918));
+const deprecatedExperimental = {};
+exports.deprecatedExperimental = deprecatedExperimental;
 const experimentalDefaults = {
-    detect_merge_method: false,
+    detect_merge_method: undefined,
     conflict_resolution: `fail`,
     downstream_repo: undefined,
     downstream_owner: undefined,
@@ -113,7 +115,7 @@ class Backport {
                 yield this.git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd, mainpr.commits + 1);
                 const commitShas = yield this.github.getCommits(mainpr);
                 let commitShasToCherryPick;
-                if (this.config.experimental.detect_merge_method) {
+                if (this.config.commits.cherry_picking === "auto") {
                     const merge_commit_sha = yield this.github.getMergeCommitSha(mainpr);
                     // switch case to check if it is a squash, rebase, or merge commit
                     switch (yield this.github.mergeStrategy(mainpr, merge_commit_sha)) {
@@ -1071,11 +1073,18 @@ function run() {
         const branch_name = core.getInput("branch_name");
         const copy_labels_pattern = core.getInput("copy_labels_pattern");
         const target_branches = core.getInput("target_branches");
+        const cherry_picking = core.getInput("cherry_picking");
         const merge_commits = core.getInput("merge_commits");
         const copy_assignees = core.getInput("copy_assignees");
         const copy_milestone = core.getInput("copy_milestone");
         const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
         const experimental = JSON.parse(core.getInput("experimental"));
+        if (cherry_picking !== "auto" && cherry_picking !== "pull_request_head") {
+            const message = `Expected input 'cherry_picking' to be either 'auto' or 'pull_request_head', but was '${cherry_picking}'`;
+            console.error(message);
+            core.setFailed(message);
+            return;
+        }
         if (merge_commits != "fail" && merge_commits != "skip") {
             const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
             console.error(message);
@@ -1087,6 +1096,11 @@ function run() {
                 console.warn((0, dedent_1.default) `Encountered unexpected key in input 'experimental'.\
         No experimental config options known for key '${key}'.\
         Please check the documentation for details about experimental features.`);
+            }
+            if (key in backport_1.deprecatedExperimental) {
+                console.warn((0, dedent_1.default) `Encountered deprecated key in input 'experimental'.\
+        Key '${key}' is no longer used. You should remove it from your workflow.\
+        Please check the release notes or the documentation for more details.`);
             }
             if (key == "conflict_resolution") {
                 if (experimental[key] !== "fail" &&
@@ -1106,7 +1120,7 @@ function run() {
             pull: { description, title, branch_name },
             copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
             target_branches: target_branches === "" ? undefined : target_branches,
-            commits: { merge_commits },
+            commits: { cherry_picking, merge_commits },
             copy_assignees: copy_assignees === "true",
             copy_milestone: copy_milestone === "true",
             copy_requested_reviewers: copy_requested_reviewers === "true",

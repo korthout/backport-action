@@ -23,9 +23,11 @@ You can select the branches to backport merged pull requests in two ways:
 
 For each selected branch, the backport action takes the following steps:
 1. fetch and checkout a new branch from the target branch
-2. cherry-pick the merged pull request's commits
+2. cherry-pick commits containing the merged pull request's changes, using the [`cherry_picking`](#cherry_picking) input
 3. create a pull request to merge the new branch into the target branch
 4. comment on the original pull request about its success
+
+The commits are cherry-picked with the [`-x`](https://git-scm.com/docs/git-cherry-pick#Documentation/git-cherry-pick.txt--x) flag.
 
 ## Usage
 
@@ -48,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Create backport pull requests
-        uses: korthout/backport-action@v2
+        uses: korthout/backport-action@v3
 ```
 
 > **Note**
@@ -95,7 +97,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Create backport pull requests
-        uses: korthout/backport-action@v2
+        uses: korthout/backport-action@v3
 ```
 
 </p>
@@ -114,6 +116,22 @@ Template used as the name for branches created by this action.
 Placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 Please refer to this action's README for all available [placeholders](#placeholders).
+
+### `cherry_picking`
+
+Default: `auto`
+
+Determines which commits are cherry-picked.
+
+When set to `auto`, the action cherry-picks the commits based on the method used to merge the pull request.
+- For "Squash and merge", the action cherry-picks the squashed commit.
+- For "Rebase and merge", the action cherry-picks the rebased commits.
+- For "Merged as a merge commit", the action cherry-picks the commits from the pull request.
+
+When set to `pull_request_head`, the action cherry-picks the commits from the pull request.
+Specifically, those reachable from the pull request's head and not reachable from the pull request's base.
+
+By default, the action cherry-picks the commits based on the method used to merge the pull request.
 
 ### `copy_assignees`
 
@@ -170,17 +188,6 @@ Behavior is defined by the option selected.
 - When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed.
 
 Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
-
-#### `detect_merge_method`
-
-Default: `false`
-
-When enabled, the action detects the method used to merge the pull request.
-- For "Squash and merge", the action cherry-picks the squashed commit.
-- For "Rebase and merge", the action cherry-picks the rebased commits.
-- For "Merged as a merge commit", the action cherry-picks the commits from the pull request.
-
-By default, the action always cherry-picks the commits from the pull request.
 
 #### `downstream_repo`
 
