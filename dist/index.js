@@ -427,10 +427,9 @@ class Backport {
         if (branchExist) {
             if (confictResolution === "draft_commit_conflicts") {
                 return (0, dedent_1.default) `\`\`\`bash
-        git fetch origin ${target}
-        git worktree add -d .worktree/${branchname} origin/${target}
+        git fetch origin ${branchname}
+        git worktree add --checkout .worktree/${branchname} origin/${target}
         cd .worktree/${branchname}
-        git switch ${branchname}
         git reset --hard HEAD^
         git cherry-pick -x ${commitShasToCherryPick.join(" ")}
         git push --force-with-lease
