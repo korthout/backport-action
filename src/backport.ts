@@ -615,7 +615,7 @@ export class Backport {
       if (confictResolution === "draft_commit_conflicts") {
         return dedent`\`\`\`bash
         git fetch origin ${branchname}
-        git worktree add --checkout .worktree/${branchname} origin/${target}
+        git worktree add --checkout .worktree/${branchname} ${branchname}
         cd .worktree/${branchname}
         git reset --hard HEAD^
         git cherry-pick -x ${commitShasToCherryPick.join(" ")}
