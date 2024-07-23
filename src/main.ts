@@ -75,7 +75,7 @@ async function run(): Promise<void> {
   const git = new Git(execa);
   const config: Config = {
     pwd,
-    labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
+    source_labels_pattern: pattern === "" ? undefined : new RegExp(pattern),
     pull: { description, title, branch_name },
     copy_labels_pattern:
       copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
