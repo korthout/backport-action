@@ -12,6 +12,7 @@ import * as github from "@actions/github";
 export interface GithubApi {
   getRepo(): Repo;
   getPayload(): Payload;
+  getEventName(): string;
   getPullNumber(): number;
   createComment(comment: Comment): Promise<{}>;
   getPullRequest(pull_number: number): Promise<PullRequest>;
@@ -52,6 +53,10 @@ export class Github implements GithubApi {
 
   public getPayload() {
     return this.#context.payload;
+  }
+
+  public getEventName() {
+    return this.#context.eventName;
   }
 
   public getPullNumber() {

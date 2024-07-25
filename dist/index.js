@@ -94,7 +94,13 @@ class Backport {
                     : workflowRepo;
                 if (repo === undefined)
                     throw new Error("No repository defined!");
-                const pull_number = this.github.getPullNumber();
+                if (this.config.source_pr_number !== undefined &&
+                    this.github.getEventName() !== "workflow_dispatch") {
+                    throw new Error("source_pr_number can only be specified for workflow_dispatch events!");
+                }
+                const pull_number = this.config.source_pr_number === undefined
+                    ? this.github.getPullNumber()
+                    : this.config.source_pr_number;
                 const mainpr = yield this.github.getPullRequest(pull_number);
                 if (!(yield this.github.isMerged(mainpr))) {
                     const message = "Only merged pull requests can be backported.";
@@ -467,7 +473,7 @@ class Backport {
         const suggestionToResolve = this.composeMessageToResolveCommittedConflicts(target, branchname, commitShasToCherryPick, conflictResolution);
         return (0, dedent_1.default) `Created backport PR for \`${target}\`:
                   - ${downstream}#${pr_number} with remaining conflicts!
-                  
+
                   ${suggestionToResolve}`;
     }
     createOutput(successByTarget, createdPullRequestNumbers) {
@@ -766,6 +772,9 @@ class Github {
     }
     getPayload() {
         return __classPrivateFieldGet(this, _Github_context, "f").payload;
+    }
+    getEventName() {
+        return __classPrivateFieldGet(this, _Github_context, "f").eventName;
     }
     getPullNumber() {
         if (__classPrivateFieldGet(this, _Github_context, "f").payload.pull_request) {
@@ -1078,6 +1087,7 @@ function run() {
         const copy_milestone = core.getInput("copy_milestone");
         const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
         const experimental = JSON.parse(core.getInput("experimental"));
+        const source_pr_number = core.getInput("source_pr_number");
         if (cherry_picking !== "auto" && cherry_picking !== "pull_request_head") {
             const message = `Expected input 'cherry_picking' to be either 'auto' or 'pull_request_head', but was '${cherry_picking}'`;
             console.error(message);
@@ -1124,6 +1134,7 @@ function run() {
             copy_milestone: copy_milestone === "true",
             copy_requested_reviewers: copy_requested_reviewers === "true",
             experimental: Object.assign(Object.assign({}, backport_1.experimentalDefaults), experimental),
+            source_pr_number: source_pr_number === "" ? undefined : parseInt(source_pr_number),
         };
         const backport = new backport_1.Backport(github, config, git);
         return backport.run();

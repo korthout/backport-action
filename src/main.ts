@@ -30,6 +30,7 @@ async function run(): Promise<void> {
   const copy_milestone = core.getInput("copy_milestone");
   const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
   const experimental = JSON.parse(core.getInput("experimental"));
+  const source_pr_number = core.getInput("source_pr_number");
 
   if (cherry_picking !== "auto" && cherry_picking !== "pull_request_head") {
     const message = `Expected input 'cherry_picking' to be either 'auto' or 'pull_request_head', but was '${cherry_picking}'`;
@@ -85,6 +86,8 @@ async function run(): Promise<void> {
     copy_milestone: copy_milestone === "true",
     copy_requested_reviewers: copy_requested_reviewers === "true",
     experimental: { ...experimentalDefaults, ...experimental },
+    source_pr_number:
+      source_pr_number === "" ? undefined : parseInt(source_pr_number),
   };
   const backport = new Backport(github, config, git);
 
