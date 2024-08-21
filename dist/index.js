@@ -769,9 +769,6 @@ class Github {
     getPayload() {
         return __classPrivateFieldGet(this, _Github_context, "f").payload;
     }
-    getEventName() {
-        return __classPrivateFieldGet(this, _Github_context, "f").eventName;
-    }
     getPullNumber() {
         if (__classPrivateFieldGet(this, _Github_context, "f").payload.pull_request) {
             return __classPrivateFieldGet(this, _Github_context, "f").payload.pull_request.number;
