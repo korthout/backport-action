@@ -118,8 +118,9 @@ inputs:
       [Backport ${target_branch}] ${pull_title}
   source_pr_number:
     description: >
-      Specifty the pull request number to backport instead of detecting based on the pull request closed event.
-      Only valid when github.event_type == "workflow_dispatch".
+      Specifies the pull request (by its number) to backport, i.e. the source pull request.
+      When set, the action will backport the specified pull request to each target branch.
+      When not set, the action determines the source pull request from the event payload.
   target_branches:
     description: >
       The action will backport the pull request to each specified target branch (space-delimited).
