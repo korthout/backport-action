@@ -108,7 +108,7 @@ class Backport {
                 }
                 const target_branches = this.findTargetBranches(mainpr, this.config);
                 if (target_branches.length === 0) {
-                    console.log(`Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${(_c = this.config.labels.pattern) === null || _c === void 0 ? void 0 : _c.source}'`);
+                    console.log(`Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${(_c = this.config.source_labels_pattern) === null || _c === void 0 ? void 0 : _c.source}'`);
                     return; // nothing left to do here
                 }
                 console.log(`Fetching all the commits from the pull request: ${mainpr.commits + 1}`);
@@ -181,8 +181,8 @@ class Backport {
                     labelsToCopy = mainpr.labels
                         .map((label) => label.name)
                         .filter((label) => label.match(copyLabelsPattern) &&
-                        (this.config.labels.pattern === undefined ||
-                            !label.match(this.config.labels.pattern)));
+                        (this.config.source_labels_pattern === undefined ||
+                            !label.match(this.config.source_labels_pattern)));
                 }
                 console.log(`Will copy labels matching ${this.config.copy_labels_pattern}. Found matching labels: ${labelsToCopy}`);
                 if (this.shouldUseDownstreamRepo()) {
@@ -324,8 +324,10 @@ class Backport {
                                 }
                             }
                         }
-                        if (labelsToCopy.length > 0) {
-                            const label_response = yield this.github.labelPR(new_pr.number, labelsToCopy, {
+                        // Combine the labels to be copied with the static labels and deduplicate them using a Set
+                        const labels = [...new Set([...labelsToCopy, ...this.config.labels])];
+                        if (labels.length > 0) {
+                            const label_response = yield this.github.labelPR(new_pr.number, labels, {
                                 owner,
                                 repo,
                             });
@@ -467,7 +469,7 @@ class Backport {
         const suggestionToResolve = this.composeMessageToResolveCommittedConflicts(target, branchname, commitShasToCherryPick, conflictResolution);
         return (0, dedent_1.default) `Created backport PR for \`${target}\`:
                   - ${downstream}#${pr_number} with remaining conflicts!
-                  
+
                   ${suggestionToResolve}`;
     }
     createOutput(successByTarget, createdPullRequestNumbers) {
@@ -497,7 +499,7 @@ function findTargetBranches(config, labels, headref) {
 }
 exports.findTargetBranches = findTargetBranches;
 function findTargetBranchesFromLabels(labels, config) {
-    const pattern = config.labels.pattern;
+    const pattern = config.source_labels_pattern;
     if (pattern === undefined) {
         return [];
     }
@@ -1070,6 +1072,7 @@ function run() {
         const description = core.getInput("pull_description");
         const title = core.getInput("pull_title");
         const branch_name = core.getInput("branch_name");
+        const labels = core.getInput("labels");
         const copy_labels_pattern = core.getInput("copy_labels_pattern");
         const target_branches = core.getInput("target_branches");
         const cherry_picking = core.getInput("cherry_picking");
@@ -1115,9 +1118,10 @@ function run() {
         const git = new git_1.Git(execa_1.execa);
         const config = {
             pwd,
-            labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
+            source_labels_pattern: pattern === "" ? undefined : new RegExp(pattern),
             pull: { description, title, branch_name },
             copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
+            labels: labels === "" ? [] : labels.split(/[ ]/),
             target_branches: target_branches === "" ? undefined : target_branches,
             commits: { cherry_picking, merge_commits },
             copy_assignees: copy_assignees === "true",
