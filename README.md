@@ -263,6 +263,14 @@ Placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 Please refer to this action's README for all available [placeholders](#placeholders).
 
+### `source_pr_number`
+
+Default: `''` (not set)
+
+Specifies the pull request (by its number) to backport, i.e. the source pull request.
+When set, the action will backport the specified pull request to each target branch.
+When not set, the action determines the source pull request from the event payload.
+
 ### `target_branches`
 
 Default: `''` (disabled)
