@@ -29,6 +29,7 @@ async function run(): Promise<void> {
   const copy_assignees = core.getInput("copy_assignees");
   const copy_milestone = core.getInput("copy_milestone");
   const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
+  const additional_reviewers = core.getInput("additional_reviewers");
   const experimental = JSON.parse(core.getInput("experimental"));
   const source_pr_number = core.getInput("source_pr_number");
 
@@ -85,6 +86,7 @@ async function run(): Promise<void> {
     copy_assignees: copy_assignees === "true",
     copy_milestone: copy_milestone === "true",
     copy_requested_reviewers: copy_requested_reviewers === "true",
+    additional_reviewers: additional_reviewers === "" ? undefined : additional_reviewers.split(","),
     experimental: { ...experimentalDefaults, ...experimental },
     source_pr_number:
       source_pr_number === "" ? undefined : parseInt(source_pr_number),

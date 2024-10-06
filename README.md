@@ -163,6 +163,12 @@ Controls whether to copy the requested reviewers from the original pull request 
 Note that this does not request reviews from those users who already reviewed the original pull request.
 By default, the requested reviewers are not copied.
 
+### `additional_reviewers`
+
+Default: `''` (disabled)
+
+Comma-separated list of GitHub usernames to add as reviewers to the backport pull request.
+
 ### `experimental`
 
 Default:

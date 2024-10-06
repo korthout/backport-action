@@ -35,6 +35,7 @@ export type Config = {
   copy_milestone: boolean;
   copy_assignees: boolean;
   copy_requested_reviewers: boolean;
+  additional_reviewers: string[];
   experimental: Experimental;
 };
 
@@ -418,23 +419,26 @@ export class Backport {
             }
           }
 
+          let reviewers: string [] = this.config.additional_reviewers || []
           if (this.config.copy_requested_reviewers == true) {
-            const reviewers = mainpr.requested_reviewers?.map(
-              (reviewer) => reviewer.login,
-            );
-            if (reviewers?.length > 0) {
-              console.info("Setting reviewers " + reviewers);
-              const reviewRequest = {
-                owner,
-                repo,
-                pull_number: new_pr.number,
-                reviewers: reviewers,
-              };
-              const set_reviewers_response =
-                await this.github.requestReviewers(reviewRequest);
-              if (set_reviewers_response.status != 201) {
-                console.error(JSON.stringify(set_reviewers_response));
-              }
+            const requested_reviewers = mainpr.requested_reviewers?.map(
+                (reviewer) => reviewer.login,
+            ) || [];
+            reviewers = reviewers.concat(requested_reviewers)
+          }
+          reviewers = [...new Set(reviewers)];
+          if (reviewers?.length > 0) {
+            console.info("Setting reviewers " + reviewers);
+            const reviewRequest = {
+              owner,
+              repo,
+              pull_number: new_pr.number,
+              reviewers: reviewers,
+            };
+            const set_reviewers_response =
+              await this.github.requestReviewers(reviewRequest);
+            if (set_reviewers_response.status != 201) {
+              console.error(JSON.stringify(set_reviewers_response));
             }
           }
 

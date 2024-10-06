@@ -45,6 +45,10 @@ inputs:
       Note that this does not request reviews from those users who already reviewed the original pull request.
       By default, the requested reviewers are not copied.
     default: false
+  additional_reviewers:
+    description: >
+      Comma-separated list of GitHub usernames to add as reviewers to the backport pull request.
+      By default, no additional reviewers are added.
   experimental:
     description: >
       Configure experimental features by passing a JSON object.
