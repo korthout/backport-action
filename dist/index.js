@@ -301,12 +301,12 @@ class Backport {
                             const assignees = mainpr.assignees.map((label) => label.login);
                             if (assignees.length > 0) {
                                 console.info("Setting assignees " + assignees);
-                                const set_assignee_response = yield this.github.setAssignees(new_pr.number, assignees, {
+                                const add_assignee_response = yield this.github.addAssignees(new_pr.number, assignees, {
                                     owner,
                                     repo,
                                 });
-                                if (set_assignee_response.status != 201) {
-                                    console.error(JSON.stringify(set_assignee_response));
+                                if (add_assignee_response.status != 201) {
+                                    console.error(JSON.stringify(add_assignee_response));
                                 }
                             }
                         }
@@ -846,7 +846,7 @@ class Github {
             return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addLabels(Object.assign(Object.assign({}, repo), { issue_number: pr, labels }));
         });
     }
-    setAssignees(pr, assignees, repo) {
+    addAssignees(pr, assignees, repo) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log(`Set Assignees ${assignees} to #${pr}`);
             return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addAssignees(Object.assign(Object.assign({}, repo), { issue_number: pr, assignees }));

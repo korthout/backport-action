@@ -24,7 +24,7 @@ export interface GithubApi {
     repo: Repo,
   ): Promise<LabelPullRequestResponse>;
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
-  setAssignees(
+  addAssignees(
     pr: number,
     assignees: string[],
     repo: Repo,
@@ -142,7 +142,7 @@ export class Github implements GithubApi {
     });
   }
 
-  public async setAssignees(pr: number, assignees: string[], repo: Repo) {
+  public async addAssignees(pr: number, assignees: string[], repo: Repo) {
     console.log(`Set Assignees ${assignees} to #${pr}`);
     return this.#octokit.rest.issues.addAssignees({
       ...repo,

@@ -404,7 +404,7 @@ export class Backport {
             const assignees = mainpr.assignees.map((label) => label.login);
             if (assignees.length > 0) {
               console.info("Setting assignees " + assignees);
-              const set_assignee_response = await this.github.setAssignees(
+              const add_assignee_response = await this.github.addAssignees(
                 new_pr.number,
                 assignees,
                 {
@@ -412,8 +412,8 @@ export class Backport {
                   repo,
                 },
               );
-              if (set_assignee_response.status != 201) {
-                console.error(JSON.stringify(set_assignee_response));
+              if (add_assignee_response.status != 201) {
+                console.error(JSON.stringify(add_assignee_response));
               }
             }
           }
