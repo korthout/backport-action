@@ -35,6 +35,7 @@ export type Config = {
   copy_milestone: boolean;
   copy_assignees: boolean;
   copy_requested_reviewers: boolean;
+  add_author_as_assignee: boolean;
   experimental: Experimental;
 };
 
@@ -450,6 +451,22 @@ export class Backport {
             if (label_response.status != 200) {
               console.error(JSON.stringify(label_response));
               // The PR was still created so let's still comment on the original.
+            }
+          }
+
+          if (this.config.add_author_as_assignee == true) {
+            const author = mainpr.user.login;
+            console.info("Setting " + author + " as assignee");
+            const add_assignee_response = await this.github.addAssignees(
+              new_pr.number,
+              [author],
+              {
+                owner,
+                repo,
+              },
+            );
+            if (add_assignee_response.status != 201) {
+              console.error(JSON.stringify(add_assignee_response));
             }
           }
 

@@ -163,6 +163,13 @@ Controls whether to copy the requested reviewers from the original pull request 
 Note that this does not request reviews from those users who already reviewed the original pull request.
 By default, the requested reviewers are not copied.
 
+### `add_author_as_assignee`
+
+Default: `false` (disabled)
+
+Controls whether to set the author of the original pull request as an assignee on the backport pull request.
+By default, the original author is not made an assignee.
+
 ### `experimental`
 
 Default:

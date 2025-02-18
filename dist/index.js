@@ -336,6 +336,17 @@ class Backport {
                                 // The PR was still created so let's still comment on the original.
                             }
                         }
+                        if (this.config.add_author_as_assignee == true) {
+                            const author = mainpr.user.login;
+                            console.info("Setting " + author + " as assignee");
+                            const add_assignee_response = yield this.github.addAssignees(new_pr.number, [author], {
+                                owner,
+                                repo,
+                            });
+                            if (add_assignee_response.status != 201) {
+                                console.error(JSON.stringify(add_assignee_response));
+                            }
+                        }
                         // post success message to original pr
                         {
                             const message = uncommitedShas !== null
@@ -1079,6 +1090,7 @@ function run() {
         const copy_assignees = core.getInput("copy_assignees");
         const copy_milestone = core.getInput("copy_milestone");
         const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
+        const add_author_as_assignee = core.getInput("add_author_as_assignee");
         const experimental = JSON.parse(core.getInput("experimental"));
         const source_pr_number = core.getInput("source_pr_number");
         if (cherry_picking !== "auto" && cherry_picking !== "pull_request_head") {
@@ -1126,6 +1138,7 @@ function run() {
             copy_assignees: copy_assignees === "true",
             copy_milestone: copy_milestone === "true",
             copy_requested_reviewers: copy_requested_reviewers === "true",
+            add_author_as_assignee: add_author_as_assignee === "true",
             experimental: Object.assign(Object.assign({}, backport_1.experimentalDefaults), experimental),
             source_pr_number: source_pr_number === "" ? undefined : parseInt(source_pr_number),
         };
