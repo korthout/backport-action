@@ -122,9 +122,10 @@ inputs:
       Note that the pull request's headref is excluded automatically.
       Can be used in addition to backport labels.
       By default, only backport labels are used to specify the target branches.
-  labels:
+  add_labels:
     description: >
-      A space separted list of labels to add to the pull request.
+      The action will add these labels (space-delimited) to the backport pull request.
+      By default, no labels are added.
 
 outputs:
   created_pull_numbers:

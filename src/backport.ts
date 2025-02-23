@@ -24,7 +24,7 @@ export type Config = {
     branch_name: string;
   };
   copy_labels_pattern?: RegExp;
-  labels: string[];
+  add_labels: string[];
   target_branches?: string;
   commits: {
     cherry_picking: "auto" | "pull_request_head";
@@ -434,7 +434,9 @@ export class Backport {
           }
 
           // Combine the labels to be copied with the static labels and deduplicate them using a Set
-          const labels = [...new Set([...labelsToCopy, ...this.config.labels])];
+          const labels = [
+            ...new Set([...labelsToCopy, ...this.config.add_labels]),
+          ];
           if (labels.length > 0) {
             const label_response = await this.github.labelPR(
               new_pr.number,
