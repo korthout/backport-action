@@ -17,9 +17,7 @@ type PRContent = {
 
 export type Config = {
   pwd: string;
-  labels: {
-    pattern?: RegExp;
-  };
+  source_labels_pattern?: RegExp;
   source_pr_number?: number;
   pull: {
     description: string;
@@ -27,6 +25,7 @@ export type Config = {
     branch_name: string;
   };
   copy_labels_pattern?: RegExp;
+  add_labels: string[];
   target_branches?: string;
   commits: {
     cherry_picking: "auto" | "pull_request_head";
@@ -126,7 +125,7 @@ export class Backport {
       const target_branches = this.findTargetBranches(mainpr, this.config);
       if (target_branches.length === 0) {
         console.log(
-          `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.labels.pattern?.source}'`,
+          `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.source_labels_pattern?.source}'`,
         );
         return; // nothing left to do here
       }
@@ -245,8 +244,8 @@ export class Backport {
           .filter(
             (label) =>
               label.match(copyLabelsPattern) &&
-              (this.config.labels.pattern === undefined ||
-                !label.match(this.config.labels.pattern)),
+              (this.config.source_labels_pattern === undefined ||
+                !label.match(this.config.source_labels_pattern)),
           );
       }
       console.log(
@@ -439,10 +438,14 @@ export class Backport {
             }
           }
 
-          if (labelsToCopy.length > 0) {
+          // Combine the labels to be copied with the static labels and deduplicate them using a Set
+          const labels = [
+            ...new Set([...labelsToCopy, ...this.config.add_labels]),
+          ];
+          if (labels.length > 0) {
             const label_response = await this.github.labelPR(
               new_pr.number,
-              labelsToCopy,
+              labels,
               {
                 owner,
                 repo,
@@ -723,7 +726,7 @@ export class Backport {
 }
 
 export function findTargetBranches(
-  config: Pick<Config, "labels" | "target_branches">,
+  config: Pick<Config, "source_labels_pattern" | "target_branches">,
   labels: string[],
   headref: string,
 ) {
@@ -757,9 +760,9 @@ export function findTargetBranches(
 
 function findTargetBranchesFromLabels(
   labels: string[],
-  config: Pick<Config, "labels">,
+  config: Pick<Config, "source_labels_pattern">,
 ) {
-  const pattern = config.labels.pattern;
+  const pattern = config.source_labels_pattern;
   if (pattern === undefined) {
     return [];
   }

@@ -7,6 +7,10 @@ inputs:
     description: >
       Controls whether to set the author of the original pull request as an assignee on the backport pull request.
       By default, the original author is not made an assignee.
+  add_labels:
+    description: >
+      The action will add these labels (space-delimited) to the backport pull request.
+      By default, no labels are added.
   branch_name:
     description: >
       Template used as the name for branches created by this action.

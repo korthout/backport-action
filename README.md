@@ -114,6 +114,13 @@ Default: `false` (disabled)
 Controls whether to set the author of the original pull request as an assignee on the backport pull request.
 By default, the original author is not made an assignee.
 
+### `add_labels`
+
+Default: `''` (disabled)
+
+The action will add these labels (space-delimited) to the backport pull request.
+By default, no labels are added.
+
 ### `branch_name`
 
 Default: `backport-${pull_number}-to-${target_branch}`
