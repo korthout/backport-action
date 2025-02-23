@@ -9,7 +9,7 @@ inputs:
       By default, no labels are added.
   branch_name:
     description: >
-      Template used as the name for branches created by this action. 
+      Template used as the name for branches created by this action.
       Placeholders can be used to define variable values.
       These are indicated by a dollar sign and curly braces (`${placeholder}`).
       Please refer to this action's README for all available placeholders.
@@ -56,7 +56,7 @@ inputs:
 
       #### `conflict_resolution`
 
-      Specifies how the action will handle a conflict occuring during the cherry-pick. 
+      Specifies how the action will handle a conflict occuring during the cherry-pick.
       In all cases, the action will stop the cherry-pick at the first conflict encountered.
 
       Behavior is defined by the option selected.
@@ -64,15 +64,15 @@ inputs:
       - When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed.
 
       Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
-      
+
       #### `downstream_repo`
-      
+
       Define if you want to backport to a repository other than where the workflow runs.
 
       By default, the action always backports to the repository in which the workflow runs.
-      
+
       #### `downstream_owner`
-      
+
       Define if you want to backport to another owner than the owner of the repository the workflow runs on.
       Only takes effect if the `downstream_repo` property is also defined.
 
@@ -120,6 +120,11 @@ inputs:
       Please refer to this action's README for all available placeholders.
     default: >-
       [Backport ${target_branch}] ${pull_title}
+  source_pr_number:
+    description: >
+      Specifies the pull request (by its number) to backport, i.e. the source pull request.
+      When set, the action will backport the specified pull request to each target branch.
+      When not set, the action determines the source pull request from the event payload.
   target_branches:
     description: >
       The action will backport the pull request to each specified target branch (space-delimited).

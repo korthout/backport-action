@@ -94,7 +94,9 @@ class Backport {
                     : workflowRepo;
                 if (repo === undefined)
                     throw new Error("No repository defined!");
-                const pull_number = this.github.getPullNumber();
+                const pull_number = this.config.source_pr_number === undefined
+                    ? this.github.getPullNumber()
+                    : this.config.source_pr_number;
                 const mainpr = yield this.github.getPullRequest(pull_number);
                 if (!(yield this.github.isMerged(mainpr))) {
                     const message = "Only merged pull requests can be backported.";
@@ -108,7 +110,7 @@ class Backport {
                 }
                 const target_branches = this.findTargetBranches(mainpr, this.config);
                 if (target_branches.length === 0) {
-                    console.log(`Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${(_c = this.config.labels.pattern) === null || _c === void 0 ? void 0 : _c.source}'`);
+                    console.log(`Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${(_c = this.config.source_labels_pattern) === null || _c === void 0 ? void 0 : _c.source}'`);
                     return; // nothing left to do here
                 }
                 console.log(`Fetching all the commits from the pull request: ${mainpr.commits + 1}`);
@@ -181,8 +183,8 @@ class Backport {
                     labelsToCopy = mainpr.labels
                         .map((label) => label.name)
                         .filter((label) => label.match(copyLabelsPattern) &&
-                        (this.config.labels.pattern === undefined ||
-                            !label.match(this.config.labels.pattern)));
+                        (this.config.source_labels_pattern === undefined ||
+                            !label.match(this.config.source_labels_pattern)));
                 }
                 console.log(`Will copy labels matching ${this.config.copy_labels_pattern}. Found matching labels: ${labelsToCopy}`);
                 if (this.shouldUseDownstreamRepo()) {
@@ -324,8 +326,12 @@ class Backport {
                                 }
                             }
                         }
-                        if (labelsToCopy.length > 0) {
-                            const label_response = yield this.github.labelPR(new_pr.number, labelsToCopy, {
+                        // Combine the labels to be copied with the static labels and deduplicate them using a Set
+                        const labels = [
+                            ...new Set([...labelsToCopy, ...this.config.add_labels]),
+                        ];
+                        if (labels.length > 0) {
+                            const label_response = yield this.github.labelPR(new_pr.number, labels, {
                                 owner,
                                 repo,
                             });
@@ -467,7 +473,7 @@ class Backport {
         const suggestionToResolve = this.composeMessageToResolveCommittedConflicts(target, branchname, commitShasToCherryPick, conflictResolution);
         return (0, dedent_1.default) `Created backport PR for \`${target}\`:
                   - ${downstream}#${pr_number} with remaining conflicts!
-                  
+
                   ${suggestionToResolve}`;
     }
     createOutput(successByTarget, createdPullRequestNumbers) {
@@ -497,7 +503,7 @@ function findTargetBranches(config, labels, headref) {
 }
 exports.findTargetBranches = findTargetBranches;
 function findTargetBranchesFromLabels(labels, config) {
-    const pattern = config.labels.pattern;
+    const pattern = config.source_labels_pattern;
     if (pattern === undefined) {
         return [];
     }
@@ -1070,6 +1076,7 @@ function run() {
         const description = core.getInput("pull_description");
         const title = core.getInput("pull_title");
         const branch_name = core.getInput("branch_name");
+        const add_labels = core.getInput("add_labels");
         const copy_labels_pattern = core.getInput("copy_labels_pattern");
         const target_branches = core.getInput("target_branches");
         const cherry_picking = core.getInput("cherry_picking");
@@ -1078,6 +1085,7 @@ function run() {
         const copy_milestone = core.getInput("copy_milestone");
         const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
         const experimental = JSON.parse(core.getInput("experimental"));
+        const source_pr_number = core.getInput("source_pr_number");
         if (cherry_picking !== "auto" && cherry_picking !== "pull_request_head") {
             const message = `Expected input 'cherry_picking' to be either 'auto' or 'pull_request_head', but was '${cherry_picking}'`;
             console.error(message);
@@ -1115,15 +1123,17 @@ function run() {
         const git = new git_1.Git(execa_1.execa);
         const config = {
             pwd,
-            labels: { pattern: pattern === "" ? undefined : new RegExp(pattern) },
+            source_labels_pattern: pattern === "" ? undefined : new RegExp(pattern),
             pull: { description, title, branch_name },
             copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
+            add_labels: add_labels === "" ? [] : add_labels.split(/[ ]/),
             target_branches: target_branches === "" ? undefined : target_branches,
             commits: { cherry_picking, merge_commits },
             copy_assignees: copy_assignees === "true",
             copy_milestone: copy_milestone === "true",
             copy_requested_reviewers: copy_requested_reviewers === "true",
             experimental: Object.assign(Object.assign({}, backport_1.experimentalDefaults), experimental),
+            source_pr_number: source_pr_number === "" ? undefined : parseInt(source_pr_number),
         };
         const backport = new backport_1.Backport(github, config, git);
         return backport.run();
