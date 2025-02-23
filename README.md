@@ -118,7 +118,7 @@ By default, the original author is not made an assignee.
 
 Default: `''` (disabled)
 
-The action will add these labels (space-delimited) to the backport pull request.
+The action will add these labels (comma-delimited) to the backport pull request.
 By default, no labels are added.
 
 ### `branch_name`
