@@ -107,6 +107,13 @@ jobs:
 
 The action can be configured with the following optional [inputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepswith):
 
+### `add_labels`
+
+Default: `''` (disabled)
+
+The action will add these labels (space-delimited) to the backport pull request.
+By default, no labels are added.
+
 ### `branch_name`
 
 Default: `backport-${pull_number}-to-${target_branch}`
