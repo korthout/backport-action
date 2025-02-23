@@ -1094,7 +1094,7 @@ async function run() {
         source_labels_pattern: pattern === "" ? undefined : new RegExp(pattern),
         pull: { description, title, branch_name },
         copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
-        add_labels: add_labels === "" ? [] : add_labels.split(/[ ]/),
+        add_labels: add_labels === "" ? [] : add_labels.split(/[,]/),
         target_branches: target_branches === "" ? undefined : target_branches,
         commits: { cherry_picking, merge_commits },
         copy_assignees: copy_assignees === "true",
