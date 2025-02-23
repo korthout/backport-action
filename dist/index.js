@@ -22,27 +22,29 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.findTargetBranches = exports.Backport = exports.deprecatedExperimental = exports.experimentalDefaults = void 0;
+exports.Backport = exports.deprecatedExperimental = exports.experimentalDefaults = void 0;
+exports.findTargetBranches = findTargetBranches;
 const core = __importStar(__nccwpck_require__(7484));
 const dedent_1 = __importDefault(__nccwpck_require__(3924));
 const github_1 = __nccwpck_require__(6681);
@@ -64,14 +66,18 @@ var Output;
     Output["created_pull_numbers"] = "created_pull_numbers";
 })(Output || (Output = {}));
 class Backport {
+    github;
+    config;
+    git;
+    downstreamRepo;
+    downstreamOwner;
     constructor(github, config, git) {
-        var _a, _b;
         this.github = github;
         this.config = config;
         this.git = git;
-        this.downstreamRepo = (_a = this.config.experimental.downstream_repo) !== null && _a !== void 0 ? _a : undefined;
+        this.downstreamRepo = this.config.experimental.downstream_repo ?? undefined;
         this.downstreamOwner =
-            (_b = this.config.experimental.downstream_owner) !== null && _b !== void 0 ? _b : undefined;
+            this.config.experimental.downstream_owner ?? undefined;
     }
     shouldUseDownstreamRepo() {
         return !!this.downstreamRepo;
@@ -79,271 +85,227 @@ class Backport {
     getRemote() {
         return this.shouldUseDownstreamRepo() ? "downstream" : "origin";
     }
-    run() {
-        var _a, _b, _c, _d, _e, _f;
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const payload = this.github.getPayload();
-                const workflowOwner = this.github.getRepo().owner;
-                const owner = this.shouldUseDownstreamRepo() && this.downstreamOwner // if undefined, use owner of workflow
-                    ? this.downstreamOwner
-                    : workflowOwner;
-                const workflowRepo = (_b = (_a = payload.repository) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : this.github.getRepo().repo;
-                const repo = this.shouldUseDownstreamRepo()
-                    ? this.downstreamRepo
-                    : workflowRepo;
-                if (repo === undefined)
-                    throw new Error("No repository defined!");
-                const pull_number = this.config.source_pr_number === undefined
-                    ? this.github.getPullNumber()
-                    : this.config.source_pr_number;
-                const mainpr = yield this.github.getPullRequest(pull_number);
-                if (!(yield this.github.isMerged(mainpr))) {
-                    const message = "Only merged pull requests can be backported.";
-                    this.github.createComment({
-                        owner: workflowOwner,
-                        repo: workflowRepo,
-                        issue_number: pull_number,
-                        body: message,
-                    });
-                    return;
+    async run() {
+        try {
+            const payload = this.github.getPayload();
+            const workflowOwner = this.github.getRepo().owner;
+            const owner = this.shouldUseDownstreamRepo() && this.downstreamOwner // if undefined, use owner of workflow
+                ? this.downstreamOwner
+                : workflowOwner;
+            const workflowRepo = payload.repository?.name ?? this.github.getRepo().repo;
+            const repo = this.shouldUseDownstreamRepo()
+                ? this.downstreamRepo
+                : workflowRepo;
+            if (repo === undefined)
+                throw new Error("No repository defined!");
+            const pull_number = this.config.source_pr_number === undefined
+                ? this.github.getPullNumber()
+                : this.config.source_pr_number;
+            const mainpr = await this.github.getPullRequest(pull_number);
+            if (!(await this.github.isMerged(mainpr))) {
+                const message = "Only merged pull requests can be backported.";
+                this.github.createComment({
+                    owner: workflowOwner,
+                    repo: workflowRepo,
+                    issue_number: pull_number,
+                    body: message,
+                });
+                return;
+            }
+            const target_branches = this.findTargetBranches(mainpr, this.config);
+            if (target_branches.length === 0) {
+                console.log(`Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.source_labels_pattern?.source}'`);
+                return; // nothing left to do here
+            }
+            console.log(`Fetching all the commits from the pull request: ${mainpr.commits + 1}`);
+            await this.git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd, mainpr.commits + 1);
+            const commitShas = await this.github.getCommits(mainpr);
+            let commitShasToCherryPick;
+            if (this.config.commits.cherry_picking === "auto") {
+                const merge_commit_sha = await this.github.getMergeCommitSha(mainpr);
+                // switch case to check if it is a squash, rebase, or merge commit
+                switch (await this.github.mergeStrategy(mainpr, merge_commit_sha)) {
+                    case github_1.MergeStrategy.SQUASHED:
+                        // If merged via a squash merge_commit_sha represents the SHA of the squashed commit on
+                        // the base branch. We must fetch it and its parent in case of a shallowly cloned repo
+                        // To store the fetched commits indefinitely we save them to a remote ref using the sha
+                        await this.git.fetch(`+${merge_commit_sha}:refs/remotes/origin/${merge_commit_sha}`, this.config.pwd, 2);
+                        commitShasToCherryPick = [merge_commit_sha];
+                        break;
+                    case github_1.MergeStrategy.REBASED:
+                        // If rebased merge_commit_sha represents the commit that the base branch was updated to
+                        // We must fetch it, its parents, and one extra parent in case of a shallowly cloned repo
+                        // To store the fetched commits indefinitely we save them to a remote ref using the sha
+                        await this.git.fetch(`+${merge_commit_sha}:refs/remotes/origin/${merge_commit_sha}`, this.config.pwd, mainpr.commits + 1);
+                        const range = `${merge_commit_sha}~${mainpr.commits}..${merge_commit_sha}`;
+                        commitShasToCherryPick = await this.git.findCommitsInRange(range, this.config.pwd);
+                        break;
+                    case github_1.MergeStrategy.MERGECOMMIT:
+                        commitShasToCherryPick = commitShas;
+                        break;
+                    case github_1.MergeStrategy.UNKNOWN:
+                        console.log("Could not detect merge strategy. Using commits from the Pull Request.");
+                        commitShasToCherryPick = commitShas;
+                        break;
+                    default:
+                        console.log("Could not detect merge strategy. Using commits from the Pull Request.");
+                        commitShasToCherryPick = commitShas;
+                        break;
                 }
-                const target_branches = this.findTargetBranches(mainpr, this.config);
-                if (target_branches.length === 0) {
-                    console.log(`Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${(_c = this.config.source_labels_pattern) === null || _c === void 0 ? void 0 : _c.source}'`);
-                    return; // nothing left to do here
+            }
+            else {
+                console.log("Not detecting merge strategy. Using commits from the Pull Request.");
+                commitShasToCherryPick = commitShas;
+            }
+            console.log(`Found commits to backport: ${commitShasToCherryPick}`);
+            console.log("Checking the merged pull request for merge commits");
+            const mergeCommitShas = await this.git.findMergeCommits(commitShasToCherryPick, this.config.pwd);
+            console.log(`Encountered ${mergeCommitShas.length ?? "no"} merge commits`);
+            if (mergeCommitShas.length > 0 &&
+                this.config.commits.merge_commits == "fail") {
+                const message = (0, dedent_1.default) `Backport failed because this pull request contains merge commits. \
+          You can either backport this pull request manually, or configure the action to skip merge commits.`;
+                console.error(message);
+                this.github.createComment({
+                    owner: workflowOwner,
+                    repo: workflowRepo,
+                    issue_number: pull_number,
+                    body: message,
+                });
+                return;
+            }
+            if (mergeCommitShas.length > 0 &&
+                this.config.commits.merge_commits == "skip") {
+                console.log("Skipping merge commits: " + mergeCommitShas);
+                const nonMergeCommitShas = commitShasToCherryPick.filter((sha) => !mergeCommitShas.includes(sha));
+                commitShasToCherryPick = nonMergeCommitShas;
+            }
+            console.log("Will cherry-pick the following commits: " + commitShasToCherryPick);
+            let labelsToCopy = [];
+            if (typeof this.config.copy_labels_pattern !== "undefined") {
+                let copyLabelsPattern = this.config.copy_labels_pattern;
+                labelsToCopy = mainpr.labels
+                    .map((label) => label.name)
+                    .filter((label) => label.match(copyLabelsPattern) &&
+                    (this.config.source_labels_pattern === undefined ||
+                        !label.match(this.config.source_labels_pattern)));
+            }
+            console.log(`Will copy labels matching ${this.config.copy_labels_pattern}. Found matching labels: ${labelsToCopy}`);
+            if (this.shouldUseDownstreamRepo()) {
+                await this.git.remoteAdd(this.config.pwd, "downstream", owner, repo);
+            }
+            const successByTarget = new Map();
+            const createdPullRequestNumbers = new Array();
+            for (const target of target_branches) {
+                console.log(`Backporting to target branch '${target}...'`);
+                try {
+                    await this.git.fetch(target, this.config.pwd, 1, this.getRemote());
                 }
-                console.log(`Fetching all the commits from the pull request: ${mainpr.commits + 1}`);
-                yield this.git.fetch(`refs/pull/${pull_number}/head`, this.config.pwd, mainpr.commits + 1);
-                const commitShas = yield this.github.getCommits(mainpr);
-                let commitShasToCherryPick;
-                if (this.config.commits.cherry_picking === "auto") {
-                    const merge_commit_sha = yield this.github.getMergeCommitSha(mainpr);
-                    // switch case to check if it is a squash, rebase, or merge commit
-                    switch (yield this.github.mergeStrategy(mainpr, merge_commit_sha)) {
-                        case github_1.MergeStrategy.SQUASHED:
-                            // If merged via a squash merge_commit_sha represents the SHA of the squashed commit on
-                            // the base branch. We must fetch it and its parent in case of a shallowly cloned repo
-                            // To store the fetched commits indefinitely we save them to a remote ref using the sha
-                            yield this.git.fetch(`+${merge_commit_sha}:refs/remotes/origin/${merge_commit_sha}`, this.config.pwd, 2);
-                            commitShasToCherryPick = [merge_commit_sha];
-                            break;
-                        case github_1.MergeStrategy.REBASED:
-                            // If rebased merge_commit_sha represents the commit that the base branch was updated to
-                            // We must fetch it, its parents, and one extra parent in case of a shallowly cloned repo
-                            // To store the fetched commits indefinitely we save them to a remote ref using the sha
-                            yield this.git.fetch(`+${merge_commit_sha}:refs/remotes/origin/${merge_commit_sha}`, this.config.pwd, mainpr.commits + 1);
-                            const range = `${merge_commit_sha}~${mainpr.commits}..${merge_commit_sha}`;
-                            commitShasToCherryPick = yield this.git.findCommitsInRange(range, this.config.pwd);
-                            break;
-                        case github_1.MergeStrategy.MERGECOMMIT:
-                            commitShasToCherryPick = commitShas;
-                            break;
-                        case github_1.MergeStrategy.UNKNOWN:
-                            console.log("Could not detect merge strategy. Using commits from the Pull Request.");
-                            commitShasToCherryPick = commitShas;
-                            break;
-                        default:
-                            console.log("Could not detect merge strategy. Using commits from the Pull Request.");
-                            commitShasToCherryPick = commitShas;
-                            break;
+                catch (error) {
+                    if (error instanceof git_1.GitRefNotFoundError) {
+                        const message = this.composeMessageForFetchTargetFailure(error.ref);
+                        console.error(message);
+                        successByTarget.set(target, false);
+                        await this.github.createComment({
+                            owner: workflowOwner,
+                            repo: workflowRepo,
+                            issue_number: pull_number,
+                            body: message,
+                        });
+                        continue;
+                    }
+                    else {
+                        throw error;
                     }
                 }
-                else {
-                    console.log("Not detecting merge strategy. Using commits from the Pull Request.");
-                    commitShasToCherryPick = commitShas;
-                }
-                console.log(`Found commits to backport: ${commitShasToCherryPick}`);
-                console.log("Checking the merged pull request for merge commits");
-                const mergeCommitShas = yield this.git.findMergeCommits(commitShasToCherryPick, this.config.pwd);
-                console.log(`Encountered ${(_d = mergeCommitShas.length) !== null && _d !== void 0 ? _d : "no"} merge commits`);
-                if (mergeCommitShas.length > 0 &&
-                    this.config.commits.merge_commits == "fail") {
-                    const message = (0, dedent_1.default) `Backport failed because this pull request contains merge commits. \
-          You can either backport this pull request manually, or configure the action to skip merge commits.`;
-                    console.error(message);
-                    this.github.createComment({
-                        owner: workflowOwner,
-                        repo: workflowRepo,
-                        issue_number: pull_number,
-                        body: message,
-                    });
-                    return;
-                }
-                if (mergeCommitShas.length > 0 &&
-                    this.config.commits.merge_commits == "skip") {
-                    console.log("Skipping merge commits: " + mergeCommitShas);
-                    const nonMergeCommitShas = commitShasToCherryPick.filter((sha) => !mergeCommitShas.includes(sha));
-                    commitShasToCherryPick = nonMergeCommitShas;
-                }
-                console.log("Will cherry-pick the following commits: " + commitShasToCherryPick);
-                let labelsToCopy = [];
-                if (typeof this.config.copy_labels_pattern !== "undefined") {
-                    let copyLabelsPattern = this.config.copy_labels_pattern;
-                    labelsToCopy = mainpr.labels
-                        .map((label) => label.name)
-                        .filter((label) => label.match(copyLabelsPattern) &&
-                        (this.config.source_labels_pattern === undefined ||
-                            !label.match(this.config.source_labels_pattern)));
-                }
-                console.log(`Will copy labels matching ${this.config.copy_labels_pattern}. Found matching labels: ${labelsToCopy}`);
-                if (this.shouldUseDownstreamRepo()) {
-                    yield this.git.remoteAdd(this.config.pwd, "downstream", owner, repo);
-                }
-                const successByTarget = new Map();
-                const createdPullRequestNumbers = new Array();
-                for (const target of target_branches) {
-                    console.log(`Backporting to target branch '${target}...'`);
+                try {
+                    const branchname = utils.replacePlaceholders(this.config.pull.branch_name, mainpr, target);
+                    console.log(`Start backport to ${branchname}`);
                     try {
-                        yield this.git.fetch(target, this.config.pwd, 1, this.getRemote());
+                        await this.git.checkout(branchname, `${this.getRemote()}/${target}`, this.config.pwd);
                     }
                     catch (error) {
-                        if (error instanceof git_1.GitRefNotFoundError) {
-                            const message = this.composeMessageForFetchTargetFailure(error.ref);
-                            console.error(message);
-                            successByTarget.set(target, false);
-                            yield this.github.createComment({
-                                owner: workflowOwner,
-                                repo: workflowRepo,
-                                issue_number: pull_number,
-                                body: message,
-                            });
-                            continue;
-                        }
-                        else {
-                            throw error;
+                        const message = this.composeMessageForCheckoutFailure(target, branchname, commitShasToCherryPick);
+                        console.error(message);
+                        successByTarget.set(target, false);
+                        await this.github.createComment({
+                            owner: workflowOwner,
+                            repo: workflowRepo,
+                            issue_number: pull_number,
+                            body: message,
+                        });
+                        continue;
+                    }
+                    let uncommitedShas;
+                    try {
+                        uncommitedShas = await this.git.cherryPick(commitShasToCherryPick, this.config.experimental.conflict_resolution, this.config.pwd);
+                    }
+                    catch (error) {
+                        const message = this.composeMessageForCherryPickFailure(target, branchname, commitShasToCherryPick);
+                        console.error(message);
+                        successByTarget.set(target, false);
+                        await this.github.createComment({
+                            owner: workflowOwner,
+                            repo: workflowRepo,
+                            issue_number: pull_number,
+                            body: message,
+                        });
+                        continue;
+                    }
+                    console.info(`Push branch to ${this.getRemote()}`);
+                    const pushExitCode = await this.git.push(branchname, this.getRemote(), this.config.pwd);
+                    if (pushExitCode != 0) {
+                        const message = this.composeMessageForGitPushFailure(target, pushExitCode);
+                        console.error(message);
+                        successByTarget.set(target, false);
+                        await this.github.createComment({
+                            owner: workflowOwner,
+                            repo: workflowRepo,
+                            issue_number: pull_number,
+                            body: message,
+                        });
+                        continue;
+                    }
+                    console.info(`Create PR for ${branchname}`);
+                    const { title, body } = this.composePRContent(target, mainpr);
+                    const new_pr_response = await this.github.createPR({
+                        owner,
+                        repo,
+                        title,
+                        body,
+                        head: branchname,
+                        base: target,
+                        maintainer_can_modify: true,
+                        draft: uncommitedShas !== null,
+                    });
+                    if (new_pr_response.status != 201) {
+                        console.error(JSON.stringify(new_pr_response));
+                        successByTarget.set(target, false);
+                        const message = this.composeMessageForCreatePRFailed(new_pr_response);
+                        await this.github.createComment({
+                            owner: workflowOwner,
+                            repo: workflowRepo,
+                            issue_number: pull_number,
+                            body: message,
+                        });
+                        continue;
+                    }
+                    const new_pr = new_pr_response.data;
+                    if (this.config.copy_milestone == true) {
+                        const milestone = mainpr.milestone?.number;
+                        if (milestone) {
+                            console.info("Setting milestone to " + milestone);
+                            const set_milestone_response = await this.github.setMilestone(new_pr.number, milestone);
+                            if (set_milestone_response.status != 200) {
+                                console.error(JSON.stringify(set_milestone_response));
+                            }
                         }
                     }
-                    try {
-                        const branchname = utils.replacePlaceholders(this.config.pull.branch_name, mainpr, target);
-                        console.log(`Start backport to ${branchname}`);
-                        try {
-                            yield this.git.checkout(branchname, `${this.getRemote()}/${target}`, this.config.pwd);
-                        }
-                        catch (error) {
-                            const message = this.composeMessageForCheckoutFailure(target, branchname, commitShasToCherryPick);
-                            console.error(message);
-                            successByTarget.set(target, false);
-                            yield this.github.createComment({
-                                owner: workflowOwner,
-                                repo: workflowRepo,
-                                issue_number: pull_number,
-                                body: message,
-                            });
-                            continue;
-                        }
-                        let uncommitedShas;
-                        try {
-                            uncommitedShas = yield this.git.cherryPick(commitShasToCherryPick, this.config.experimental.conflict_resolution, this.config.pwd);
-                        }
-                        catch (error) {
-                            const message = this.composeMessageForCherryPickFailure(target, branchname, commitShasToCherryPick);
-                            console.error(message);
-                            successByTarget.set(target, false);
-                            yield this.github.createComment({
-                                owner: workflowOwner,
-                                repo: workflowRepo,
-                                issue_number: pull_number,
-                                body: message,
-                            });
-                            continue;
-                        }
-                        console.info(`Push branch to ${this.getRemote()}`);
-                        const pushExitCode = yield this.git.push(branchname, this.getRemote(), this.config.pwd);
-                        if (pushExitCode != 0) {
-                            const message = this.composeMessageForGitPushFailure(target, pushExitCode);
-                            console.error(message);
-                            successByTarget.set(target, false);
-                            yield this.github.createComment({
-                                owner: workflowOwner,
-                                repo: workflowRepo,
-                                issue_number: pull_number,
-                                body: message,
-                            });
-                            continue;
-                        }
-                        console.info(`Create PR for ${branchname}`);
-                        const { title, body } = this.composePRContent(target, mainpr);
-                        const new_pr_response = yield this.github.createPR({
-                            owner,
-                            repo,
-                            title,
-                            body,
-                            head: branchname,
-                            base: target,
-                            maintainer_can_modify: true,
-                            draft: uncommitedShas !== null,
-                        });
-                        if (new_pr_response.status != 201) {
-                            console.error(JSON.stringify(new_pr_response));
-                            successByTarget.set(target, false);
-                            const message = this.composeMessageForCreatePRFailed(new_pr_response);
-                            yield this.github.createComment({
-                                owner: workflowOwner,
-                                repo: workflowRepo,
-                                issue_number: pull_number,
-                                body: message,
-                            });
-                            continue;
-                        }
-                        const new_pr = new_pr_response.data;
-                        if (this.config.copy_milestone == true) {
-                            const milestone = (_e = mainpr.milestone) === null || _e === void 0 ? void 0 : _e.number;
-                            if (milestone) {
-                                console.info("Setting milestone to " + milestone);
-                                const set_milestone_response = yield this.github.setMilestone(new_pr.number, milestone);
-                                if (set_milestone_response.status != 200) {
-                                    console.error(JSON.stringify(set_milestone_response));
-                                }
-                            }
-                        }
-                        if (this.config.copy_assignees == true) {
-                            const assignees = mainpr.assignees.map((label) => label.login);
-                            if (assignees.length > 0) {
-                                console.info("Setting assignees " + assignees);
-                                const add_assignee_response = yield this.github.addAssignees(new_pr.number, assignees, {
-                                    owner,
-                                    repo,
-                                });
-                                if (add_assignee_response.status != 201) {
-                                    console.error(JSON.stringify(add_assignee_response));
-                                }
-                            }
-                        }
-                        if (this.config.copy_requested_reviewers == true) {
-                            const reviewers = (_f = mainpr.requested_reviewers) === null || _f === void 0 ? void 0 : _f.map((reviewer) => reviewer.login);
-                            if ((reviewers === null || reviewers === void 0 ? void 0 : reviewers.length) > 0) {
-                                console.info("Setting reviewers " + reviewers);
-                                const reviewRequest = {
-                                    owner,
-                                    repo,
-                                    pull_number: new_pr.number,
-                                    reviewers: reviewers,
-                                };
-                                const set_reviewers_response = yield this.github.requestReviewers(reviewRequest);
-                                if (set_reviewers_response.status != 201) {
-                                    console.error(JSON.stringify(set_reviewers_response));
-                                }
-                            }
-                        }
-                        // Combine the labels to be copied with the static labels and deduplicate them using a Set
-                        const labels = [
-                            ...new Set([...labelsToCopy, ...this.config.add_labels]),
-                        ];
-                        if (labels.length > 0) {
-                            const label_response = yield this.github.labelPR(new_pr.number, labels, {
-                                owner,
-                                repo,
-                            });
-                            if (label_response.status != 200) {
-                                console.error(JSON.stringify(label_response));
-                                // The PR was still created so let's still comment on the original.
-                            }
-                        }
-                        if (this.config.add_author_as_assignee == true) {
-                            const author = mainpr.user.login;
-                            console.info("Setting " + author + " as assignee");
-                            const add_assignee_response = yield this.github.addAssignees(new_pr.number, [author], {
+                    if (this.config.copy_assignees == true) {
+                        const assignees = mainpr.assignees.map((label) => label.login);
+                        if (assignees.length > 0) {
+                            console.info("Setting assignees " + assignees);
+                            const add_assignee_response = await this.github.addAssignees(new_pr.number, assignees, {
                                 owner,
                                 repo,
                             });
@@ -351,60 +313,101 @@ class Backport {
                                 console.error(JSON.stringify(add_assignee_response));
                             }
                         }
-                        // post success message to original pr
-                        {
-                            const message = uncommitedShas !== null
-                                ? this.composeMessageForSuccessWithConflicts(new_pr.number, target, this.shouldUseDownstreamRepo() ? `${owner}/${repo}` : "", branchname, uncommitedShas, this.config.experimental.conflict_resolution)
-                                : this.composeMessageForSuccess(new_pr.number, target, this.shouldUseDownstreamRepo() ? `${owner}/${repo}` : "");
-                            successByTarget.set(target, true);
-                            createdPullRequestNumbers.push(new_pr.number);
-                            yield this.github.createComment({
-                                owner: workflowOwner,
-                                repo: workflowRepo,
-                                issue_number: pull_number,
-                                body: message,
-                            });
-                        }
-                        // post message to new pr to resolve conflict
-                        if (uncommitedShas !== null) {
-                            const message = this.composeMessageToResolveCommittedConflicts(target, branchname, uncommitedShas, this.config.experimental.conflict_resolution);
-                            yield this.github.createComment({
+                    }
+                    if (this.config.copy_requested_reviewers == true) {
+                        const reviewers = mainpr.requested_reviewers?.map((reviewer) => reviewer.login);
+                        if (reviewers?.length > 0) {
+                            console.info("Setting reviewers " + reviewers);
+                            const reviewRequest = {
                                 owner,
                                 repo,
-                                issue_number: new_pr.number,
-                                body: message,
-                            });
+                                pull_number: new_pr.number,
+                                reviewers: reviewers,
+                            };
+                            const set_reviewers_response = await this.github.requestReviewers(reviewRequest);
+                            if (set_reviewers_response.status != 201) {
+                                console.error(JSON.stringify(set_reviewers_response));
+                            }
                         }
                     }
-                    catch (error) {
-                        if (error instanceof Error) {
-                            console.error(error.message);
-                            successByTarget.set(target, false);
-                            yield this.github.createComment({
-                                owner: workflowOwner,
-                                repo: workflowRepo,
-                                issue_number: pull_number,
-                                body: error.message,
-                            });
-                        }
-                        else {
-                            throw error;
+                    // Combine the labels to be copied with the static labels and deduplicate them using a Set
+                    const labels = [
+                        ...new Set([...labelsToCopy, ...this.config.add_labels]),
+                    ];
+                    if (labels.length > 0) {
+                        const label_response = await this.github.labelPR(new_pr.number, labels, {
+                            owner,
+                            repo,
+                        });
+                        if (label_response.status != 200) {
+                            console.error(JSON.stringify(label_response));
+                            // The PR was still created so let's still comment on the original.
                         }
                     }
+                    if (this.config.add_author_as_assignee == true) {
+                        const author = mainpr.user.login;
+                        console.info("Setting " + author + " as assignee");
+                        const add_assignee_response = await this.github.addAssignees(new_pr.number, [author], {
+                            owner,
+                            repo,
+                        });
+                        if (add_assignee_response.status != 201) {
+                            console.error(JSON.stringify(add_assignee_response));
+                        }
+                    }
+                    // post success message to original pr
+                    {
+                        const message = uncommitedShas !== null
+                            ? this.composeMessageForSuccessWithConflicts(new_pr.number, target, this.shouldUseDownstreamRepo() ? `${owner}/${repo}` : "", branchname, uncommitedShas, this.config.experimental.conflict_resolution)
+                            : this.composeMessageForSuccess(new_pr.number, target, this.shouldUseDownstreamRepo() ? `${owner}/${repo}` : "");
+                        successByTarget.set(target, true);
+                        createdPullRequestNumbers.push(new_pr.number);
+                        await this.github.createComment({
+                            owner: workflowOwner,
+                            repo: workflowRepo,
+                            issue_number: pull_number,
+                            body: message,
+                        });
+                    }
+                    // post message to new pr to resolve conflict
+                    if (uncommitedShas !== null) {
+                        const message = this.composeMessageToResolveCommittedConflicts(target, branchname, uncommitedShas, this.config.experimental.conflict_resolution);
+                        await this.github.createComment({
+                            owner,
+                            repo,
+                            issue_number: new_pr.number,
+                            body: message,
+                        });
+                    }
                 }
-                this.createOutput(successByTarget, createdPullRequestNumbers);
+                catch (error) {
+                    if (error instanceof Error) {
+                        console.error(error.message);
+                        successByTarget.set(target, false);
+                        await this.github.createComment({
+                            owner: workflowOwner,
+                            repo: workflowRepo,
+                            issue_number: pull_number,
+                            body: error.message,
+                        });
+                    }
+                    else {
+                        throw error;
+                    }
+                }
             }
-            catch (error) {
-                if (error instanceof Error) {
-                    console.error(error.message);
-                    core.setFailed(error.message);
-                }
-                else {
-                    console.error(`An unexpected error occurred: ${JSON.stringify(error)}`);
-                    core.setFailed("An unexpected error occured. Please check the logs for details");
-                }
+            this.createOutput(successByTarget, createdPullRequestNumbers);
+        }
+        catch (error) {
+            if (error instanceof Error) {
+                console.error(error.message);
+                core.setFailed(error.message);
             }
-        });
+            else {
+                console.error(`An unexpected error occurred: ${JSON.stringify(error)}`);
+                core.setFailed("An unexpected error occured. Please check the logs for details");
+            }
+        }
     }
     findTargetBranches(mainpr, config) {
         const labels = mainpr.labels.map((label) => label.name);
@@ -498,11 +501,13 @@ class Backport {
 }
 exports.Backport = Backport;
 function findTargetBranches(config, labels, headref) {
-    var _a, _b;
     console.log("Determining target branches...");
     console.log(`Detected labels on PR: ${labels}`);
     const targetBranchesFromLabels = findTargetBranchesFromLabels(labels, config);
-    const configuredTargetBranches = (_b = (_a = config.target_branches) === null || _a === void 0 ? void 0 : _a.split(" ").map((t) => t.trim()).filter((t) => t !== "")) !== null && _b !== void 0 ? _b : [];
+    const configuredTargetBranches = config.target_branches
+        ?.split(" ")
+        .map((t) => t.trim())
+        .filter((t) => t !== "") ?? [];
     console.log(`Found target branches in labels: ${targetBranchesFromLabels}`);
     console.log(`Found target branches in \`target_branches\` input: ${configuredTargetBranches}`);
     console.log(`Exclude pull request's headref from target branches: ${headref}`);
@@ -512,7 +517,6 @@ function findTargetBranches(config, labels, headref) {
     console.log(`Determined target branches: ${targetBranches}`);
     return targetBranches;
 }
-exports.findTargetBranches = findTargetBranches;
 function findTargetBranchesFromLabels(labels, config) {
     const pattern = config.source_labels_pattern;
     if (pattern === undefined) {
@@ -540,22 +544,14 @@ function findTargetBranchesFromLabels(labels, config) {
 /***/ }),
 
 /***/ 9412:
-/***/ (function(__unused_webpack_module, exports) {
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Git = exports.GitRefNotFoundError = void 0;
 class GitRefNotFoundError extends Error {
+    ref;
     constructor(message, ref) {
         super(message);
         this.ref = ref;
@@ -563,24 +559,22 @@ class GitRefNotFoundError extends Error {
 }
 exports.GitRefNotFoundError = GitRefNotFoundError;
 class Git {
+    execa;
     constructor(execa) {
         this.execa = execa;
     }
-    git(command, args, pwd) {
-        var _a;
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log(`git ${command} ${args.join(" ")}`);
-            const child = this.execa("git", [command, ...args], {
-                cwd: pwd,
-                env: {
-                    GIT_COMMITTER_NAME: "github-actions[bot]",
-                    GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com",
-                },
-                reject: false,
-            });
-            (_a = child.stderr) === null || _a === void 0 ? void 0 : _a.pipe(process.stderr);
-            return child;
+    async git(command, args, pwd) {
+        console.log(`git ${command} ${args.join(" ")}`);
+        const child = this.execa("git", [command, ...args], {
+            cwd: pwd,
+            env: {
+                GIT_COMMITTER_NAME: "github-actions[bot]",
+                GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com",
+            },
+            reject: false,
         });
+        child.stderr?.pipe(process.stderr);
+        return child;
     }
     /**
      * Fetches a ref from origin
@@ -592,16 +586,14 @@ class Git {
      * @throws GitRefNotFoundError when ref not found
      * @throws Error for any other non-zero exit code
      */
-    fetch(ref, pwd, depth, remote = "origin") {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { exitCode } = yield this.git("fetch", [`--depth=${depth}`, remote, ref], pwd);
-            if (exitCode === 128) {
-                throw new GitRefNotFoundError(`Expected to fetch '${ref}' from '${remote}', but couldn't find it`, ref);
-            }
-            else if (exitCode !== 0) {
-                throw new Error(`'git fetch ${remote} ${ref}' failed with exit code ${exitCode}`);
-            }
-        });
+    async fetch(ref, pwd, depth, remote = "origin") {
+        const { exitCode } = await this.git("fetch", [`--depth=${depth}`, remote, ref], pwd);
+        if (exitCode === 128) {
+            throw new GitRefNotFoundError(`Expected to fetch '${ref}' from '${remote}', but couldn't find it`, ref);
+        }
+        else if (exitCode !== 0) {
+            throw new Error(`'git fetch ${remote} ${ref}' failed with exit code ${exitCode}`);
+        }
     }
     /**
      * Adds a new remote Git repository as a shortname.
@@ -611,99 +603,87 @@ class Git {
      * @param owner the owner of the GitHub repository
      * @param repo the name of the repository
      */
-    remoteAdd(pwd, shortname, owner, repo) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { exitCode } = yield this.git("remote", ["add", shortname, `https://github.com/${owner}/${repo}.git`], pwd);
+    async remoteAdd(pwd, shortname, owner, repo) {
+        const { exitCode } = await this.git("remote", ["add", shortname, `https://github.com/${owner}/${repo}.git`], pwd);
+        if (exitCode !== 0) {
+            throw new Error(`'git remote add ${owner}/${repo}' failed with exit code ${exitCode}`);
+        }
+    }
+    async findCommitsInRange(range, pwd) {
+        const { exitCode, stdout } = await this.git("log", ['--pretty=format:"%H"', "--reverse", range], pwd);
+        if (exitCode !== 0) {
+            throw new Error(`'git log --pretty=format:"%H" ${range}' failed with exit code ${exitCode}`);
+        }
+        const commitShas = stdout
+            .split("\n")
+            .map((sha) => sha.replace(/"/g, ""))
+            .filter((sha) => sha.trim() !== "");
+        return commitShas;
+    }
+    async findMergeCommits(commitShas, pwd) {
+        const range = `${commitShas[0]}^..${commitShas[commitShas.length - 1]}`;
+        const { exitCode, stdout } = await this.git("rev-list", ["--merges", range], pwd);
+        if (exitCode !== 0) {
+            throw new Error(`'git rev-list --merges ${range}' failed with exit code ${exitCode}`);
+        }
+        const mergeCommitShas = stdout
+            .split("\n")
+            .filter((sha) => sha.trim() !== "");
+        return mergeCommitShas;
+    }
+    async push(branchname, remote, pwd) {
+        const { exitCode } = await this.git("push", ["--set-upstream", remote, branchname], pwd);
+        return exitCode;
+    }
+    async checkout(branch, start, pwd) {
+        const { exitCode } = await this.git("switch", ["-c", branch, start], pwd);
+        if (exitCode !== 0) {
+            throw new Error(`'git switch -c ${branch} ${start}' failed with exit code ${exitCode}`);
+        }
+    }
+    async cherryPick(commitShas, conflictResolution, pwd) {
+        const abortCherryPickAndThrow = async (commitShas, exitCode) => {
+            await this.git("cherry-pick", ["--abort"], pwd);
+            throw new Error(`'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`);
+        };
+        if (conflictResolution === `fail`) {
+            const { exitCode } = await this.git("cherry-pick", ["-x", ...commitShas], pwd);
             if (exitCode !== 0) {
-                throw new Error(`'git remote add ${owner}/${repo}' failed with exit code ${exitCode}`);
+                await abortCherryPickAndThrow(commitShas, exitCode);
             }
-        });
-    }
-    findCommitsInRange(range, pwd) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { exitCode, stdout } = yield this.git("log", ['--pretty=format:"%H"', "--reverse", range], pwd);
-            if (exitCode !== 0) {
-                throw new Error(`'git log --pretty=format:"%H" ${range}' failed with exit code ${exitCode}`);
-            }
-            const commitShas = stdout
-                .split("\n")
-                .map((sha) => sha.replace(/"/g, ""))
-                .filter((sha) => sha.trim() !== "");
-            return commitShas;
-        });
-    }
-    findMergeCommits(commitShas, pwd) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const range = `${commitShas[0]}^..${commitShas[commitShas.length - 1]}`;
-            const { exitCode, stdout } = yield this.git("rev-list", ["--merges", range], pwd);
-            if (exitCode !== 0) {
-                throw new Error(`'git rev-list --merges ${range}' failed with exit code ${exitCode}`);
-            }
-            const mergeCommitShas = stdout
-                .split("\n")
-                .filter((sha) => sha.trim() !== "");
-            return mergeCommitShas;
-        });
-    }
-    push(branchname, remote, pwd) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { exitCode } = yield this.git("push", ["--set-upstream", remote, branchname], pwd);
-            return exitCode;
-        });
-    }
-    checkout(branch, start, pwd) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { exitCode } = yield this.git("switch", ["-c", branch, start], pwd);
-            if (exitCode !== 0) {
-                throw new Error(`'git switch -c ${branch} ${start}' failed with exit code ${exitCode}`);
-            }
-        });
-    }
-    cherryPick(commitShas, conflictResolution, pwd) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const abortCherryPickAndThrow = (commitShas, exitCode) => __awaiter(this, void 0, void 0, function* () {
-                yield this.git("cherry-pick", ["--abort"], pwd);
-                throw new Error(`'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`);
-            });
-            if (conflictResolution === `fail`) {
-                const { exitCode } = yield this.git("cherry-pick", ["-x", ...commitShas], pwd);
+            return null;
+        }
+        else {
+            let uncommittedShas = [...commitShas];
+            // Cherry-pick commit one by one.
+            while (uncommittedShas.length > 0) {
+                const { exitCode } = await this.git("cherry-pick", ["-x", uncommittedShas[0]], pwd);
                 if (exitCode !== 0) {
-                    yield abortCherryPickAndThrow(commitShas, exitCode);
-                }
-                return null;
-            }
-            else {
-                let uncommittedShas = [...commitShas];
-                // Cherry-pick commit one by one.
-                while (uncommittedShas.length > 0) {
-                    const { exitCode } = yield this.git("cherry-pick", ["-x", uncommittedShas[0]], pwd);
-                    if (exitCode !== 0) {
-                        if (exitCode === 1) {
-                            // conflict encountered
-                            if (conflictResolution === `draft_commit_conflicts`) {
-                                // Commit the conflict, resolution of this commit is left to the user.
-                                // Allow creating PR for cherry-pick with only 1 commit and it results in a conflict.
-                                const { exitCode } = yield this.git("commit", ["--all", `-m BACKPORT-CONFLICT`], pwd);
-                                if (exitCode !== 0) {
-                                    yield abortCherryPickAndThrow(commitShas, exitCode);
-                                }
-                                return uncommittedShas;
+                    if (exitCode === 1) {
+                        // conflict encountered
+                        if (conflictResolution === `draft_commit_conflicts`) {
+                            // Commit the conflict, resolution of this commit is left to the user.
+                            // Allow creating PR for cherry-pick with only 1 commit and it results in a conflict.
+                            const { exitCode } = await this.git("commit", ["--all", `-m BACKPORT-CONFLICT`], pwd);
+                            if (exitCode !== 0) {
+                                await abortCherryPickAndThrow(commitShas, exitCode);
                             }
-                            else {
-                                throw new Error(`'Unsupported conflict_resolution method ${conflictResolution}`);
-                            }
+                            return uncommittedShas;
                         }
                         else {
-                            // other fail reasons
-                            yield abortCherryPickAndThrow([uncommittedShas[0]], exitCode);
+                            throw new Error(`'Unsupported conflict_resolution method ${conflictResolution}`);
                         }
                     }
-                    // pop sha
-                    uncommittedShas.shift();
+                    else {
+                        // other fail reasons
+                        await abortCherryPickAndThrow([uncommittedShas[0]], exitCode);
+                    }
                 }
-                return null;
+                // pop sha
+                uncommittedShas.shift();
             }
-        });
+            return null;
+        }
     }
 }
 exports.Git = Git;
@@ -740,137 +720,126 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
-    if (kind === "m") throw new TypeError("Private method is not writable");
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
-    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
-};
-var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
-    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
-};
-var _Github_octokit, _Github_context;
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MergeStrategy = exports.Github = void 0;
 const github = __importStar(__nccwpck_require__(3228));
 class Github {
+    #octokit;
+    #context;
     constructor(token) {
-        _Github_octokit.set(this, void 0);
-        _Github_context.set(this, void 0);
-        __classPrivateFieldSet(this, _Github_octokit, github.getOctokit(token), "f");
-        __classPrivateFieldSet(this, _Github_context, github.context, "f");
+        this.#octokit = github.getOctokit(token);
+        this.#context = github.context;
     }
     getRepo() {
-        return __classPrivateFieldGet(this, _Github_context, "f").repo;
+        return this.#context.repo;
     }
     getPayload() {
-        return __classPrivateFieldGet(this, _Github_context, "f").payload;
+        return this.#context.payload;
     }
     getPullNumber() {
-        if (__classPrivateFieldGet(this, _Github_context, "f").payload.pull_request) {
-            return __classPrivateFieldGet(this, _Github_context, "f").payload.pull_request.number;
+        if (this.#context.payload.pull_request) {
+            return this.#context.payload.pull_request.number;
         }
         // if the pr is not part of the payload
         // the number can be taken from the issue
-        return __classPrivateFieldGet(this, _Github_context, "f").issue.number;
+        return this.#context.issue.number;
     }
-    createComment(comment) {
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log(`Create comment: ${comment.body}`);
-            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.createComment(comment);
+    async createComment(comment) {
+        console.log(`Create comment: ${comment.body}`);
+        return this.#octokit.rest.issues.createComment(comment);
+    }
+    async getPullRequest(pull_number) {
+        console.log(`Retrieve pull request data for #${pull_number}`);
+        return this.#octokit.rest.pulls
+            .get({
+            ...this.getRepo(),
+            pull_number,
+        })
+            .then((response) => response.data);
+    }
+    async isMerged(pull) {
+        console.log(`Check whether pull request ${pull.number} is merged`);
+        return this.#octokit.rest.pulls
+            .checkIfMerged({ ...this.getRepo(), pull_number: pull.number })
+            .then(() => true /* status is always 204 */)
+            .catch((error) => {
+            if (error?.status == 404)
+                return false;
+            else
+                throw error;
         });
     }
-    getPullRequest(pull_number) {
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log(`Retrieve pull request data for #${pull_number}`);
-            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls
-                .get(Object.assign(Object.assign({}, this.getRepo()), { pull_number }))
-                .then((response) => response.data);
+    async getFirstAndLastCommitSha(pull) {
+        const commits = await this.getCommits(pull);
+        return {
+            firstCommitSha: commits[0],
+            lastCommitSha: commits.length > 1 ? commits[commits.length - 1] : null,
+        };
+    }
+    async getCommits(pull) {
+        console.log(`Retrieving the commits from pull request ${pull.number}`);
+        const commits = [];
+        const getCommitsPaged = (page) => this.#octokit.rest.pulls
+            .listCommits({
+            ...this.getRepo(),
+            pull_number: pull.number,
+            per_page: 100,
+            page: page,
+        })
+            .then((commits) => commits.data.map((commit) => commit.sha));
+        for (let page = 1; page <= Math.ceil(pull.commits / 100); page++) {
+            const commitsOnPage = await getCommitsPaged(page);
+            commits.push(...commitsOnPage);
+        }
+        return commits;
+    }
+    async createPR(pr) {
+        console.log(`Create PR: ${pr.body}`);
+        return this.#octokit.rest.pulls.create(pr);
+    }
+    async requestReviewers(request) {
+        console.log(`Request reviewers: ${request.reviewers}`);
+        return this.#octokit.rest.pulls.requestReviewers(request);
+    }
+    async labelPR(pr, labels, repo) {
+        console.log(`Label PR #${pr} with labels: ${labels}`);
+        return this.#octokit.rest.issues.addLabels({
+            ...repo,
+            issue_number: pr,
+            labels,
         });
     }
-    isMerged(pull) {
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log(`Check whether pull request ${pull.number} is merged`);
-            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls
-                .checkIfMerged(Object.assign(Object.assign({}, this.getRepo()), { pull_number: pull.number }))
-                .then(() => true /* status is always 204 */)
-                .catch((error) => {
-                if ((error === null || error === void 0 ? void 0 : error.status) == 404)
-                    return false;
-                else
-                    throw error;
-            });
+    async addAssignees(pr, assignees, repo) {
+        console.log(`Set Assignees ${assignees} to #${pr}`);
+        return this.#octokit.rest.issues.addAssignees({
+            ...repo,
+            issue_number: pr,
+            assignees,
         });
     }
-    getFirstAndLastCommitSha(pull) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const commits = yield this.getCommits(pull);
-            return {
-                firstCommitSha: commits[0],
-                lastCommitSha: commits.length > 1 ? commits[commits.length - 1] : null,
-            };
-        });
-    }
-    getCommits(pull) {
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log(`Retrieving the commits from pull request ${pull.number}`);
-            const commits = [];
-            const getCommitsPaged = (page) => __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls
-                .listCommits(Object.assign(Object.assign({}, this.getRepo()), { pull_number: pull.number, per_page: 100, page: page }))
-                .then((commits) => commits.data.map((commit) => commit.sha));
-            for (let page = 1; page <= Math.ceil(pull.commits / 100); page++) {
-                const commitsOnPage = yield getCommitsPaged(page);
-                commits.push(...commitsOnPage);
-            }
-            return commits;
-        });
-    }
-    createPR(pr) {
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log(`Create PR: ${pr.body}`);
-            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls.create(pr);
-        });
-    }
-    requestReviewers(request) {
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log(`Request reviewers: ${request.reviewers}`);
-            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.pulls.requestReviewers(request);
-        });
-    }
-    labelPR(pr, labels, repo) {
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log(`Label PR #${pr} with labels: ${labels}`);
-            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addLabels(Object.assign(Object.assign({}, repo), { issue_number: pr, labels }));
-        });
-    }
-    addAssignees(pr, assignees, repo) {
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log(`Set Assignees ${assignees} to #${pr}`);
-            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.addAssignees(Object.assign(Object.assign({}, repo), { issue_number: pr, assignees }));
-        });
-    }
-    setMilestone(pr, milestone) {
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log(`Set Milestone ${milestone} to #${pr}`);
-            return __classPrivateFieldGet(this, _Github_octokit, "f").rest.issues.update(Object.assign(Object.assign({}, this.getRepo()), { issue_number: pr, milestone: milestone }));
+    async setMilestone(pr, milestone) {
+        console.log(`Set Milestone ${milestone} to #${pr}`);
+        return this.#octokit.rest.issues.update({
+            ...this.getRepo(),
+            issue_number: pr,
+            milestone: milestone,
         });
     }
     /**
@@ -887,43 +856,41 @@ class Github {
      * @param pull - The pull request object.
      * @returns The SHA of the merge commit.
      */
-    getMergeCommitSha(pull) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return pull.merge_commit_sha;
-        });
+    async getMergeCommitSha(pull) {
+        return pull.merge_commit_sha;
     }
     /**
      * Retrieves a commit from the repository.
      * @param sha - The SHA of the commit to retrieve.
      * @returns A promise that resolves to the retrieved commit.
      */
-    getCommit(sha) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const commit = __classPrivateFieldGet(this, _Github_octokit, "f").rest.repos.getCommit(Object.assign(Object.assign({}, this.getRepo()), { ref: sha }));
-            return commit;
+    async getCommit(sha) {
+        const commit = this.#octokit.rest.repos.getCommit({
+            ...this.getRepo(),
+            ref: sha,
         });
+        return commit;
     }
     /**
      * Retrieves the parents of a commit.
      * @param sha - The SHA of the commit.
      * @returns A promise that resolves to the parents of the commit.
      */
-    getParents(sha) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const commit = yield this.getCommit(sha);
-            return commit.data.parents;
-        });
+    async getParents(sha) {
+        const commit = await this.getCommit(sha);
+        return commit.data.parents;
     }
     /**
      * Retrieves the pull requests associated with a specific commit.
      * @param sha The SHA of the commit.
      * @returns A promise that resolves to the pull requests associated with the commit.
      */
-    getPullRequestsAssociatedWithCommit(sha) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const pr = __classPrivateFieldGet(this, _Github_octokit, "f").rest.repos.listPullRequestsAssociatedWithCommit(Object.assign(Object.assign({}, this.getRepo()), { commit_sha: sha }));
-            return pr;
+    async getPullRequestsAssociatedWithCommit(sha) {
+        const pr = this.#octokit.rest.repos.listPullRequestsAssociatedWithCommit({
+            ...this.getRepo(),
+            commit_sha: sha,
         });
+        return pr;
     }
     /**
      * Checks if a given SHA is associated with a specific pull request.
@@ -931,24 +898,20 @@ class Github {
      * @param pull - The pull request to check against.
      * @returns A boolean indicating whether the SHA is associated with the pull request.
      */
-    isShaAssociatedWithPullRequest(sha, pull) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const assoc_pr = yield this.getPullRequestsAssociatedWithCommit(sha);
-            const assoc_pr_data = assoc_pr.data;
-            // commits can be associated with multiple PRs
-            // checks if any of the assoc_prs is the same as the pull
-            return assoc_pr_data.some((pr) => pr.number == pull.number);
-        });
+    async isShaAssociatedWithPullRequest(sha, pull) {
+        const assoc_pr = await this.getPullRequestsAssociatedWithCommit(sha);
+        const assoc_pr_data = assoc_pr.data;
+        // commits can be associated with multiple PRs
+        // checks if any of the assoc_prs is the same as the pull
+        return assoc_pr_data.some((pr) => pr.number == pull.number);
     }
     /**
      * Checks if a commit is a merge commit.
      * @param parents - An array of parent commit hashes.
      * @returns A promise that resolves to a boolean indicating whether the commit is a merge commit.
      */
-    isMergeCommit(parents) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return parents.length > 1;
-        });
+    async isMergeCommit(parents) {
+        return parents.length > 1;
     }
     /**
      * Checks if a pull request is rebased.
@@ -957,10 +920,8 @@ class Github {
      * @param pull - The pull request object.
      * @returns A boolean value indicating if the pull request is rebased.
      */
-    isRebased(first_parent_belongs_to_pr, merge_belongs_to_pr, pull) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return first_parent_belongs_to_pr && merge_belongs_to_pr;
-        });
+    async isRebased(first_parent_belongs_to_pr, merge_belongs_to_pr, pull) {
+        return first_parent_belongs_to_pr && merge_belongs_to_pr;
     }
     /**
      * Checks if a merge commit is squashed.
@@ -968,10 +929,8 @@ class Github {
      * @param merge_belongs_to_pr - Indicates if the merge commit belongs to a pull request.
      * @returns A boolean value indicating if the merge commit is squashed.
      */
-    isSquashed(first_parent_belongs_to_pr, merge_belongs_to_pr) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return !first_parent_belongs_to_pr && merge_belongs_to_pr;
-        });
+    async isSquashed(first_parent_belongs_to_pr, merge_belongs_to_pr) {
+        return !first_parent_belongs_to_pr && merge_belongs_to_pr;
     }
     /**
      * Determines the merge strategy used for a given pull request.
@@ -979,50 +938,47 @@ class Github {
      * @param pull - The pull request to analyze.
      * @returns The merge strategy used for the pull request.
      */
-    mergeStrategy(pull, merge_commit_sha) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (merge_commit_sha == null) {
-                console.log("PR was merged without merge_commit_sha unable to detect merge method");
-                return MergeStrategy.UNKNOWN;
-            }
-            const parents = yield this.getParents(merge_commit_sha);
-            if (yield this.isMergeCommit(parents)) {
-                console.log("PR was merged using a merge commit");
-                return MergeStrategy.MERGECOMMIT;
-            }
-            // if there is only one commit, it is a rebase OR a squash but we treat it
-            // as a squash.
-            if (pull.commits == 1) {
-                console.log("PR was merged using a squash or a rebase. Choosing squash strategy.");
-                return MergeStrategy.SQUASHED;
-            }
-            // Prepare the data for the rebase and squash checks.
-            const first_parent_sha = parents[0].sha;
-            const first_parent_belonts_to_pr = yield this.isShaAssociatedWithPullRequest(first_parent_sha, pull);
-            const merge_belongs_to_pr = yield this.isShaAssociatedWithPullRequest(merge_commit_sha, pull);
-            // This is the case when the PR is merged using a rebase.
-            // and has multiple commits.
-            if (yield this.isRebased(first_parent_belonts_to_pr, merge_belongs_to_pr, pull)) {
-                console.log("PR was merged using a rebase");
-                return MergeStrategy.REBASED;
-            }
-            if (yield this.isSquashed(first_parent_belonts_to_pr, merge_belongs_to_pr)) {
-                console.log("PR was merged using a squash");
-                return MergeStrategy.SQUASHED;
-            }
+    async mergeStrategy(pull, merge_commit_sha) {
+        if (merge_commit_sha == null) {
+            console.log("PR was merged without merge_commit_sha unable to detect merge method");
             return MergeStrategy.UNKNOWN;
-        });
+        }
+        const parents = await this.getParents(merge_commit_sha);
+        if (await this.isMergeCommit(parents)) {
+            console.log("PR was merged using a merge commit");
+            return MergeStrategy.MERGECOMMIT;
+        }
+        // if there is only one commit, it is a rebase OR a squash but we treat it
+        // as a squash.
+        if (pull.commits == 1) {
+            console.log("PR was merged using a squash or a rebase. Choosing squash strategy.");
+            return MergeStrategy.SQUASHED;
+        }
+        // Prepare the data for the rebase and squash checks.
+        const first_parent_sha = parents[0].sha;
+        const first_parent_belonts_to_pr = await this.isShaAssociatedWithPullRequest(first_parent_sha, pull);
+        const merge_belongs_to_pr = await this.isShaAssociatedWithPullRequest(merge_commit_sha, pull);
+        // This is the case when the PR is merged using a rebase.
+        // and has multiple commits.
+        if (await this.isRebased(first_parent_belonts_to_pr, merge_belongs_to_pr, pull)) {
+            console.log("PR was merged using a rebase");
+            return MergeStrategy.REBASED;
+        }
+        if (await this.isSquashed(first_parent_belonts_to_pr, merge_belongs_to_pr)) {
+            console.log("PR was merged using a squash");
+            return MergeStrategy.SQUASHED;
+        }
+        return MergeStrategy.UNKNOWN;
     }
 }
 exports.Github = Github;
-_Github_octokit = new WeakMap(), _Github_context = new WeakMap();
 var MergeStrategy;
 (function (MergeStrategy) {
     MergeStrategy["SQUASHED"] = "squashed";
     MergeStrategy["REBASED"] = "rebased";
     MergeStrategy["MERGECOMMIT"] = "mergecommit";
     MergeStrategy["UNKNOWN"] = "unknown";
-})(MergeStrategy = exports.MergeStrategy || (exports.MergeStrategy = {}));
+})(MergeStrategy || (exports.MergeStrategy = MergeStrategy = {}));
 
 
 /***/ }),
@@ -1048,22 +1004,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -1079,78 +1036,76 @@ const dedent_1 = __importDefault(__nccwpck_require__(3924));
  *
  * Is separated from backport for testing purposes
  */
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const token = core.getInput("github_token", { required: true });
-        const pwd = core.getInput("github_workspace", { required: true });
-        const pattern = core.getInput("label_pattern");
-        const description = core.getInput("pull_description");
-        const title = core.getInput("pull_title");
-        const branch_name = core.getInput("branch_name");
-        const add_labels = core.getInput("add_labels");
-        const copy_labels_pattern = core.getInput("copy_labels_pattern");
-        const target_branches = core.getInput("target_branches");
-        const cherry_picking = core.getInput("cherry_picking");
-        const merge_commits = core.getInput("merge_commits");
-        const copy_assignees = core.getInput("copy_assignees");
-        const copy_milestone = core.getInput("copy_milestone");
-        const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
-        const add_author_as_assignee = core.getInput("add_author_as_assignee");
-        const experimental = JSON.parse(core.getInput("experimental"));
-        const source_pr_number = core.getInput("source_pr_number");
-        if (cherry_picking !== "auto" && cherry_picking !== "pull_request_head") {
-            const message = `Expected input 'cherry_picking' to be either 'auto' or 'pull_request_head', but was '${cherry_picking}'`;
-            console.error(message);
-            core.setFailed(message);
-            return;
-        }
-        if (merge_commits != "fail" && merge_commits != "skip") {
-            const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
-            console.error(message);
-            core.setFailed(message);
-            return;
-        }
-        for (const key in experimental) {
-            if (!(key in backport_1.experimentalDefaults)) {
-                console.warn((0, dedent_1.default) `Encountered unexpected key in input 'experimental'.\
+async function run() {
+    const token = core.getInput("github_token", { required: true });
+    const pwd = core.getInput("github_workspace", { required: true });
+    const pattern = core.getInput("label_pattern");
+    const description = core.getInput("pull_description");
+    const title = core.getInput("pull_title");
+    const branch_name = core.getInput("branch_name");
+    const add_labels = core.getInput("add_labels");
+    const copy_labels_pattern = core.getInput("copy_labels_pattern");
+    const target_branches = core.getInput("target_branches");
+    const cherry_picking = core.getInput("cherry_picking");
+    const merge_commits = core.getInput("merge_commits");
+    const copy_assignees = core.getInput("copy_assignees");
+    const copy_milestone = core.getInput("copy_milestone");
+    const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
+    const add_author_as_assignee = core.getInput("add_author_as_assignee");
+    const experimental = JSON.parse(core.getInput("experimental"));
+    const source_pr_number = core.getInput("source_pr_number");
+    if (cherry_picking !== "auto" && cherry_picking !== "pull_request_head") {
+        const message = `Expected input 'cherry_picking' to be either 'auto' or 'pull_request_head', but was '${cherry_picking}'`;
+        console.error(message);
+        core.setFailed(message);
+        return;
+    }
+    if (merge_commits != "fail" && merge_commits != "skip") {
+        const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
+        console.error(message);
+        core.setFailed(message);
+        return;
+    }
+    for (const key in experimental) {
+        if (!(key in backport_1.experimentalDefaults)) {
+            console.warn((0, dedent_1.default) `Encountered unexpected key in input 'experimental'.\
         No experimental config options known for key '${key}'.\
         Please check the documentation for details about experimental features.`);
-            }
-            if (key in backport_1.deprecatedExperimental) {
-                console.warn((0, dedent_1.default) `Encountered deprecated key in input 'experimental'.\
+        }
+        if (key in backport_1.deprecatedExperimental) {
+            console.warn((0, dedent_1.default) `Encountered deprecated key in input 'experimental'.\
         Key '${key}' is no longer used. You should remove it from your workflow.\
         Please check the release notes or the documentation for more details.`);
-            }
-            if (key == "conflict_resolution") {
-                if (experimental[key] !== "fail" &&
-                    experimental[key] !== "draft_commit_conflicts") {
-                    const message = `Expected input 'conflict_resolution' to be either 'fail' or 'draft_commit_conflicts', but was '${experimental[key]}'`;
-                    console.error(message);
-                    core.setFailed(message);
-                    return;
-                }
+        }
+        if (key == "conflict_resolution") {
+            if (experimental[key] !== "fail" &&
+                experimental[key] !== "draft_commit_conflicts") {
+                const message = `Expected input 'conflict_resolution' to be either 'fail' or 'draft_commit_conflicts', but was '${experimental[key]}'`;
+                console.error(message);
+                core.setFailed(message);
+                return;
             }
         }
-        const github = new github_1.Github(token);
-        const git = new git_1.Git(execa_1.execa);
-        const config = {
-            pwd,
-            source_labels_pattern: pattern === "" ? undefined : new RegExp(pattern),
-            pull: { description, title, branch_name },
-            copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
-            add_labels: add_labels === "" ? [] : add_labels.split(/[ ]/),
-            target_branches: target_branches === "" ? undefined : target_branches,
-            commits: { cherry_picking, merge_commits },
-            copy_assignees: copy_assignees === "true",
-            copy_milestone: copy_milestone === "true",
-            copy_requested_reviewers: copy_requested_reviewers === "true",
-            add_author_as_assignee: add_author_as_assignee === "true",
-            experimental: Object.assign(Object.assign({}, backport_1.experimentalDefaults), experimental),
-            source_pr_number: source_pr_number === "" ? undefined : parseInt(source_pr_number),
-        };
-        const backport = new backport_1.Backport(github, config, git);
-        return backport.run();
-    });
+    }
+    const github = new github_1.Github(token);
+    const git = new git_1.Git(execa_1.execa);
+    const config = {
+        pwd,
+        source_labels_pattern: pattern === "" ? undefined : new RegExp(pattern),
+        pull: { description, title, branch_name },
+        copy_labels_pattern: copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
+        add_labels: add_labels === "" ? [] : add_labels.split(/[ ]/),
+        target_branches: target_branches === "" ? undefined : target_branches,
+        commits: { cherry_picking, merge_commits },
+        copy_assignees: copy_assignees === "true",
+        copy_milestone: copy_milestone === "true",
+        copy_requested_reviewers: copy_requested_reviewers === "true",
+        add_author_as_assignee: add_author_as_assignee === "true",
+        experimental: { ...backport_1.experimentalDefaults, ...experimental },
+        source_pr_number: source_pr_number === "" ? undefined : parseInt(source_pr_number),
+    };
+    const backport = new backport_1.Backport(github, config, git);
+    return backport.run();
 }
 // this would be executed on import in a test file
 run();
@@ -1164,7 +1119,8 @@ run();
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getMentionedIssueRefs = exports.replacePlaceholders = void 0;
+exports.replacePlaceholders = replacePlaceholders;
+exports.getMentionedIssueRefs = getMentionedIssueRefs;
 /**
  * @param template The template potentially containing placeholders
  * @param main The main pull request that is backported
@@ -1172,28 +1128,24 @@ exports.getMentionedIssueRefs = exports.replacePlaceholders = void 0;
  * @returns Description that can be used in the backport pull request
  */
 function replacePlaceholders(template, main, target) {
-    var _a;
     const issues = getMentionedIssueRefs(main.body);
     return template
         .replace("${pull_author}", main.user.login)
         .replace("${pull_number}", main.number.toString())
         .replace("${pull_title}", main.title)
-        .replace("${pull_description}", (_a = main.body) !== null && _a !== void 0 ? _a : "")
+        .replace("${pull_description}", main.body ?? "")
         .replace("${target_branch}", target)
         .replace("${issue_refs}", issues.join(" "));
 }
-exports.replacePlaceholders = replacePlaceholders;
 /**
  * @param body Text in which to search for mentioned issues
  * @returns All found mentioned issues as GitHub issue references
  */
 function getMentionedIssueRefs(body) {
-    var _a, _b, _c;
-    const issueUrls = (_b = (_a = body === null || body === void 0 ? void 0 : body.match(patterns.url.global)) === null || _a === void 0 ? void 0 : _a.map((url) => toRef(url))) !== null && _b !== void 0 ? _b : [];
-    const issueRefs = (_c = body === null || body === void 0 ? void 0 : body.match(patterns.ref)) !== null && _c !== void 0 ? _c : [];
+    const issueUrls = body?.match(patterns.url.global)?.map((url) => toRef(url)) ?? [];
+    const issueRefs = body?.match(patterns.ref) ?? [];
     return issueUrls.concat(issueRefs).map((ref) => ref.trim());
 }
-exports.getMentionedIssueRefs = getMentionedIssueRefs;
 const patterns = {
     // matches urls to github issues at start, middle, end of line as individual word
     // may be lead and trailed by whitespace which should be trimmed
@@ -6372,7 +6324,7 @@ module.exports = __toCommonJS(dist_src_exports);
 var import_universal_user_agent = __nccwpck_require__(3843);
 
 // pkg/dist-src/version.js
-var VERSION = "9.0.6";
+var VERSION = "9.0.2";
 
 // pkg/dist-src/defaults.js
 var userAgent = `octokit-endpoint.js/${VERSION} ${(0, import_universal_user_agent.getUserAgent)()}`;
@@ -6399,24 +6351,12 @@ function lowercaseKeys(object) {
   }, {});
 }
 
-// pkg/dist-src/util/is-plain-object.js
-function isPlainObject(value) {
-  if (typeof value !== "object" || value === null)
-    return false;
-  if (Object.prototype.toString.call(value) !== "[object Object]")
-    return false;
-  const proto = Object.getPrototypeOf(value);
-  if (proto === null)
-    return true;
-  const Ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return typeof Ctor === "function" && Ctor instanceof Ctor && Function.prototype.call(Ctor) === Function.prototype.call(value);
-}
-
 // pkg/dist-src/util/merge-deep.js
+var import_is_plain_object = __nccwpck_require__(3407);
 function mergeDeep(defaults, options) {
   const result = Object.assign({}, defaults);
   Object.keys(options).forEach((key) => {
-    if (isPlainObject(options[key])) {
+    if ((0, import_is_plain_object.isPlainObject)(options[key])) {
       if (!(key in defaults))
         Object.assign(result, { [key]: options[key] });
       else
@@ -6477,9 +6417,9 @@ function addQueryParameters(url, parameters) {
 }
 
 // pkg/dist-src/util/extract-url-variable-names.js
-var urlVariableRegex = /\{[^{}}]+\}/g;
+var urlVariableRegex = /\{[^}]+\}/g;
 function removeNonChars(variableName) {
-  return variableName.replace(/(?:^\W+)|(?:(?<!\W)\W+$)/g, "").split(/,/);
+  return variableName.replace(/^\W+|\W+$/g, "").split(/,/);
 }
 function extractUrlVariableNames(url) {
   const matches = url.match(urlVariableRegex);
@@ -6491,13 +6431,10 @@ function extractUrlVariableNames(url) {
 
 // pkg/dist-src/util/omit.js
 function omit(object, keysToOmit) {
-  const result = { __proto__: null };
-  for (const key of Object.keys(object)) {
-    if (keysToOmit.indexOf(key) === -1) {
-      result[key] = object[key];
-    }
-  }
-  return result;
+  return Object.keys(object).filter((option) => !keysToOmit.includes(option)).reduce((obj, key) => {
+    obj[key] = object[key];
+    return obj;
+  }, {});
 }
 
 // pkg/dist-src/util/url-template.js
@@ -6665,7 +6602,7 @@ function parse(options) {
     }
     if (url.endsWith("/graphql")) {
       if (options.mediaType.previews?.length) {
-        const previewsFromAcceptHeader = headers.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || [];
+        const previewsFromAcceptHeader = headers.accept.match(/[\w-]+(?=-preview)/g) || [];
         headers.accept = previewsFromAcceptHeader.concat(options.mediaType.previews).map((preview) => {
           const format = options.mediaType.format ? `.${options.mediaType.format}` : "+json";
           return `application/vnd.github.${preview}-preview${format}`;
@@ -9523,22 +9460,10 @@ var import_endpoint = __nccwpck_require__(4471);
 var import_universal_user_agent = __nccwpck_require__(3843);
 
 // pkg/dist-src/version.js
-var VERSION = "8.4.1";
-
-// pkg/dist-src/is-plain-object.js
-function isPlainObject(value) {
-  if (typeof value !== "object" || value === null)
-    return false;
-  if (Object.prototype.toString.call(value) !== "[object Object]")
-    return false;
-  const proto = Object.getPrototypeOf(value);
-  if (proto === null)
-    return true;
-  const Ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return typeof Ctor === "function" && Ctor instanceof Ctor && Function.prototype.call(Ctor) === Function.prototype.call(value);
-}
+var VERSION = "8.1.4";
 
 // pkg/dist-src/fetch-wrapper.js
+var import_is_plain_object = __nccwpck_require__(3407);
 var import_request_error = __nccwpck_require__(3708);
 
 // pkg/dist-src/get-buffer-response.js
@@ -9548,10 +9473,10 @@ function getBufferResponse(response) {
 
 // pkg/dist-src/fetch-wrapper.js
 function fetchWrapper(requestOptions) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c;
   const log = requestOptions.request && requestOptions.request.log ? requestOptions.request.log : console;
   const parseSuccessResponseBody = ((_a = requestOptions.request) == null ? void 0 : _a.parseSuccessResponseBody) !== false;
-  if (isPlainObject(requestOptions.body) || Array.isArray(requestOptions.body)) {
+  if ((0, import_is_plain_object.isPlainObject)(requestOptions.body) || Array.isArray(requestOptions.body)) {
     requestOptions.body = JSON.stringify(requestOptions.body);
   }
   let headers = {};
@@ -9569,9 +9494,8 @@ function fetchWrapper(requestOptions) {
   return fetch(requestOptions.url, {
     method: requestOptions.method,
     body: requestOptions.body,
-    redirect: (_c = requestOptions.request) == null ? void 0 : _c.redirect,
     headers: requestOptions.headers,
-    signal: (_d = requestOptions.request) == null ? void 0 : _d.signal,
+    signal: (_c = requestOptions.request) == null ? void 0 : _c.signal,
     // duplex must be set if request.body is ReadableStream or Async Iterables.
     // See https://fetch.spec.whatwg.org/#dom-requestinit-duplex.
     ...requestOptions.body && { duplex: "half" }
@@ -9582,7 +9506,7 @@ function fetchWrapper(requestOptions) {
       headers[keyAndValue[0]] = keyAndValue[1];
     }
     if ("deprecation" in headers) {
-      const matches = headers.link && headers.link.match(/<([^<>]+)>; rel="deprecation"/);
+      const matches = headers.link && headers.link.match(/<([^>]+)>; rel="deprecation"/);
       const deprecationLink = matches && matches.pop();
       log.warn(
         `[@octokit/request] "${requestOptions.method} ${requestOptions.url}" is deprecated. It is scheduled to be removed on ${headers.sunset}${deprecationLink ? `. See ${deprecationLink}` : ""}`
@@ -9658,7 +9582,7 @@ function fetchWrapper(requestOptions) {
 async function getResponseData(response) {
   const contentType = response.headers.get("content-type");
   if (/application\/json/.test(contentType)) {
-    return response.json().catch(() => response.text()).catch(() => "");
+    return response.json();
   }
   if (!contentType || /^text\/|charset=utf-8$/.test(contentType)) {
     return response.text();
@@ -9668,17 +9592,11 @@ async function getResponseData(response) {
 function toErrorMessage(data) {
   if (typeof data === "string")
     return data;
-  let suffix;
-  if ("documentation_url" in data) {
-    suffix = ` - ${data.documentation_url}`;
-  } else {
-    suffix = "";
-  }
   if ("message" in data) {
     if (Array.isArray(data.errors)) {
-      return `${data.message}: ${data.errors.map(JSON.stringify).join(", ")}${suffix}`;
+      return `${data.message}: ${data.errors.map(JSON.stringify).join(", ")}`;
     }
-    return `${data.message}${suffix}`;
+    return data.message;
   }
   return `Unknown error: ${JSON.stringify(data)}`;
 }
@@ -10413,6 +10331,52 @@ module.exports = getStream;
 module.exports.buffer = (stream, options) => getStream(stream, {...options, encoding: 'buffer'});
 module.exports.array = (stream, options) => getStream(stream, {...options, array: true});
 module.exports.MaxBufferError = MaxBufferError;
+
+
+/***/ }),
+
+/***/ 3407:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+/*!
+ * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+function isObject(o) {
+  return Object.prototype.toString.call(o) === '[object Object]';
+}
+
+function isPlainObject(o) {
+  var ctor,prot;
+
+  if (isObject(o) === false) return false;
+
+  // If has modified constructor
+  ctor = o.constructor;
+  if (ctor === undefined) return true;
+
+  // If has modified prototype
+  prot = ctor.prototype;
+  if (isObject(prot) === false) return false;
+
+  // If constructor does not have an Object-specific method
+  if (prot.hasOwnProperty('isPrototypeOf') === false) {
+    return false;
+  }
+
+  // Most likely a plain Object
+  return true;
+}
+
+exports.isPlainObject = isPlainObject;
 
 
 /***/ }),
