@@ -107,6 +107,13 @@ jobs:
 
 The action can be configured with the following optional [inputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepswith):
 
+### `add_author_as_assignee`
+
+Default: `false` (disabled)
+
+Controls whether to set the author of the original pull request as an assignee on the backport pull request.
+By default, the original author is not made an assignee.
+
 ### `branch_name`
 
 Default: `backport-${pull_number}-to-${target_branch}`
@@ -162,13 +169,6 @@ Default: `false` (disabled)
 Controls whether to copy the requested reviewers from the original pull request to the backport pull request.
 Note that this does not request reviews from those users who already reviewed the original pull request.
 By default, the requested reviewers are not copied.
-
-### `add_author_as_assignee`
-
-Default: `false` (disabled)
-
-Controls whether to set the author of the original pull request as an assignee on the backport pull request.
-By default, the original author is not made an assignee.
 
 ### `experimental`
 
