@@ -3,6 +3,10 @@ description: >
   Fast and flexible action to cherry-pick commits from labeled pull requests
 author: korthout
 inputs:
+  add_labels:
+    description: >
+      The action will add these labels (space-delimited) to the backport pull request.
+      By default, no labels are added.
   branch_name:
     description: >
       Template used as the name for branches created by this action. 
@@ -122,10 +126,6 @@ inputs:
       Note that the pull request's headref is excluded automatically.
       Can be used in addition to backport labels.
       By default, only backport labels are used to specify the target branches.
-  add_labels:
-    description: >
-      The action will add these labels (space-delimited) to the backport pull request.
-      By default, no labels are added.
 
 outputs:
   created_pull_numbers:
