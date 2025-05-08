@@ -25,7 +25,7 @@
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.11.1",
-    "@actions/github": "^6.0.0",
+    "@actions/github": "^6.0.1",
     "@types/dedent": "^0.7.2",
     "dedent": "^1.5.3",
     "execa": "^7.2.0"
