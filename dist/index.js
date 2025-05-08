@@ -33933,7 +33933,8 @@ function createDedent(options) {
   function dedent(strings, ...values) {
     const raw = typeof strings === "string" ? [strings] : strings.raw;
     const {
-      escapeSpecialCharacters = Array.isArray(strings)
+      escapeSpecialCharacters = Array.isArray(strings),
+      trimWhitespace = true
     } = options;
 
     // first, perform interpolation
@@ -33975,9 +33976,12 @@ function createDedent(options) {
     }
 
     // dedent eats leading and trailing whitespace too
-    result = result.trim();
+    if (trimWhitespace) {
+      result = result.trim();
+    }
+
+    // handle escaped newlines at the end to ensure they don't get stripped too
     if (escapeSpecialCharacters) {
-      // handle escaped newlines at the end to ensure they don't get stripped too
       result = result.replace(/\\n/g, "\n");
     }
     return result;
