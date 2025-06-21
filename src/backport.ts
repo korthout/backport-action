@@ -5,6 +5,7 @@ import {
   CreatePullRequestResponse,
   PullRequest,
   MergeStrategy,
+  RequestError,
 } from "./github";
 import { GithubApi } from "./github";
 import { Git, GitRefNotFoundError } from "./git";
@@ -360,22 +361,24 @@ export class Backport {
 
           console.info(`Create PR for ${branchname}`);
           const { title, body } = this.composePRContent(target, mainpr);
-          const new_pr_response = await this.github.createPR({
-            owner,
-            repo,
-            title,
-            body,
-            head: branchname,
-            base: target,
-            maintainer_can_modify: true,
-            draft: uncommitedShas !== null,
-          });
+          let new_pr_response: CreatePullRequestResponse;
+          try {
+            new_pr_response = await this.github.createPR({
+              owner,
+              repo,
+              title,
+              body,
+              head: branchname,
+              base: target,
+              maintainer_can_modify: true,
+              draft: uncommitedShas !== null,
+            });
+          } catch (error) {
+            if (!(error instanceof RequestError)) throw error;
 
-          if (new_pr_response.status != 201) {
-            console.error(JSON.stringify(new_pr_response));
+            console.error(JSON.stringify(error.response?.data));
             successByTarget.set(target, false);
-            const message =
-              this.composeMessageForCreatePRFailed(new_pr_response);
+            const message = this.composeMessageForCreatePRFailed(error);
             await this.github.createComment({
               owner: workflowOwner,
               repo: workflowRepo,
@@ -390,12 +393,11 @@ export class Backport {
             const milestone = mainpr.milestone?.number;
             if (milestone) {
               console.info("Setting milestone to " + milestone);
-              const set_milestone_response = await this.github.setMilestone(
-                new_pr.number,
-                milestone,
-              );
-              if (set_milestone_response.status != 200) {
-                console.error(JSON.stringify(set_milestone_response));
+              try {
+                await this.github.setMilestone(new_pr.number, milestone);
+              } catch (error) {
+                if (!(error instanceof RequestError)) throw error;
+                console.error(JSON.stringify(error.response));
               }
             }
           }
@@ -404,16 +406,14 @@ export class Backport {
             const assignees = mainpr.assignees.map((label) => label.login);
             if (assignees.length > 0) {
               console.info("Setting assignees " + assignees);
-              const add_assignee_response = await this.github.addAssignees(
-                new_pr.number,
-                assignees,
-                {
+              try {
+                await this.github.addAssignees(new_pr.number, assignees, {
                   owner,
                   repo,
-                },
-              );
-              if (add_assignee_response.status != 201) {
-                console.error(JSON.stringify(add_assignee_response));
+                });
+              } catch (error) {
+                if (!(error instanceof RequestError)) throw error;
+                console.error(JSON.stringify(error.response));
               }
             }
           }
@@ -430,10 +430,11 @@ export class Backport {
                 pull_number: new_pr.number,
                 reviewers: reviewers,
               };
-              const set_reviewers_response =
+              try {
                 await this.github.requestReviewers(reviewRequest);
-              if (set_reviewers_response.status != 201) {
-                console.error(JSON.stringify(set_reviewers_response));
+              } catch (error) {
+                if (!(error instanceof RequestError)) throw error;
+                console.error(JSON.stringify(error.response));
               }
             }
           }
@@ -443,16 +444,14 @@ export class Backport {
             ...new Set([...labelsToCopy, ...this.config.add_labels]),
           ];
           if (labels.length > 0) {
-            const label_response = await this.github.labelPR(
-              new_pr.number,
-              labels,
-              {
+            try {
+              await this.github.labelPR(new_pr.number, labels, {
                 owner,
                 repo,
-              },
-            );
-            if (label_response.status != 200) {
-              console.error(JSON.stringify(label_response));
+              });
+            } catch (error) {
+              if (!(error instanceof RequestError)) throw error;
+              console.error(JSON.stringify(error.response));
               // The PR was still created so let's still comment on the original.
             }
           }
@@ -460,16 +459,14 @@ export class Backport {
           if (this.config.add_author_as_assignee == true) {
             const author = mainpr.user.login;
             console.info("Setting " + author + " as assignee");
-            const add_assignee_response = await this.github.addAssignees(
-              new_pr.number,
-              [author],
-              {
+            try {
+              await this.github.addAssignees(new_pr.number, [author], {
                 owner,
                 repo,
-              },
-            );
-            if (add_assignee_response.status != 201) {
-              console.error(JSON.stringify(add_assignee_response));
+              });
+            } catch (error) {
+              if (!(error instanceof RequestError)) throw error;
+              console.error(JSON.stringify(error.response));
             }
           }
 
@@ -667,11 +664,9 @@ export class Backport {
     return dedent`Git push to origin failed for ${target} with exitcode ${exitcode}`;
   }
 
-  private composeMessageForCreatePRFailed(
-    response: CreatePullRequestResponse,
-  ): string {
+  private composeMessageForCreatePRFailed(error: RequestError): string {
     return dedent`Backport branch created but failed to create PR.
-                Request to create PR rejected with status ${response.status}.
+                Request to create PR rejected with status ${error.status}.
 
                 (see action log for full response)`;
   }
