@@ -376,6 +376,16 @@ export class Backport {
           } catch (error) {
             if (!(error instanceof RequestError)) throw error;
 
+            if (
+              error.status == 422 &&
+              (error.response?.data as any).errors.some((err: any) =>
+                err.message.startsWith("A pull request already exists for "),
+              )
+            ) {
+              console.info(`PR for ${branchname} already exists, skipping.`);
+              continue;
+            }
+
             console.error(JSON.stringify(error.response?.data));
             successByTarget.set(target, false);
             const message = this.composeMessageForCreatePRFailed(error);
