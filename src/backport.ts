@@ -344,19 +344,30 @@ export class Backport {
             this.config.pwd,
           );
           if (pushExitCode != 0) {
-            const message = this.composeMessageForGitPushFailure(
-              target,
-              pushExitCode,
-            );
-            console.error(message);
-            successByTarget.set(target, false);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: message,
-            });
-            continue;
+            try {
+              // If the branch already exists, ignore the error and keep going.
+              await this.git.fetch(
+                branchname,
+                this.config.pwd,
+                1,
+                this.getRemote(),
+              );
+            } catch {
+              // Fetching the branch failed as well, so report the original push error.
+              const message = this.composeMessageForGitPushFailure(
+                target,
+                pushExitCode,
+              );
+              console.error(message);
+              successByTarget.set(target, false);
+              await this.github.createComment({
+                owner: workflowOwner,
+                repo: workflowRepo,
+                issue_number: pull_number,
+                body: message,
+              });
+              continue;
+            }
           }
 
           console.info(`Create PR for ${branchname}`);
