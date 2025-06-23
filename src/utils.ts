@@ -57,7 +57,7 @@ const toRef = (url: string) => {
   const result = patterns.url.first.exec(url);
   if (!result) {
     console.error(
-      `Expected to transform url (${url}) to GitHub reference, but it did not match pattern'`,
+      `Expected to transform url (${url}) to GitHub reference, but it did not match pattern`,
     );
     return "";
   }
