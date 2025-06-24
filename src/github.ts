@@ -8,6 +8,7 @@
  */
 
 import * as github from "@actions/github";
+export { RequestError } from "@octokit/request-error";
 
 export interface GithubApi {
   getRepo(): Repo;
