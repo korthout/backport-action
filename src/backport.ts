@@ -346,12 +346,19 @@ export class Backport {
           if (pushExitCode != 0) {
             try {
               // If the branch already exists, ignore the error and keep going.
+              console.info(
+                `Branch ${branchname} may already exist, fetching it instead to recover previous run`,
+              );
               await this.git.fetch(
                 branchname,
                 this.config.pwd,
                 1,
                 this.getRemote(),
               );
+              console.info(
+                `Previous branch successfully recovered, retrying PR creation`,
+              );
+              // note that the recovered branch is not guaranteed to be up-to-date
             } catch {
               // Fetching the branch failed as well, so report the original push error.
               const message = this.composeMessageForGitPushFailure(
