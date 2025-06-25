@@ -1208,7 +1208,7 @@ const toRef = (url) => {
     // so this maps the urls to GitHub refs by matching again without the global flag
     const result = patterns.url.first.exec(url);
     if (!result) {
-        console.error(`Expected to transform url (${url}) to GitHub reference, but it did not match pattern'`);
+        console.error(`Expected to transform url (${url}) to GitHub reference, but it did not match pattern`);
         return "";
     }
     const [, org, repo, number] = result;
