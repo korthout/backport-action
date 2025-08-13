@@ -18,6 +18,8 @@ import dedent from "dedent";
 async function run(): Promise<void> {
   const token = core.getInput("github_token", { required: true });
   const pwd = core.getInput("github_workspace", { required: true });
+  const gitCommitterName = core.getInput("git_committer_name");
+  const gitCommitterEmail = core.getInput("git_committer_email");
   const pattern = core.getInput("label_pattern");
   const description = core.getInput("pull_description");
   const title = core.getInput("pull_title");
@@ -75,7 +77,7 @@ async function run(): Promise<void> {
   }
 
   const github = new Github(token);
-  const git = new Git(execa);
+  const git = new Git(execa, gitCommitterName, gitCommitterEmail);
   const config: Config = {
     pwd,
     source_labels_pattern: pattern === "" ? undefined : new RegExp(pattern),

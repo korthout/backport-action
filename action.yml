@@ -94,6 +94,12 @@ inputs:
   github_workspace:
     description: Working directory for the backport action.
     default: ${{ github.workspace }}
+  git_committer_name:
+    description: Git committer name.
+    default: 'github-actions[bot]'
+  git_committer_email:
+    description: Git committer email.
+    default: 'github-actions[bot]@users.noreply.github.com'
   label_pattern:
     description: >
       Regex pattern to match the backport labels on the merged pull request.

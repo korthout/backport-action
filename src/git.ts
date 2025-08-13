@@ -9,15 +9,19 @@ export class GitRefNotFoundError extends Error {
 }
 
 export class Git {
-  constructor(private execa: Execa) {}
+  constructor(
+    private execa: Execa,
+    private gitCommitterName: string,
+    private gitCommitterEmail: string,
+  ) {}
 
   private async git(command: string, args: string[], pwd: string) {
     console.log(`git ${command} ${args.join(" ")}`);
     const child = this.execa("git", [command, ...args], {
       cwd: pwd,
       env: {
-        GIT_COMMITTER_NAME: "github-actions[bot]",
-        GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com",
+        GIT_COMMITTER_NAME: this.gitCommitterName,
+        GIT_COMMITTER_EMAIL: this.gitCommitterEmail,
       },
       reject: false,
     });

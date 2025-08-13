@@ -600,16 +600,20 @@ class GitRefNotFoundError extends Error {
 exports.GitRefNotFoundError = GitRefNotFoundError;
 class Git {
     execa;
-    constructor(execa) {
+    gitCommitterName;
+    gitCommitterEmail;
+    constructor(execa, gitCommitterName, gitCommitterEmail) {
         this.execa = execa;
+        this.gitCommitterName = gitCommitterName;
+        this.gitCommitterEmail = gitCommitterEmail;
     }
     async git(command, args, pwd) {
         console.log(`git ${command} ${args.join(" ")}`);
         const child = this.execa("git", [command, ...args], {
             cwd: pwd,
             env: {
-                GIT_COMMITTER_NAME: "github-actions[bot]",
-                GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com",
+                GIT_COMMITTER_NAME: this.gitCommitterName,
+                GIT_COMMITTER_EMAIL: this.gitCommitterEmail,
             },
             reject: false,
         });
@@ -1081,6 +1085,8 @@ const dedent_1 = __importDefault(__nccwpck_require__(3924));
 async function run() {
     const token = core.getInput("github_token", { required: true });
     const pwd = core.getInput("github_workspace", { required: true });
+    const gitCommitterName = core.getInput("git_committer_name");
+    const gitCommitterEmail = core.getInput("git_committer_email");
     const pattern = core.getInput("label_pattern");
     const description = core.getInput("pull_description");
     const title = core.getInput("pull_title");
@@ -1130,7 +1136,7 @@ async function run() {
         }
     }
     const github = new github_1.Github(token);
-    const git = new git_1.Git(execa_1.execa);
+    const git = new git_1.Git(execa_1.execa, gitCommitterName, gitCommitterEmail);
     const config = {
         pwd,
         source_labels_pattern: pattern === "" ? undefined : new RegExp(pattern),
