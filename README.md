@@ -103,6 +103,34 @@ jobs:
 </p>
 </details>
 
+### Signing cherry-picked commit
+
+By default, github-actions user (`github-actions[bot]`) is used as a committer for the cherry-picked commit.
+If you wish to use your own user for this (and add GPG signature to the commit ) you can specify
+`git_committer_name` and `git_committer_email`:
+
+```yaml
+...
+- name: Import GPG key
+  id: import-gpg
+  uses: crazy-max/ghaction-import-gpg@v6.3.0 # Or any other action to set up GPG
+  with:
+    gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+    passphrase: ${{ secrets.GPG_PASSPHRASE }}
+    git_config_global: true
+    git_user_signingkey: true
+    git_commit_gpgsign: true
+- name: Create backport pull requests
+  uses: korthout/backport-action@v3
+  with:
+    git_committer_name: ${{ steps.import-gpg.outputs.name }}
+    git_committer_email: ${{ steps.import-gpg.outputs.email }}
+```
+
+> **Note**
+> Cherry-picked commit will still be shown as "Partially verified" (instead of "Unverified").
+> Despite cherry-picked commit being signed by committer (bot), there is no way to preserve the original (author's) signature.
+
 ## Inputs
 
 The action can be configured with the following optional [inputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepswith):
@@ -230,6 +258,18 @@ Either `GITHUB_TOKEN` or a repo-scoped [Personal Access Token](https://docs.gith
 Default: `${{ github.workspace }}`
 
 Working directory for the backport action.
+
+### `git_committer_name`
+
+Default: `github-actions[bot]`
+
+Name of the committer for the cherry-picked commit.
+
+### `git_committer_email`
+
+Default: `github-actions[bot]@users.noreply.github.com`
+
+Email of the committer for the cherry-picked commit.
 
 ### `label_pattern`
 
