@@ -103,6 +103,40 @@ jobs:
 </p>
 </details>
 
+### Signing cherry-picked commits
+
+By default, the committer of the cherry‑picked commits is the user `github-actions[bot]`.
+The original author remains the *author* of the commit; only the *committer* changes.
+By default, the cherry-picked commits are not signed.
+
+If you need the cherry‑picked commits to be signed (e.g. to satisfy a protected branch rule requiring signed commits) you can configure a signing identity.
+
+Below is a GPG example (pin the third‑party action by commit for supply‑chain security):
+
+```yaml
+...
+- name: Import GPG key
+  id: import-gpg
+  uses: crazy-max/ghaction-import-gpg@v6.3.0 # Or any other action to set up GPG
+  with:
+    gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+    passphrase: ${{ secrets.GPG_PASSPHRASE }}
+    git_config_global: true
+    git_user_signingkey: true
+    git_commit_gpgsign: true
+- name: Create backport pull requests
+  uses: korthout/backport-action@v3
+  with:
+    git_committer_name: ${{ steps.import-gpg.outputs.name }}
+    git_committer_email: ${{ steps.import-gpg.outputs.email }}
+```
+
+> **Note**
+> The cherry-picked commits will still be shown as "Partially verified" (instead of "Unverified") in the GitHub UI.
+> This is a limitation of GitHub and does not indicate a problem with the action itself.
+> Despite the cherry-picked commit being signed by the specified committer, there is no way to preserve the original (author's) signature.
+> However, the commit is cherry-picked with the [`-x`](https://git-scm.com/docs/git-cherry-pick#Documentation/git-cherry-pick.txt--x) flag ensuring that it references the original commit as an audit trail.
+
 ## Inputs
 
 The action can be configured with the following optional [inputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepswith):
@@ -230,6 +264,18 @@ Either `GITHUB_TOKEN` or a repo-scoped [Personal Access Token](https://docs.gith
 Default: `${{ github.workspace }}`
 
 Working directory for the backport action.
+
+### `git_committer_name`
+
+Default: `github-actions[bot]`
+
+Name of the committer for the cherry-picked commit.
+
+### `git_committer_email`
+
+Default: `github-actions[bot]@users.noreply.github.com`
+
+Email of the committer for the cherry-picked commit.
 
 ### `label_pattern`
 
