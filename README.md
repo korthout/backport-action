@@ -103,11 +103,15 @@ jobs:
 </p>
 </details>
 
-### Signing cherry-picked commit
+### Signing cherry-picked commits
 
-By default, github-actions user (`github-actions[bot]`) is used as a committer for the cherry-picked commit.
-If you wish to use your own user for this (and add GPG signature to the commit ) you can specify
-`git_committer_name` and `git_committer_email`:
+By default, the committer of the cherry‑picked commits is the user `github-actions[bot]`.
+The original author remains the *author* of the commit; only the *committer* changes.
+By default, the cherry-picked commits are not signed.
+
+If you need the cherry‑picked commits to be signed (e.g. to satisfy a protected branch rule requiring signed commits) you can configure a signing identity.
+
+Below is a GPG example (pin the third‑party action by commit for supply‑chain security):
 
 ```yaml
 ...
@@ -128,8 +132,10 @@ If you wish to use your own user for this (and add GPG signature to the commit )
 ```
 
 > **Note**
-> Cherry-picked commit will still be shown as "Partially verified" (instead of "Unverified").
-> Despite cherry-picked commit being signed by committer (bot), there is no way to preserve the original (author's) signature.
+> The cherry-picked commits will still be shown as "Partially verified" (instead of "Unverified") in the GitHub UI.
+> This is a limitation of GitHub and does not indicate a problem with the action itself.
+> Despite the cherry-picked commit being signed by the specified committer, there is no way to preserve the original (author's) signature.
+> However, the commit is cherry-picked with the [`-x`](https://git-scm.com/docs/git-cherry-pick#Documentation/git-cherry-pick.txt--x) flag ensuring that it references the original commit as an audit trail.
 
 ## Inputs
 
