@@ -95,10 +95,10 @@ inputs:
     description: Working directory for the backport action.
     default: ${{ github.workspace }}
   git_committer_name:
-    description: Git committer name.
+    description: Name of the committer for the cherry-picked commit.
     default: 'github-actions[bot]'
   git_committer_email:
-    description: Git committer email.
+    description: Email of the committer for the cherry-picked commit.
     default: 'github-actions[bot]@users.noreply.github.com'
   label_pattern:
     description: >
