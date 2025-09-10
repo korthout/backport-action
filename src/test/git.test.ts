@@ -41,7 +41,7 @@ describe("git.fetch", () => {
   describe("throws Error", () => {
     it("when failing with an unexpected non-zero exit code", async () => {
       response.exitCode = 1;
-      await expect(git.fetch("unknown", "", 1)).rejects.toThrowError(
+      await expect(git.fetch("unknown", "", 1)).rejects.toThrow(
         `'git fetch origin unknown' failed with exit code 1`,
       );
     });
@@ -53,9 +53,7 @@ describe("git.cherryPick", () => {
     describe("throws Error", () => {
       it("when failing with an unexpected non-zero exit code", async () => {
         response.exitCode = 1;
-        await expect(
-          git.cherryPick(["unknown"], `fail`, ""),
-        ).rejects.toThrowError(
+        await expect(git.cherryPick(["unknown"], `fail`, "")).rejects.toThrow(
           `'git cherry-pick -x unknown' failed with exit code 1`,
         );
       });
@@ -77,7 +75,7 @@ describe("git.cherryPick", () => {
         response.exitCode = 128;
         await expect(
           git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
-        ).rejects.toThrowError(
+        ).rejects.toThrow(
           `'git cherry-pick -x unknown' failed with exit code 128`,
         );
       });
@@ -87,7 +85,7 @@ describe("git.cherryPick", () => {
         responseCommit.exitCode = 1;
         await expect(
           git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
-        ).rejects.toThrowError(
+        ).rejects.toThrow(
           `'git cherry-pick -x unknown' failed with exit code 1`,
         );
       });
@@ -118,7 +116,7 @@ describe("git.findMergeCommits", () => {
   describe("throws Error", () => {
     it("when failing with an unpexected non-zero exit code", async () => {
       response.exitCode = 1;
-      await expect(git.findMergeCommits(["unknown"], "")).rejects.toThrowError(
+      await expect(git.findMergeCommits(["unknown"], "")).rejects.toThrow(
         `'git rev-list --merges unknown^..unknown' failed with exit code 1`,
       );
     });

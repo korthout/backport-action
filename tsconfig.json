@@ -13,5 +13,5 @@
   },
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Recommended",
-  "exclude": ["test/*"]
+  "exclude": ["src/**/*.test.ts", "jest.config.ts"]
 }
