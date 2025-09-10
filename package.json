@@ -27,11 +27,11 @@
     "node": ">=24.0.0 <25"
   },
   "dependencies": {
-    "@actions/core": "^1.11.1",
-    "@actions/github": "^6.0.1",
-    "@types/dedent": "^0.7.2",
-    "dedent": "^1.6.0",
-    "execa": "^7.2.0"
+    "@actions/core": "1.11.1",
+    "@actions/github": "6.0.1",
+    "@types/dedent": "0.7.2",
+    "dedent": "1.7.0",
+    "execa": "7.2.0"
   },
   "devDependencies": {
     "@types/jest": "30.0.0",
