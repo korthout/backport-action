@@ -53,6 +53,30 @@ inputs:
       Note that this does not request reviews from those users who already reviewed the original pull request.
       By default, the requested reviewers are not copied.
     default: false
+  enable_auto_merge:
+    description: >
+      Controls whether to enable auto-merge on the created backport pull request.
+      When enabled, the pull request will automatically merge when all required checks pass and approvals are received.
+      By default, auto-merge is not enabled.
+    default: false
+  auto_merge_enable_label:
+    description: >
+      Label name on the original pull request that force-enables auto-merge on backport PRs.
+      When this exact label is present, auto-merge will be enabled regardless of the enable_auto_merge default.
+      This allows users to opt-in to auto-merge for backport PRs on a per-PR basis.
+    default: backport-auto-merge
+  auto_merge_disable_label:
+    description: >
+      Label name on the original pull request that force-disables auto-merge on backport PRs.
+      When this exact label is present, auto-merge will be disabled regardless of the enable_auto_merge default.
+      Takes precedence over the enable label for safety. This allows users to opt-out of auto-merge for backport PRs.
+    default: backport-no-auto-merge
+  auto_merge_method:
+    description: >
+      The merge method to use when auto-merge is enabled on backport PRs.
+      Valid options are 'merge' (create a merge commit), 'squash' (squash and merge), or 'rebase' (rebase and merge).
+      Must match one of the merge methods enabled in the repository settings.
+    default: squash
   experimental:
     description: >
       Configure experimental features by passing a JSON object.

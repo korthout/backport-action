@@ -211,6 +211,44 @@ Controls whether to copy the requested reviewers from the original pull request 
 Note that this does not request reviews from those users who already reviewed the original pull request.
 By default, the requested reviewers are not copied.
 
+### `enable_auto_merge`
+
+Default: `false` (disabled)
+
+Controls the default auto-merge behavior for created backport pull requests.
+When enabled, backport pull requests will automatically merge when all required checks pass and approvals are received.
+This default behavior can be overridden on a per-PR basis using labels (see `auto_merge_enable_label` and `auto_merge_disable_label`).
+By default, auto-merge is not enabled.
+
+### `auto_merge_enable_label`
+
+Default: `backport-auto-merge`
+
+Label name on the original pull request that force-enables auto-merge on backport PRs.
+When this exact label is present on the source PR, auto-merge will be enabled on the backport PR regardless of the `enable_auto_merge` default setting.
+This allows users to opt-in to auto-merge for backport PRs on a per-PR basis even when the repository default is disabled.
+
+### `auto_merge_disable_label`
+
+Default: `backport-no-auto-merge`
+
+Label name on the original pull request that force-disables auto-merge on backport PRs.
+When this exact label is present on the source PR, auto-merge will be disabled on the backport PR regardless of the `enable_auto_merge` default setting.
+This label takes precedence over the enable label for safety, allowing users to opt-out even when auto-merge would otherwise be enabled.
+
+### `auto_merge_method`
+
+Default: `squash`
+
+The merge method to use when auto-merge is enabled on backport PRs.
+Valid options are:
+- `merge` - Create a merge commit (combines all commits with a merge commit)
+- `squash` - Squash and merge (combines all commits into a single commit)  
+- `rebase` - Rebase and merge (replays commits individually without a merge commit)
+
+**Important**: The specified method must be enabled in your repository's merge settings, otherwise auto-merge will fail.
+Most repositories have "squash" enabled by default, making it the safest choice.
+
 ### `experimental`
 
 Default:

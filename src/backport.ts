@@ -36,6 +36,10 @@ export type Config = {
   copy_assignees: boolean;
   copy_requested_reviewers: boolean;
   add_author_as_assignee: boolean;
+  enable_auto_merge: boolean;
+  auto_merge_enable_label?: string;
+  auto_merge_disable_label?: string;
+  auto_merge_method: "merge" | "squash" | "rebase";
   experimental: Experimental;
 };
 
@@ -498,6 +502,41 @@ export class Backport {
             }
           }
 
+          if (this.shouldEnableAutoMerge(mainpr)) {
+            console.info(
+              "Attempting to enable auto-merge for PR #" + new_pr.number,
+            );
+            try {
+              await this.github.enableAutoMerge(
+                new_pr.number,
+                {
+                  owner,
+                  repo,
+                },
+                this.config.auto_merge_method,
+              );
+              console.info(
+                "Successfully enabled auto-merge for PR #" + new_pr.number,
+              );
+            } catch (error) {
+              if (!(error instanceof RequestError)) throw error;
+
+              // Handle auto-merge failures gracefully
+              const errorMessage = this.getAutoMergeErrorMessage(
+                error,
+                this.config.auto_merge_method,
+              );
+              console.warn(
+                `Failed to enable auto-merge for PR #${new_pr.number}: ${errorMessage}`,
+              );
+              console.warn(
+                "The backport PR was created successfully, but auto-merge could not be enabled.",
+              );
+
+              // The PR was still created so let's still comment on the original.
+            }
+          }
+
           // post success message to original pr
           {
             const message =
@@ -746,6 +785,95 @@ export class Backport {
     const createdPullNumbersOutput = createdPullRequestNumbers.join(" ");
     core.setOutput(Output.created_pull_numbers, createdPullNumbersOutput);
   }
+
+  private shouldEnableAutoMerge(pullRequest: PullRequest): boolean {
+    return shouldEnableAutoMerge(
+      this.config,
+      pullRequest.labels.map((label) => label.name),
+    );
+  }
+
+  private getAutoMergeErrorMessage(
+    error: RequestError,
+    mergeMethod: string,
+  ): string {
+    const errorStr = JSON.stringify(error.response?.data) || error.message;
+
+    // Check for common auto-merge error scenarios
+    if (errorStr.includes("auto-merge") && errorStr.includes("not allowed")) {
+      return `Repository does not have "Allow auto-merge" enabled. Please enable it in repository Settings > General > Pull Requests.`;
+    }
+
+    if (
+      errorStr.includes("merge commits are not allowed") ||
+      errorStr.includes("Merge method merge commits are not allowed")
+    ) {
+      return `Repository does not allow merge commits. Try using 'auto_merge_method: squash' or 'auto_merge_method: rebase' instead.`;
+    }
+
+    if (errorStr.includes("squash") && errorStr.includes("not allowed")) {
+      return `Repository does not allow squash merging. Try using 'auto_merge_method: merge' or 'auto_merge_method: rebase' instead.`;
+    }
+
+    if (errorStr.includes("rebase") && errorStr.includes("not allowed")) {
+      return `Repository does not allow rebase merging. Try using 'auto_merge_method: merge' or 'auto_merge_method: squash' instead.`;
+    }
+
+    if (
+      errorStr.includes("not authorized") ||
+      errorStr.includes("insufficient permissions")
+    ) {
+      return `Insufficient permissions to enable auto-merge. Ensure the GitHub token has 'contents: write' and 'pull-requests: write' permissions.`;
+    }
+
+    if (errorStr.includes("protected branch")) {
+      return `Branch protection rules prevent auto-merge. Check if the bot/user has merge permissions on protected branches.`;
+    }
+
+    if (
+      errorStr.includes("Pull request is in clean status") ||
+      errorStr.includes("clean status")
+    ) {
+      return `PR can be merged immediately, so auto-merge is not needed. Auto-merge only works when there are pending requirements (like required status checks or reviews).`;
+    }
+
+    // Generic fallback with some context
+    return `Auto-merge method '${mergeMethod}' failed. Check repository merge settings and permissions. Error: ${error.message}`;
+  }
+}
+
+export function shouldEnableAutoMerge(
+  config: Pick<
+    Config,
+    "enable_auto_merge" | "auto_merge_enable_label" | "auto_merge_disable_label"
+  >,
+  labels: string[],
+): boolean {
+  let enableAutoMerge = config.enable_auto_merge;
+
+  // Check for enable label
+  if (
+    config.auto_merge_enable_label &&
+    labels.includes(config.auto_merge_enable_label)
+  ) {
+    enableAutoMerge = true;
+    console.info(
+      `Found auto-merge enable label '${config.auto_merge_enable_label}', enabling auto-merge`,
+    );
+  }
+
+  // Check for disable label (takes precedence)
+  if (
+    config.auto_merge_disable_label &&
+    labels.includes(config.auto_merge_disable_label)
+  ) {
+    enableAutoMerge = false;
+    console.info(
+      `Found auto-merge disable label '${config.auto_merge_disable_label}', disabling auto-merge`,
+    );
+  }
+
+  return enableAutoMerge;
 }
 
 export function findTargetBranches(
