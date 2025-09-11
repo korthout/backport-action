@@ -236,6 +236,19 @@ Label name on the original pull request that force-disables auto-merge on backpo
 When this exact label is present on the source PR, auto-merge will be disabled on the backport PR regardless of the `enable_auto_merge` default setting.
 This label takes precedence over the enable label for safety, allowing users to opt-out even when auto-merge would otherwise be enabled.
 
+### `auto_merge_method`
+
+Default: `squash`
+
+The merge method to use when auto-merge is enabled on backport PRs.
+Valid options are:
+- `merge` - Create a merge commit (combines all commits with a merge commit)
+- `squash` - Squash and merge (combines all commits into a single commit)  
+- `rebase` - Rebase and merge (replays commits individually without a merge commit)
+
+**Important**: The specified method must be enabled in your repository's merge settings, otherwise auto-merge will fail.
+Most repositories have "squash" enabled by default, making it the safest choice.
+
 ### `experimental`
 
 Default:

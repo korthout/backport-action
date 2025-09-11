@@ -39,6 +39,7 @@ export type Config = {
   enable_auto_merge: boolean;
   auto_merge_enable_label?: string;
   auto_merge_disable_label?: string;
+  auto_merge_method: "merge" | "squash" | "rebase";
   experimental: Experimental;
 };
 
@@ -507,7 +508,7 @@ export class Backport {
               await this.github.enableAutoMerge(new_pr.number, {
                 owner,
                 repo,
-              });
+              }, this.config.auto_merge_method);
             } catch (error) {
               if (!(error instanceof RequestError)) throw error;
               console.error(JSON.stringify(error.response));

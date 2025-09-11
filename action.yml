@@ -71,6 +71,12 @@ inputs:
       When this exact label is present, auto-merge will be disabled regardless of the enable_auto_merge default.
       Takes precedence over the enable label for safety. This allows users to opt-out of auto-merge for backport PRs.
     default: backport-no-auto-merge
+  auto_merge_method:
+    description: >
+      The merge method to use when auto-merge is enabled on backport PRs.
+      Valid options are 'merge' (create a merge commit), 'squash' (squash and merge), or 'rebase' (rebase and merge).
+      Must match one of the merge methods enabled in the repository settings.
+    default: squash
   experimental:
     description: >
       Configure experimental features by passing a JSON object.

@@ -31,7 +31,7 @@ export interface GithubApi {
     repo: Repo,
   ): Promise<GenericResponse>;
   setMilestone(pr: number, milestone: number): Promise<GenericResponse>;
-  enableAutoMerge(pr: number, repo: Repo): Promise<GenericResponse>;
+  enableAutoMerge(pr: number, repo: Repo, mergeMethod: "merge" | "squash" | "rebase"): Promise<GenericResponse>;
   mergeStrategy(
     pull: PullRequest,
     merge_commit_sha: string | null,
@@ -165,8 +165,12 @@ export class Github implements GithubApi {
   public async enableAutoMerge(
     pr: number,
     repo: Repo,
+    mergeMethod: "merge" | "squash" | "rebase",
   ): Promise<GenericResponse> {
-    console.log(`Enable auto-merge for PR #${pr}`);
+    console.log(`Enable auto-merge for PR #${pr} with method: ${mergeMethod}`);
+    
+    // Convert our merge method to GitHub GraphQL enum
+    const graphqlMergeMethod = this.convertMergeMethodToGraphQL(mergeMethod);
 
     const query = `
       query($owner: String!, $repo: String!, $number: Int!) {
@@ -201,10 +205,23 @@ export class Github implements GithubApi {
 
     await this.#octokit.graphql(mutation, {
       pullRequestId,
-      mergeMethod: "MERGE",
+      mergeMethod: graphqlMergeMethod,
     });
 
     return { status: 200 };
+  }
+
+  private convertMergeMethodToGraphQL(mergeMethod: "merge" | "squash" | "rebase"): string {
+    switch (mergeMethod) {
+      case "merge":
+        return "MERGE";
+      case "squash":
+        return "SQUASH";
+      case "rebase":
+        return "REBASE";
+      default:
+        return "SQUASH"; // Safe default
+    }
   }
 
   /**

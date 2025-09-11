@@ -36,6 +36,7 @@ async function run(): Promise<void> {
   const enable_auto_merge = core.getInput("enable_auto_merge");
   const auto_merge_enable_label = core.getInput("auto_merge_enable_label");
   const auto_merge_disable_label = core.getInput("auto_merge_disable_label");
+  const auto_merge_method = core.getInput("auto_merge_method");
   const experimental = JSON.parse(core.getInput("experimental"));
   const source_pr_number = core.getInput("source_pr_number");
 
@@ -48,6 +49,13 @@ async function run(): Promise<void> {
 
   if (merge_commits != "fail" && merge_commits != "skip") {
     const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
+    console.error(message);
+    core.setFailed(message);
+    return;
+  }
+
+  if (auto_merge_method !== "merge" && auto_merge_method !== "squash" && auto_merge_method !== "rebase") {
+    const message = `Expected input 'auto_merge_method' to be either 'merge', 'squash', or 'rebase', but was '${auto_merge_method}'`;
     console.error(message);
     core.setFailed(message);
     return;
@@ -99,6 +107,7 @@ async function run(): Promise<void> {
       auto_merge_enable_label === "" ? undefined : auto_merge_enable_label,
     auto_merge_disable_label:
       auto_merge_disable_label === "" ? undefined : auto_merge_disable_label,
+    auto_merge_method: auto_merge_method as "merge" | "squash" | "rebase",
     experimental: { ...experimentalDefaults, ...experimental },
     source_pr_number:
       source_pr_number === "" ? undefined : parseInt(source_pr_number),
