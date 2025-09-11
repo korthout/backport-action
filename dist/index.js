@@ -397,17 +397,21 @@ class Backport {
                         }
                     }
                     if (this.shouldEnableAutoMerge(mainpr)) {
-                        console.info("Enabling auto-merge for PR #" + new_pr.number);
+                        console.info("Attempting to enable auto-merge for PR #" + new_pr.number);
                         try {
                             await this.github.enableAutoMerge(new_pr.number, {
                                 owner,
                                 repo,
                             }, this.config.auto_merge_method);
+                            console.info("Successfully enabled auto-merge for PR #" + new_pr.number);
                         }
                         catch (error) {
                             if (!(error instanceof github_1.RequestError))
                                 throw error;
-                            console.error(JSON.stringify(error.response));
+                            // Handle auto-merge failures gracefully
+                            const errorMessage = this.getAutoMergeErrorMessage(error, this.config.auto_merge_method);
+                            console.warn(`Failed to enable auto-merge for PR #${new_pr.number}: ${errorMessage}`);
+                            console.warn("The backport PR was created successfully, but auto-merge could not be enabled.");
                             // The PR was still created so let's still comment on the original.
                         }
                     }
@@ -556,6 +560,36 @@ class Backport {
     }
     shouldEnableAutoMerge(pullRequest) {
         return shouldEnableAutoMerge(this.config, pullRequest.labels.map((label) => label.name));
+    }
+    getAutoMergeErrorMessage(error, mergeMethod) {
+        const errorStr = JSON.stringify(error.response?.data) || error.message;
+        // Check for common auto-merge error scenarios
+        if (errorStr.includes("auto-merge") && errorStr.includes("not allowed")) {
+            return `Repository does not have "Allow auto-merge" enabled. Please enable it in repository Settings > General > Pull Requests.`;
+        }
+        if (errorStr.includes("merge commits are not allowed") ||
+            errorStr.includes("Merge method merge commits are not allowed")) {
+            return `Repository does not allow merge commits. Try using 'auto_merge_method: squash' or 'auto_merge_method: rebase' instead.`;
+        }
+        if (errorStr.includes("squash") && errorStr.includes("not allowed")) {
+            return `Repository does not allow squash merging. Try using 'auto_merge_method: merge' or 'auto_merge_method: rebase' instead.`;
+        }
+        if (errorStr.includes("rebase") && errorStr.includes("not allowed")) {
+            return `Repository does not allow rebase merging. Try using 'auto_merge_method: merge' or 'auto_merge_method: squash' instead.`;
+        }
+        if (errorStr.includes("not authorized") ||
+            errorStr.includes("insufficient permissions")) {
+            return `Insufficient permissions to enable auto-merge. Ensure the GitHub token has 'contents: write' and 'pull-requests: write' permissions.`;
+        }
+        if (errorStr.includes("protected branch")) {
+            return `Branch protection rules prevent auto-merge. Check if the bot/user has merge permissions on protected branches.`;
+        }
+        if (errorStr.includes("Pull request is in clean status") ||
+            errorStr.includes("clean status")) {
+            return `PR can be merged immediately, so auto-merge is not needed. Auto-merge only works when there are pending requirements (like required status checks or reviews).`;
+        }
+        // Generic fallback with some context
+        return `Auto-merge method '${mergeMethod}' failed. Check repository merge settings and permissions. Error: ${error.message}`;
     }
 }
 exports.Backport = Backport;
@@ -1202,7 +1236,9 @@ async function run() {
         core.setFailed(message);
         return;
     }
-    if (auto_merge_method !== "merge" && auto_merge_method !== "squash" && auto_merge_method !== "rebase") {
+    if (auto_merge_method !== "merge" &&
+        auto_merge_method !== "squash" &&
+        auto_merge_method !== "rebase") {
         const message = `Expected input 'auto_merge_method' to be either 'merge', 'squash', or 'rebase', but was '${auto_merge_method}'`;
         console.error(message);
         core.setFailed(message);

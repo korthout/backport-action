@@ -31,7 +31,11 @@ export interface GithubApi {
     repo: Repo,
   ): Promise<GenericResponse>;
   setMilestone(pr: number, milestone: number): Promise<GenericResponse>;
-  enableAutoMerge(pr: number, repo: Repo, mergeMethod: "merge" | "squash" | "rebase"): Promise<GenericResponse>;
+  enableAutoMerge(
+    pr: number,
+    repo: Repo,
+    mergeMethod: "merge" | "squash" | "rebase",
+  ): Promise<GenericResponse>;
   mergeStrategy(
     pull: PullRequest,
     merge_commit_sha: string | null,
@@ -168,7 +172,7 @@ export class Github implements GithubApi {
     mergeMethod: "merge" | "squash" | "rebase",
   ): Promise<GenericResponse> {
     console.log(`Enable auto-merge for PR #${pr} with method: ${mergeMethod}`);
-    
+
     // Convert our merge method to GitHub GraphQL enum
     const graphqlMergeMethod = this.convertMergeMethodToGraphQL(mergeMethod);
 
@@ -211,7 +215,9 @@ export class Github implements GithubApi {
     return { status: 200 };
   }
 
-  private convertMergeMethodToGraphQL(mergeMethod: "merge" | "squash" | "rebase"): string {
+  private convertMergeMethodToGraphQL(
+    mergeMethod: "merge" | "squash" | "rebase",
+  ): string {
     switch (mergeMethod) {
       case "merge":
         return "MERGE";

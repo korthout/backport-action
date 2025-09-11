@@ -54,7 +54,11 @@ async function run(): Promise<void> {
     return;
   }
 
-  if (auto_merge_method !== "merge" && auto_merge_method !== "squash" && auto_merge_method !== "rebase") {
+  if (
+    auto_merge_method !== "merge" &&
+    auto_merge_method !== "squash" &&
+    auto_merge_method !== "rebase"
+  ) {
     const message = `Expected input 'auto_merge_method' to be either 'merge', 'squash', or 'rebase', but was '${auto_merge_method}'`;
     console.error(message);
     core.setFailed(message);
