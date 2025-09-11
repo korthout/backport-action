@@ -37,6 +37,8 @@ export type Config = {
   copy_requested_reviewers: boolean;
   add_author_as_assignee: boolean;
   enable_auto_merge: boolean;
+  auto_merge_enable_label?: string;
+  auto_merge_disable_label?: string;
   experimental: Experimental;
 };
 
@@ -499,7 +501,7 @@ export class Backport {
             }
           }
 
-          if (this.config.enable_auto_merge == true) {
+          if (this.shouldEnableAutoMerge(mainpr)) {
             console.info("Enabling auto-merge for PR #" + new_pr.number);
             try {
               await this.github.enableAutoMerge(new_pr.number, {
@@ -761,6 +763,47 @@ export class Backport {
     const createdPullNumbersOutput = createdPullRequestNumbers.join(" ");
     core.setOutput(Output.created_pull_numbers, createdPullNumbersOutput);
   }
+
+  private shouldEnableAutoMerge(pullRequest: PullRequest): boolean {
+    return shouldEnableAutoMerge(
+      this.config,
+      pullRequest.labels.map((label) => label.name),
+    );
+  }
+}
+
+export function shouldEnableAutoMerge(
+  config: Pick<
+    Config,
+    "enable_auto_merge" | "auto_merge_enable_label" | "auto_merge_disable_label"
+  >,
+  labels: string[],
+): boolean {
+  let enableAutoMerge = config.enable_auto_merge;
+
+  // Check for enable label
+  if (
+    config.auto_merge_enable_label &&
+    labels.includes(config.auto_merge_enable_label)
+  ) {
+    enableAutoMerge = true;
+    console.info(
+      `Found auto-merge enable label '${config.auto_merge_enable_label}', enabling auto-merge`,
+    );
+  }
+
+  // Check for disable label (takes precedence)
+  if (
+    config.auto_merge_disable_label &&
+    labels.includes(config.auto_merge_disable_label)
+  ) {
+    enableAutoMerge = false;
+    console.info(
+      `Found auto-merge disable label '${config.auto_merge_disable_label}', disabling auto-merge`,
+    );
+  }
+
+  return enableAutoMerge;
 }
 
 export function findTargetBranches(

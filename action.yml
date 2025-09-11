@@ -59,6 +59,18 @@ inputs:
       When enabled, the pull request will automatically merge when all required checks pass and approvals are received.
       By default, auto-merge is not enabled.
     default: false
+  auto_merge_enable_label:
+    description: >
+      Label name on the original pull request that force-enables auto-merge on backport PRs.
+      When this exact label is present, auto-merge will be enabled regardless of the enable_auto_merge default.
+      This allows users to opt-in to auto-merge for backport PRs on a per-PR basis.
+    default: backport-auto-merge
+  auto_merge_disable_label:
+    description: >
+      Label name on the original pull request that force-disables auto-merge on backport PRs.
+      When this exact label is present, auto-merge will be disabled regardless of the enable_auto_merge default.
+      Takes precedence over the enable label for safety. This allows users to opt-out of auto-merge for backport PRs.
+    default: backport-no-auto-merge
   experimental:
     description: >
       Configure experimental features by passing a JSON object.

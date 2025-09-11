@@ -215,9 +215,26 @@ By default, the requested reviewers are not copied.
 
 Default: `false` (disabled)
 
-Controls whether to enable auto-merge on the created backport pull request.
-When enabled, the pull request will automatically merge when all required checks pass and approvals are received.
+Controls the default auto-merge behavior for created backport pull requests.
+When enabled, backport pull requests will automatically merge when all required checks pass and approvals are received.
+This default behavior can be overridden on a per-PR basis using labels (see `auto_merge_enable_label` and `auto_merge_disable_label`).
 By default, auto-merge is not enabled.
+
+### `auto_merge_enable_label`
+
+Default: `backport-auto-merge`
+
+Label name on the original pull request that force-enables auto-merge on backport PRs.
+When this exact label is present on the source PR, auto-merge will be enabled on the backport PR regardless of the `enable_auto_merge` default setting.
+This allows users to opt-in to auto-merge for backport PRs on a per-PR basis even when the repository default is disabled.
+
+### `auto_merge_disable_label`
+
+Default: `backport-no-auto-merge`
+
+Label name on the original pull request that force-disables auto-merge on backport PRs.
+When this exact label is present on the source PR, auto-merge will be disabled on the backport PR regardless of the `enable_auto_merge` default setting.
+This label takes precedence over the enable label for safety, allowing users to opt-out even when auto-merge would otherwise be enabled.
 
 ### `experimental`
 
