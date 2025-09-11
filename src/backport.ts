@@ -36,6 +36,7 @@ export type Config = {
   copy_assignees: boolean;
   copy_requested_reviewers: boolean;
   add_author_as_assignee: boolean;
+  enable_auto_merge: boolean;
   experimental: Experimental;
 };
 
@@ -495,6 +496,20 @@ export class Backport {
             } catch (error) {
               if (!(error instanceof RequestError)) throw error;
               console.error(JSON.stringify(error.response));
+            }
+          }
+
+          if (this.config.enable_auto_merge == true) {
+            console.info("Enabling auto-merge for PR #" + new_pr.number);
+            try {
+              await this.github.enableAutoMerge(new_pr.number, {
+                owner,
+                repo,
+              });
+            } catch (error) {
+              if (!(error instanceof RequestError)) throw error;
+              console.error(JSON.stringify(error.response));
+              // The PR was still created so let's still comment on the original.
             }
           }
 

@@ -31,6 +31,7 @@ export interface GithubApi {
     repo: Repo,
   ): Promise<GenericResponse>;
   setMilestone(pr: number, milestone: number): Promise<GenericResponse>;
+  enableAutoMerge(pr: number, repo: Repo): Promise<GenericResponse>;
   mergeStrategy(
     pull: PullRequest,
     merge_commit_sha: string | null,
@@ -159,6 +160,51 @@ export class Github implements GithubApi {
       issue_number: pr,
       milestone: milestone,
     });
+  }
+
+  public async enableAutoMerge(
+    pr: number,
+    repo: Repo,
+  ): Promise<GenericResponse> {
+    console.log(`Enable auto-merge for PR #${pr}`);
+
+    const query = `
+      query($owner: String!, $repo: String!, $number: Int!) {
+        repository(owner: $owner, name: $repo) {
+          pullRequest(number: $number) {
+            id
+          }
+        }
+      }
+    `;
+
+    const { repository } = (await this.#octokit.graphql(query, {
+      owner: repo.owner,
+      repo: repo.repo,
+      number: pr,
+    })) as any;
+
+    const pullRequestId = repository.pullRequest.id;
+
+    const mutation = `
+      mutation($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod) {
+        enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: $mergeMethod}) {
+          pullRequest {
+            autoMergeRequest {
+              enabledAt
+              mergeMethod
+            }
+          }
+        }
+      }
+    `;
+
+    await this.#octokit.graphql(mutation, {
+      pullRequestId,
+      mergeMethod: "MERGE",
+    });
+
+    return { status: 200 };
   }
 
   /**

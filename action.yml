@@ -53,6 +53,12 @@ inputs:
       Note that this does not request reviews from those users who already reviewed the original pull request.
       By default, the requested reviewers are not copied.
     default: false
+  enable_auto_merge:
+    description: >
+      Controls whether to enable auto-merge on the created backport pull request.
+      When enabled, the pull request will automatically merge when all required checks pass and approvals are received.
+      By default, auto-merge is not enabled.
+    default: false
   experimental:
     description: >
       Configure experimental features by passing a JSON object.

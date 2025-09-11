@@ -33,6 +33,7 @@ async function run(): Promise<void> {
   const copy_milestone = core.getInput("copy_milestone");
   const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
   const add_author_as_assignee = core.getInput("add_author_as_assignee");
+  const enable_auto_merge = core.getInput("enable_auto_merge");
   const experimental = JSON.parse(core.getInput("experimental"));
   const source_pr_number = core.getInput("source_pr_number");
 
@@ -91,6 +92,7 @@ async function run(): Promise<void> {
     copy_milestone: copy_milestone === "true",
     copy_requested_reviewers: copy_requested_reviewers === "true",
     add_author_as_assignee: add_author_as_assignee === "true",
+    enable_auto_merge: enable_auto_merge === "true",
     experimental: { ...experimentalDefaults, ...experimental },
     source_pr_number:
       source_pr_number === "" ? undefined : parseInt(source_pr_number),

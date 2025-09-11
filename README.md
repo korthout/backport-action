@@ -211,6 +211,14 @@ Controls whether to copy the requested reviewers from the original pull request 
 Note that this does not request reviews from those users who already reviewed the original pull request.
 By default, the requested reviewers are not copied.
 
+### `enable_auto_merge`
+
+Default: `false` (disabled)
+
+Controls whether to enable auto-merge on the created backport pull request.
+When enabled, the pull request will automatically merge when all required checks pass and approvals are received.
+By default, auto-merge is not enabled.
+
 ### `experimental`
 
 Default:
