@@ -44,7 +44,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Backport = exports.deprecatedExperimental = exports.experimentalDefaults = void 0;
-exports.shouldEnableAutoMerge = shouldEnableAutoMerge;
 exports.findTargetBranches = findTargetBranches;
 const core = __importStar(__nccwpck_require__(7484));
 const dedent_1 = __importDefault(__nccwpck_require__(3924));
@@ -559,7 +558,7 @@ class Backport {
         core.setOutput(Output.created_pull_numbers, createdPullNumbersOutput);
     }
     shouldEnableAutoMerge(pullRequest) {
-        return shouldEnableAutoMerge(this.config, pullRequest.labels.map((label) => label.name));
+        return this.config.enable_auto_merge;
     }
     getAutoMergeErrorMessage(error, mergeMethod) {
         const errorStr = JSON.stringify(error.response?.data) || error.message;
@@ -593,22 +592,6 @@ class Backport {
     }
 }
 exports.Backport = Backport;
-function shouldEnableAutoMerge(config, labels) {
-    let enableAutoMerge = config.enable_auto_merge;
-    // Check for enable label
-    if (config.auto_merge_enable_label &&
-        labels.includes(config.auto_merge_enable_label)) {
-        enableAutoMerge = true;
-        console.info(`Found auto-merge enable label '${config.auto_merge_enable_label}', enabling auto-merge`);
-    }
-    // Check for disable label (takes precedence)
-    if (config.auto_merge_disable_label &&
-        labels.includes(config.auto_merge_disable_label)) {
-        enableAutoMerge = false;
-        console.info(`Found auto-merge disable label '${config.auto_merge_disable_label}', disabling auto-merge`);
-    }
-    return enableAutoMerge;
-}
 function findTargetBranches(config, labels, headref) {
     console.log("Determining target branches...");
     console.log(`Detected labels on PR: ${labels}`);
@@ -960,7 +943,12 @@ class Github {
     async enableAutoMerge(pr, repo, mergeMethod) {
         console.log(`Enable auto-merge for PR #${pr} with method: ${mergeMethod}`);
         // Convert our merge method to GitHub GraphQL enum
-        const graphqlMergeMethod = this.convertMergeMethodToGraphQL(mergeMethod);
+        const mergeMethodMap = {
+            merge: "MERGE",
+            squash: "SQUASH",
+            rebase: "REBASE",
+        };
+        const graphqlMergeMethod = mergeMethodMap[mergeMethod] ?? "MERGE";
         const query = `
       query($owner: String!, $repo: String!, $number: Int!) {
         repository(owner: $owner, name: $repo) {
@@ -993,18 +981,6 @@ class Github {
             mergeMethod: graphqlMergeMethod,
         });
         return { status: 200 };
-    }
-    convertMergeMethodToGraphQL(mergeMethod) {
-        switch (mergeMethod) {
-            case "merge":
-                return "MERGE";
-            case "squash":
-                return "SQUASH";
-            case "rebase":
-                return "REBASE";
-            default:
-                return "SQUASH"; // Safe default
-        }
     }
     /**
      * Retrieves the SHA of the merge commit for a given pull request.
@@ -1219,8 +1195,6 @@ async function run() {
     const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
     const add_author_as_assignee = core.getInput("add_author_as_assignee");
     const enable_auto_merge = core.getInput("enable_auto_merge");
-    const auto_merge_enable_label = core.getInput("auto_merge_enable_label");
-    const auto_merge_disable_label = core.getInput("auto_merge_disable_label");
     const auto_merge_method = core.getInput("auto_merge_method");
     const experimental = JSON.parse(core.getInput("experimental"));
     const source_pr_number = core.getInput("source_pr_number");
@@ -1280,8 +1254,6 @@ async function run() {
         copy_requested_reviewers: copy_requested_reviewers === "true",
         add_author_as_assignee: add_author_as_assignee === "true",
         enable_auto_merge: enable_auto_merge === "true",
-        auto_merge_enable_label: auto_merge_enable_label === "" ? undefined : auto_merge_enable_label,
-        auto_merge_disable_label: auto_merge_disable_label === "" ? undefined : auto_merge_disable_label,
         auto_merge_method: auto_merge_method,
         experimental: { ...backport_1.experimentalDefaults, ...experimental },
         source_pr_number: source_pr_number === "" ? undefined : parseInt(source_pr_number),

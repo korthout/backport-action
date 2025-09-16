@@ -57,26 +57,19 @@ inputs:
     description: >
       Controls whether to enable auto-merge on the created backport pull request.
       When enabled, the pull request will automatically merge when all required checks pass and approvals are received.
+      Can be set to a simple boolean (true/false) or controlled dynamically via workflow expressions. Examples:
+      Simple boolean: enable_auto_merge: true
+      Opt-in with label: enable_auto_merge: ${{ contains(github.event.pull_request.labels.*.name, 'backport-auto-merge') }}
+      Opt-out with label: enable_auto_merge: ${{ !contains(github.event.pull_request.labels.*.name, 'backport-no-auto-merge') }}
       By default, auto-merge is not enabled.
     default: false
-  auto_merge_enable_label:
-    description: >
-      Label name on the original pull request that force-enables auto-merge on backport PRs.
-      When this exact label is present, auto-merge will be enabled regardless of the enable_auto_merge default.
-      This allows users to opt-in to auto-merge for backport PRs on a per-PR basis.
-    default: backport-auto-merge
-  auto_merge_disable_label:
-    description: >
-      Label name on the original pull request that force-disables auto-merge on backport PRs.
-      When this exact label is present, auto-merge will be disabled regardless of the enable_auto_merge default.
-      Takes precedence over the enable label for safety. This allows users to opt-out of auto-merge for backport PRs.
-    default: backport-no-auto-merge
   auto_merge_method:
     description: >
       The merge method to use when auto-merge is enabled on backport PRs.
       Valid options are 'merge' (create a merge commit), 'squash' (squash and merge), or 'rebase' (rebase and merge).
-      Must match one of the merge methods enabled in the repository settings.
-    default: squash
+      The specified method must be enabled in your repository's merge settings, otherwise auto-merge will fail.
+      The merge commit method is GitHub's default merge method.
+    default: merge
   experimental:
     description: >
       Configure experimental features by passing a JSON object.

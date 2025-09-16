@@ -174,7 +174,12 @@ export class Github implements GithubApi {
     console.log(`Enable auto-merge for PR #${pr} with method: ${mergeMethod}`);
 
     // Convert our merge method to GitHub GraphQL enum
-    const graphqlMergeMethod = this.convertMergeMethodToGraphQL(mergeMethod);
+    const mergeMethodMap = {
+      merge: "MERGE",
+      squash: "SQUASH",
+      rebase: "REBASE",
+    } as const;
+    const graphqlMergeMethod = mergeMethodMap[mergeMethod] ?? "MERGE";
 
     const query = `
       query($owner: String!, $repo: String!, $number: Int!) {
@@ -213,21 +218,6 @@ export class Github implements GithubApi {
     });
 
     return { status: 200 };
-  }
-
-  private convertMergeMethodToGraphQL(
-    mergeMethod: "merge" | "squash" | "rebase",
-  ): string {
-    switch (mergeMethod) {
-      case "merge":
-        return "MERGE";
-      case "squash":
-        return "SQUASH";
-      case "rebase":
-        return "REBASE";
-      default:
-        return "SQUASH"; // Safe default
-    }
   }
 
   /**
