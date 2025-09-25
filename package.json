@@ -31,7 +31,7 @@
     "@actions/github": "6.0.1",
     "@types/dedent": "0.7.2",
     "dedent": "1.7.0",
-    "execa": "7.2.0"
+    "execa": "9.6.0"
   },
   "devDependencies": {
     "@types/jest": "30.0.0",
