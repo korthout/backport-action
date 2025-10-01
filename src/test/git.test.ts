@@ -1,25 +1,25 @@
 import { Git, GitRefNotFoundError } from "../git";
-import { execa } from "execa";
 
 const git = new Git(
-  execa,
   "github-actions[bot]",
   "github-actions[bot]@users.noreply.github.com",
 );
 let response = { exitCode: 0, stdout: "" };
 let responseCommit = { exitCode: 0, stdout: "" };
 
-jest.mock("execa", () => ({
-  execa: jest.fn((command: string, args?: readonly string[] | undefined) => {
-    if (command === "git" && args) {
-      const subCommand = args[0];
-      if (subCommand === "commit") {
-        // Mock behavior for "git commit"
-        return responseCommit;
+jest.mock("@actions/exec", () => ({
+  getExecOutput: jest.fn(
+    (command: string, args?: readonly string[] | undefined) => {
+      if (command === "git" && args) {
+        const subCommand = args[0];
+        if (subCommand === "commit") {
+          // Mock behavior for "git commit"
+          return responseCommit;
+        }
       }
-    }
-    return response;
-  }),
+      return response;
+    },
+  ),
 }));
 
 describe("git.fetch", () => {
