@@ -395,7 +395,7 @@ class Backport {
                             console.error(JSON.stringify(error.response));
                         }
                     }
-                    if (this.shouldEnableAutoMerge(mainpr)) {
+                    if (this.config.auto_merge_enabled === true) {
                         console.info("Attempting to enable auto-merge for PR #" + new_pr.number);
                         try {
                             await this.github.enableAutoMerge(new_pr.number, {
@@ -556,9 +556,6 @@ class Backport {
         core.setOutput(Output.wasSuccessfulByTarget, byTargetOutput);
         const createdPullNumbersOutput = createdPullRequestNumbers.join(" ");
         core.setOutput(Output.created_pull_numbers, createdPullNumbersOutput);
-    }
-    shouldEnableAutoMerge(pullRequest) {
-        return this.config.auto_merge_enabled;
     }
     getAutoMergeErrorMessage(error, mergeMethod) {
         const errorStr = JSON.stringify(error.response?.data) || error.message;
