@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
 
 jobs:
   build:
@@ -26,29 +26,3 @@ jobs:
         run: npm run test-verbose
         env:
           CI: true
-      - name: Prepare post-merge steps
-        if: >
-          github.event.action == 'closed' &&
-          github.event.pull_request.merged
-        run: git checkout ${{ github.event.pull_request.base.ref }}
-      - name: Publish artifacts
-        if: >
-          github.event.action == 'closed' &&
-          github.event.pull_request.merged
-        uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9
-        with:
-          commit: --signoff
-          default_author: user_info
-          fetch: false
-          message: 'dist: build new artifacts'
-          push: true
-      - name: Create and move next-preview tag
-        if: >
-          github.event.action == 'closed' &&
-          github.event.pull_request.merged && (
-            github.event.pull_request.base.ref == 'main' ||
-            startsWith(github.event.pull_request.base.ref, 'release')
-          )
-        run: |
-          git tag v3.next-preview --force
-          git push origin v3.next-preview --force
