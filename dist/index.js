@@ -395,6 +395,25 @@ class Backport {
                             console.error(JSON.stringify(error.response));
                         }
                     }
+                    if (this.shouldEnableAutoMerge(mainpr)) {
+                        console.info("Attempting to enable auto-merge for PR #" + new_pr.number);
+                        try {
+                            await this.github.enableAutoMerge(new_pr.number, {
+                                owner,
+                                repo,
+                            }, this.config.auto_merge_method);
+                            console.info("Successfully enabled auto-merge for PR #" + new_pr.number);
+                        }
+                        catch (error) {
+                            if (!(error instanceof github_1.RequestError))
+                                throw error;
+                            // Handle auto-merge failures gracefully
+                            const errorMessage = this.getAutoMergeErrorMessage(error, this.config.auto_merge_method);
+                            console.warn(`Failed to enable auto-merge for PR #${new_pr.number}: ${errorMessage}`);
+                            console.warn("The backport PR was created successfully, but auto-merge could not be enabled.");
+                            // The PR was still created so let's still comment on the original.
+                        }
+                    }
                     // post success message to original pr
                     {
                         const message = uncommitedShas !== null
@@ -537,6 +556,39 @@ class Backport {
         core.setOutput(Output.wasSuccessfulByTarget, byTargetOutput);
         const createdPullNumbersOutput = createdPullRequestNumbers.join(" ");
         core.setOutput(Output.created_pull_numbers, createdPullNumbersOutput);
+    }
+    shouldEnableAutoMerge(pullRequest) {
+        return this.config.auto_merge_enabled;
+    }
+    getAutoMergeErrorMessage(error, mergeMethod) {
+        const errorStr = JSON.stringify(error.response?.data) || error.message;
+        // Check for common auto-merge error scenarios
+        if (errorStr.includes("auto-merge") && errorStr.includes("not allowed")) {
+            return `Repository does not have "Allow auto-merge" enabled. Please enable it in repository Settings > General > Pull Requests.`;
+        }
+        if (errorStr.includes("merge commits are not allowed") ||
+            errorStr.includes("Merge method merge commits are not allowed")) {
+            return `Repository does not allow merge commits. Try using 'auto_merge_method: squash' or 'auto_merge_method: rebase' instead.`;
+        }
+        if (errorStr.includes("squash") && errorStr.includes("not allowed")) {
+            return `Repository does not allow squash merging. Try using 'auto_merge_method: merge' or 'auto_merge_method: rebase' instead.`;
+        }
+        if (errorStr.includes("rebase") && errorStr.includes("not allowed")) {
+            return `Repository does not allow rebase merging. Try using 'auto_merge_method: merge' or 'auto_merge_method: squash' instead.`;
+        }
+        if (errorStr.includes("not authorized") ||
+            errorStr.includes("insufficient permissions")) {
+            return `Insufficient permissions to enable auto-merge. Ensure the GitHub token has 'contents: write' and 'pull-requests: write' permissions.`;
+        }
+        if (errorStr.includes("protected branch")) {
+            return `Branch protection rules prevent auto-merge. Check if the bot/user has merge permissions on protected branches.`;
+        }
+        if (errorStr.includes("Pull request is in clean status") ||
+            errorStr.includes("clean status")) {
+            return `PR can be merged immediately, so auto-merge is not needed. Auto-merge only works when there are pending requirements (like required status checks or reviews).`;
+        }
+        // Generic fallback with some context
+        return `Auto-merge method '${mergeMethod}' failed. Check repository merge settings and permissions. Error: ${error.message}`;
     }
 }
 exports.Backport = Backport;
@@ -888,6 +940,48 @@ class Github {
             milestone: milestone,
         });
     }
+    async enableAutoMerge(pr, repo, mergeMethod) {
+        console.log(`Enable auto-merge for PR #${pr} with method: ${mergeMethod}`);
+        // Convert our merge method to GitHub GraphQL enum
+        const mergeMethodMap = {
+            merge: "MERGE",
+            squash: "SQUASH",
+            rebase: "REBASE",
+        };
+        const graphqlMergeMethod = mergeMethodMap[mergeMethod] ?? "MERGE";
+        const query = `
+      query($owner: String!, $repo: String!, $number: Int!) {
+        repository(owner: $owner, name: $repo) {
+          pullRequest(number: $number) {
+            id
+          }
+        }
+      }
+    `;
+        const { repository } = (await this.#octokit.graphql(query, {
+            owner: repo.owner,
+            repo: repo.repo,
+            number: pr,
+        }));
+        const pullRequestId = repository.pullRequest.id;
+        const mutation = `
+      mutation($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod) {
+        enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: $mergeMethod}) {
+          pullRequest {
+            autoMergeRequest {
+              enabledAt
+              mergeMethod
+            }
+          }
+        }
+      }
+    `;
+        await this.#octokit.graphql(mutation, {
+            pullRequestId,
+            mergeMethod: graphqlMergeMethod,
+        });
+        return { status: 200 };
+    }
     /**
      * Retrieves the SHA of the merge commit for a given pull request.
      *
@@ -1100,6 +1194,8 @@ async function run() {
     const copy_milestone = core.getInput("copy_milestone");
     const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
     const add_author_as_assignee = core.getInput("add_author_as_assignee");
+    const auto_merge_enabled = core.getInput("auto_merge_enabled");
+    const auto_merge_method = core.getInput("auto_merge_method");
     const experimental = JSON.parse(core.getInput("experimental"));
     const source_pr_number = core.getInput("source_pr_number");
     if (cherry_picking !== "auto" && cherry_picking !== "pull_request_head") {
@@ -1110,6 +1206,14 @@ async function run() {
     }
     if (merge_commits != "fail" && merge_commits != "skip") {
         const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
+        console.error(message);
+        core.setFailed(message);
+        return;
+    }
+    if (auto_merge_method !== "merge" &&
+        auto_merge_method !== "squash" &&
+        auto_merge_method !== "rebase") {
+        const message = `Expected input 'auto_merge_method' to be either 'merge', 'squash', or 'rebase', but was '${auto_merge_method}'`;
         console.error(message);
         core.setFailed(message);
         return;
@@ -1149,6 +1253,8 @@ async function run() {
         copy_milestone: copy_milestone === "true",
         copy_requested_reviewers: copy_requested_reviewers === "true",
         add_author_as_assignee: add_author_as_assignee === "true",
+        auto_merge_enabled: auto_merge_enabled === "true",
+        auto_merge_method: auto_merge_method,
         experimental: { ...backport_1.experimentalDefaults, ...experimental },
         source_pr_number: source_pr_number === "" ? undefined : parseInt(source_pr_number),
     };

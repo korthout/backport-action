@@ -33,6 +33,8 @@ async function run(): Promise<void> {
   const copy_milestone = core.getInput("copy_milestone");
   const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
   const add_author_as_assignee = core.getInput("add_author_as_assignee");
+  const auto_merge_enabled = core.getInput("auto_merge_enabled");
+  const auto_merge_method = core.getInput("auto_merge_method");
   const experimental = JSON.parse(core.getInput("experimental"));
   const source_pr_number = core.getInput("source_pr_number");
 
@@ -45,6 +47,17 @@ async function run(): Promise<void> {
 
   if (merge_commits != "fail" && merge_commits != "skip") {
     const message = `Expected input 'merge_commits' to be either 'fail' or 'skip', but was '${merge_commits}'`;
+    console.error(message);
+    core.setFailed(message);
+    return;
+  }
+
+  if (
+    auto_merge_method !== "merge" &&
+    auto_merge_method !== "squash" &&
+    auto_merge_method !== "rebase"
+  ) {
+    const message = `Expected input 'auto_merge_method' to be either 'merge', 'squash', or 'rebase', but was '${auto_merge_method}'`;
     console.error(message);
     core.setFailed(message);
     return;
@@ -91,6 +104,8 @@ async function run(): Promise<void> {
     copy_milestone: copy_milestone === "true",
     copy_requested_reviewers: copy_requested_reviewers === "true",
     add_author_as_assignee: add_author_as_assignee === "true",
+    auto_merge_enabled: auto_merge_enabled === "true",
+    auto_merge_method: auto_merge_method as "merge" | "squash" | "rebase",
     experimental: { ...experimentalDefaults, ...experimental },
     source_pr_number:
       source_pr_number === "" ? undefined : parseInt(source_pr_number),
