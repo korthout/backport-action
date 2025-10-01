@@ -500,7 +500,7 @@ export class Backport {
             }
           }
 
-          if (this.shouldEnableAutoMerge(mainpr)) {
+          if (this.config.auto_merge_enabled === true) {
             console.info(
               "Attempting to enable auto-merge for PR #" + new_pr.number,
             );
@@ -782,10 +782,6 @@ export class Backport {
 
     const createdPullNumbersOutput = createdPullRequestNumbers.join(" ");
     core.setOutput(Output.created_pull_numbers, createdPullNumbersOutput);
-  }
-
-  private shouldEnableAutoMerge(pullRequest: PullRequest): boolean {
-    return this.config.auto_merge_enabled;
   }
 
   private getAutoMergeErrorMessage(
