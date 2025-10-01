@@ -15,10 +15,7 @@ inputs:
     description: >
       Controls whether to auto-merge the created backport pull request.
       When enabled, the pull request will automatically merge when all required checks pass and approvals are received.
-      Can be set to a simple boolean (true/false) or controlled dynamically via workflow expressions. Examples:
-      Simple boolean: auto_merge_enabled: true
-      Opt-in with label: auto_merge_enabled: ${{ contains(github.event.pull_request.labels.*.name, 'backport-auto-merge') }}
-      Opt-out with label: auto_merge_enabled: ${{ !contains(github.event.pull_request.labels.*.name, 'backport-no-auto-merge') }}
+      Can be set to a simple boolean (true/false) or controlled dynamically via workflow expressions.
       By default, auto-merge is not enabled.
     default: false
   auto_merge_method:
