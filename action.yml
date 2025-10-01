@@ -13,7 +13,7 @@ inputs:
       By default, no labels are added.
   auto_merge_enabled:
     description: >
-      Controls whether to enable auto-merge on the created backport pull request.
+      Controls whether to auto-merge the created backport pull request.
       When enabled, the pull request will automatically merge when all required checks pass and approvals are received.
       Can be set to a simple boolean (true/false) or controlled dynamically via workflow expressions. Examples:
       Simple boolean: auto_merge_enabled: true
@@ -26,7 +26,7 @@ inputs:
       The merge method to use when auto-merge is enabled on backport PRs.
       Valid options are 'merge' (create a merge commit), 'squash' (squash and merge), or 'rebase' (rebase and merge).
       The specified method must be enabled in your repository's merge settings, otherwise auto-merge will fail.
-      The merge commit method is GitHub's default merge method.
+      By default, the backport PR is merged using a merge commit if auto-merge is enabled.
     default: merge
   branch_name:
     description: >
