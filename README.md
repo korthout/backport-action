@@ -211,7 +211,7 @@ Controls whether to copy the requested reviewers from the original pull request 
 Note that this does not request reviews from those users who already reviewed the original pull request.
 By default, the requested reviewers are not copied.
 
-### `enable_auto_merge`
+### `auto_merge_enabled`
 
 Default: `false` (disabled)
 
@@ -222,19 +222,19 @@ Can be set to a simple boolean (`true`/`false`) or controlled dynamically via wo
 **Simple boolean** (always enable or disable):
 ```yaml
 with:
-  enable_auto_merge: true
+  auto_merge_enabled: true
 ```
 
 **Opt-in with label** (enable auto-merge only when label is present):
 ```yaml
 with:
-  enable_auto_merge: ${{ contains(github.event.pull_request.labels.*.name, 'backport-auto-merge') }}
+  auto_merge_enabled: ${{ contains(github.event.pull_request.labels.*.name, 'backport-auto-merge') }}
 ```
 
 **Opt-out with label** (enable auto-merge by default, disable when label is present):
 ```yaml
 with:
-  enable_auto_merge: ${{ !contains(github.event.pull_request.labels.*.name, 'backport-no-auto-merge') }}
+  auto_merge_enabled: ${{ !contains(github.event.pull_request.labels.*.name, 'backport-no-auto-merge') }}
 ```
 By default, auto-merge is not enabled.
 

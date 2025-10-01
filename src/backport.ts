@@ -36,7 +36,7 @@ export type Config = {
   copy_assignees: boolean;
   copy_requested_reviewers: boolean;
   add_author_as_assignee: boolean;
-  enable_auto_merge: boolean;
+  auto_merge_enabled: boolean;
   auto_merge_method: "merge" | "squash" | "rebase";
   experimental: Experimental;
 };
@@ -785,7 +785,7 @@ export class Backport {
   }
 
   private shouldEnableAutoMerge(pullRequest: PullRequest): boolean {
-    return this.config.enable_auto_merge;
+    return this.config.auto_merge_enabled;
   }
 
   private getAutoMergeErrorMessage(
