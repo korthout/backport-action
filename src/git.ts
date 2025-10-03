@@ -1,4 +1,4 @@
-export type Execa = (typeof import("execa"))["execa"];
+import { ExecOptions, getExecOutput } from "@actions/exec";
 
 export class GitRefNotFoundError extends Error {
   ref: string;
@@ -10,23 +10,21 @@ export class GitRefNotFoundError extends Error {
 
 export class Git {
   constructor(
-    private execa: Execa,
     private gitCommitterName: string,
     private gitCommitterEmail: string,
   ) {}
 
   private async git(command: string, args: string[], pwd: string) {
-    console.log(`git ${command} ${args.join(" ")}`);
-    const child = this.execa("git", [command, ...args], {
+    const options: ExecOptions = {
+      silent: false,
       cwd: pwd,
       env: {
         GIT_COMMITTER_NAME: this.gitCommitterName,
         GIT_COMMITTER_EMAIL: this.gitCommitterEmail,
       },
-      reject: false,
-    });
-    child.stderr?.pipe(process.stderr);
-    return child;
+      ignoreReturnCode: true,
+    };
+    return getExecOutput("git", [command, ...args], options);
   }
 
   /**

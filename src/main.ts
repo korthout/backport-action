@@ -7,7 +7,6 @@ import {
 } from "./backport";
 import { Github } from "./github";
 import { Git } from "./git";
-import { execa } from "execa";
 import dedent from "dedent";
 
 /**
@@ -90,7 +89,7 @@ async function run(): Promise<void> {
   }
 
   const github = new Github(token);
-  const git = new Git(execa, gitCommitterName, gitCommitterEmail);
+  const git = new Git(gitCommitterName, gitCommitterEmail);
   const config: Config = {
     pwd,
     source_labels_pattern: pattern === "" ? undefined : new RegExp(pattern),
