@@ -24,6 +24,6 @@ jobs:
         startsWith(github.event.comment.body, '/backport')
       )
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - name: Create backport pull requests
         uses: korthout/backport-action@d07416681cab29bf2661702f925f020aaa962997 # v3.4.1
