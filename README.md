@@ -50,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Create backport pull requests
-        uses: korthout/backport-action@v3
+        uses: korthout/backport-action@v4
 ```
 
 > **Note**
@@ -97,7 +97,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Create backport pull requests
-        uses: korthout/backport-action@v3
+        uses: korthout/backport-action@v4
 ```
 
 </p>
@@ -125,7 +125,7 @@ Below is a GPG example (pin the third‑party action by commit for supply‑chai
     git_user_signingkey: true
     git_commit_gpgsign: true
 - name: Create backport pull requests
-  uses: korthout/backport-action@v3
+  uses: korthout/backport-action@v4
   with:
     git_committer_name: ${{ steps.import-gpg.outputs.name }}
     git_committer_email: ${{ steps.import-gpg.outputs.email }}
