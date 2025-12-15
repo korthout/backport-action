@@ -660,6 +660,7 @@ class Git {
             silent: false,
             cwd: pwd,
             env: {
+                ...process.env,
                 GIT_COMMITTER_NAME: this.gitCommitterName,
                 GIT_COMMITTER_EMAIL: this.gitCommitterEmail,
             },
