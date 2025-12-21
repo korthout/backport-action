@@ -34196,6 +34196,18 @@ function createDedent(options) {
     if (escapeSpecialCharacters) {
       result = result.replace(/\\n/g, "\n");
     }
+
+    // Workaround for Bun issue with Unicode characters
+    // https://github.com/oven-sh/bun/issues/8745
+    if (typeof Bun !== "undefined") {
+      result = result.replace(
+      // Matches e.g. \\u{1f60a} or \\u5F1F
+      /\\u(?:\{([\da-fA-F]{1,6})\}|([\da-fA-F]{4}))/g, (_, braced, unbraced) => {
+        var _ref;
+        const hex = (_ref = braced !== null && braced !== void 0 ? braced : unbraced) !== null && _ref !== void 0 ? _ref : "";
+        return String.fromCodePoint(parseInt(hex, 16));
+      });
+    }
     return result;
   }
 }
