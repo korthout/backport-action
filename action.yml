@@ -95,6 +95,13 @@ inputs:
       Only takes effect if the `downstream_repo` property is also defined.
 
       By default, uses the owner of the repository in which the workflow runs.
+
+      #### `dashboard_enabled`
+
+      Define if you want to enable the Backport Dashboard.
+      The dashboard is a single issue that tracks the status of backport pull requests.
+
+      By default, the dashboard is disabled.
     default: >
       {
         "conflict_resolution": "fail"

@@ -10,6 +10,7 @@ import {
 import { GithubApi } from "./github";
 import { Git, GitRefNotFoundError } from "./git";
 import * as utils from "./utils";
+import { Dashboard } from "./dashboard";
 
 type PRContent = {
   title: string;
@@ -49,12 +50,14 @@ type Experimental = {
   conflict_resolution: "fail" | "draft_commit_conflicts";
   downstream_repo?: string;
   downstream_owner?: string;
+  dashboard_enabled?: boolean;
 } & DeprecatedExperimental;
 const experimentalDefaults: Experimental = {
   detect_merge_method: undefined,
   conflict_resolution: `fail`,
   downstream_repo: undefined,
   downstream_owner: undefined,
+  dashboard_enabled: false,
 };
 export { experimentalDefaults, deprecatedExperimental };
 
@@ -68,6 +71,7 @@ export class Backport {
   private github;
   private config;
   private git;
+  private dashboard;
 
   private downstreamRepo;
   private downstreamOwner;
@@ -76,6 +80,7 @@ export class Backport {
     this.github = github;
     this.config = config;
     this.git = git;
+    this.dashboard = new Dashboard(github);
 
     this.downstreamRepo = this.config.experimental.downstream_repo ?? undefined;
     this.downstreamOwner =
@@ -261,6 +266,11 @@ export class Backport {
 
       const successByTarget = new Map<string, boolean>();
       const createdPullRequestNumbers = new Array<number>();
+      const createdPullRequests: {
+        number: number;
+        html_url: string;
+        base: { ref: string };
+      }[] = [];
       for (const target of target_branches) {
         console.log(`Backporting to target branch '${target}...'`);
 
@@ -555,6 +565,7 @@ export class Backport {
 
             successByTarget.set(target, true);
             createdPullRequestNumbers.push(new_pr.number);
+            createdPullRequests.push(new_pr);
             await this.github.createComment({
               owner: workflowOwner,
               repo: workflowRepo,
@@ -593,6 +604,13 @@ export class Backport {
             throw error;
           }
         }
+      }
+
+      if (this.config.experimental.dashboard_enabled) {
+        await this.dashboard.createOrUpdateDashboard(
+          mainpr,
+          createdPullRequests,
+        );
       }
 
       this.createOutput(successByTarget, createdPullRequestNumbers);
