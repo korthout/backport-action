@@ -84,9 +84,7 @@ export class Dashboard {
         await this.github.updateIssue(issue.number, newBody);
       }
     } else {
-      if (entries.length > 0) {
-        await this.github.createIssue(Dashboard.TITLE, newBody);
-      }
+      await this.github.createIssue(Dashboard.TITLE, newBody);
     }
   }
 
