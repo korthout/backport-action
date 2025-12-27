@@ -28,7 +28,16 @@ export class Dashboard {
     originalPR: PullRequest,
     backportPRs: { number: number; html_url: string; base: { ref: string } }[],
   ): Promise<void> {
+    console.log(`Updating Backport Dashboard for #${originalPR.number}`);
     const issue = await this.findDashboardIssue();
+    if (issue) {
+      console.log(`Found existing dashboard issue #${issue.number}`);
+    } else {
+      console.log(
+        "No existing dashboard issue found, will create a new one at the end.",
+      );
+    }
+
     let body = issue ? (issue.body ?? "") : Dashboard.HEADER;
 
     // Parse existing body
@@ -50,6 +59,9 @@ export class Dashboard {
       if (
         !prEntry.backports.some((existing) => existing.number === bpr.number)
       ) {
+        console.log(
+          `Tracking backport #${bpr.number} for original PR #${originalPR.number}`,
+        );
         prEntry.backports.push({
           number: bpr.number,
           branch: bpr.base.ref,
@@ -59,17 +71,26 @@ export class Dashboard {
     }
 
     // Check status of all backports in this entry
+    console.log(
+      `Checking status of ${prEntry.backports.length} backports for #${originalPR.number}`,
+    );
     const activeBackports: BackportEntry[] = [];
     for (const bpr of prEntry.backports) {
       const pr = await this.github.getPullRequest(bpr.number);
       if (!(await this.github.isMerged(pr))) {
+        console.log(`Backport #${bpr.number} is still pending`);
         activeBackports.push(bpr);
+      } else {
+        console.log(`Backport #${bpr.number} is merged`);
       }
     }
     prEntry.backports = activeBackports;
 
     // If no backports left, remove the entry
     if (prEntry.backports.length === 0) {
+      console.log(
+        `All backports for #${originalPR.number} are merged, removing entry`,
+      );
       const index = entries.indexOf(prEntry);
       if (index > -1) {
         entries.splice(index, 1);
@@ -81,9 +102,13 @@ export class Dashboard {
 
     if (issue) {
       if (issue.body !== newBody) {
+        console.info(`Updating dashboard issue #${issue.number}`);
         await this.github.updateIssue(issue.number, newBody);
+      } else {
+        console.log(`Dashboard issue #${issue.number} is up to date`);
       }
     } else {
+      console.info("Creating new dashboard issue");
       await this.github.createIssue(Dashboard.TITLE, newBody);
     }
   }
