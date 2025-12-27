@@ -100,16 +100,29 @@ export class Dashboard {
     // Reconstruct body
     const newBody = this.renderDashboard(entries);
 
-    if (issue) {
-      if (issue.body !== newBody) {
-        console.info(`Updating dashboard issue #${issue.number}`);
-        await this.github.updateIssue(issue.number, newBody);
+    try {
+      if (issue) {
+        if (issue.body !== newBody) {
+          console.info(`Updating dashboard issue #${issue.number}`);
+          await this.github.updateIssue(issue.number, newBody);
+        } else {
+          console.log(`Dashboard issue #${issue.number} is up to date`);
+        }
       } else {
-        console.log(`Dashboard issue #${issue.number} is up to date`);
+        console.info("Creating new dashboard issue");
+        await this.github.createIssue(Dashboard.TITLE, newBody);
       }
-    } else {
-      console.info("Creating new dashboard issue");
-      await this.github.createIssue(Dashboard.TITLE, newBody);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes("Resource not accessible by integration")
+      ) {
+        console.error(
+          "Failed to create or update the dashboard issue. " +
+            "Please ensure that the 'issues: write' permission is enabled in your workflow.",
+        );
+      }
+      throw error;
     }
   }
 
