@@ -50,6 +50,7 @@ const dedent_1 = __importDefault(__nccwpck_require__(3924));
 const github_1 = __nccwpck_require__(6681);
 const git_1 = __nccwpck_require__(9412);
 const utils = __importStar(__nccwpck_require__(9277));
+const dashboard_1 = __nccwpck_require__(9780);
 const deprecatedExperimental = {};
 exports.deprecatedExperimental = deprecatedExperimental;
 const experimentalDefaults = {
@@ -57,6 +58,7 @@ const experimentalDefaults = {
     conflict_resolution: `fail`,
     downstream_repo: undefined,
     downstream_owner: undefined,
+    dashboard_enabled: false,
 };
 exports.experimentalDefaults = experimentalDefaults;
 var Output;
@@ -69,12 +71,14 @@ class Backport {
     github;
     config;
     git;
+    dashboard;
     downstreamRepo;
     downstreamOwner;
     constructor(github, config, git) {
         this.github = github;
         this.config = config;
         this.git = git;
+        this.dashboard = new dashboard_1.Dashboard(github);
         this.downstreamRepo = this.config.experimental.downstream_repo ?? undefined;
         this.downstreamOwner =
             this.config.experimental.downstream_owner ?? undefined;
@@ -196,6 +200,7 @@ class Backport {
             }
             const successByTarget = new Map();
             const createdPullRequestNumbers = new Array();
+            const createdPullRequests = [];
             for (const target of target_branches) {
                 console.log(`Backporting to target branch '${target}...'`);
                 try {
@@ -421,6 +426,7 @@ class Backport {
                             : this.composeMessageForSuccess(new_pr.number, target, this.shouldUseDownstreamRepo() ? `${owner}/${repo}` : "");
                         successByTarget.set(target, true);
                         createdPullRequestNumbers.push(new_pr.number);
+                        createdPullRequests.push(new_pr);
                         await this.github.createComment({
                             owner: workflowOwner,
                             repo: workflowRepo,
@@ -454,6 +460,9 @@ class Backport {
                         throw error;
                     }
                 }
+            }
+            if (this.config.experimental.dashboard_enabled) {
+                await this.dashboard.createOrUpdateDashboard(mainpr, createdPullRequests);
             }
             this.createOutput(successByTarget, createdPullRequestNumbers);
         }
@@ -628,6 +637,156 @@ function findTargetBranchesFromLabels(labels, config) {
     })
         .map((result) => result.match[1]);
 }
+
+
+/***/ }),
+
+/***/ 9780:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Dashboard = void 0;
+const dedent_1 = __importDefault(__nccwpck_require__(3924));
+class Dashboard {
+    github;
+    static TITLE = "Backport Dashboard";
+    static HEADER = (0, dedent_1.default) `# ${Dashboard.TITLE}
+
+    This issue lists pull requests that have been backported by [backport-action](https://github.com/korthout/backport-action) that have not been merged yet.`;
+    constructor(github) {
+        this.github = github;
+    }
+    async createOrUpdateDashboard(originalPR, backportPRs) {
+        console.log(`Updating Backport Dashboard for #${originalPR.number}`);
+        const issue = await this.findDashboardIssue();
+        if (issue) {
+            console.log(`Found existing dashboard issue #${issue.number}`);
+        }
+        else {
+            console.log("No existing dashboard issue found, will create a new one at the end.");
+        }
+        let body = issue ? (issue.body ?? "") : Dashboard.HEADER;
+        // Parse existing body
+        const entries = this.parseDashboard(body);
+        // Find or create entry for originalPR
+        let prEntry = entries.find((e) => e.originalPrNumber === originalPR.number);
+        if (!prEntry) {
+            prEntry = {
+                originalPrNumber: originalPR.number,
+                originalPrTitle: originalPR.title,
+                backports: [],
+            };
+            entries.push(prEntry);
+        }
+        // Add new backports
+        for (const bpr of backportPRs) {
+            if (!prEntry.backports.some((existing) => existing.number === bpr.number)) {
+                console.log(`Tracking backport #${bpr.number} for original PR #${originalPR.number}`);
+                prEntry.backports.push({
+                    number: bpr.number,
+                    branch: bpr.base.ref,
+                    title: originalPR.title,
+                });
+            }
+        }
+        // Check status of all backports in this entry
+        console.log(`Checking status of ${prEntry.backports.length} backports for #${originalPR.number}`);
+        const activeBackports = [];
+        for (const bpr of prEntry.backports) {
+            const pr = await this.github.getPullRequest(bpr.number);
+            if (pr.state === "open") {
+                console.log(`Backport #${bpr.number} is still pending`);
+                activeBackports.push(bpr);
+            }
+            else {
+                console.log(`Backport #${bpr.number} is closed or merged`);
+            }
+        }
+        prEntry.backports = activeBackports;
+        // If no backports left, remove the entry
+        if (prEntry.backports.length === 0) {
+            console.log(`All backports for #${originalPR.number} are closed or merged, removing entry`);
+            const index = entries.indexOf(prEntry);
+            if (index > -1) {
+                entries.splice(index, 1);
+            }
+        }
+        // Reconstruct body
+        const newBody = this.renderDashboard(entries);
+        try {
+            if (issue) {
+                if (issue.body !== newBody) {
+                    console.info(`Updating dashboard issue #${issue.number}`);
+                    await this.github.updateIssue(issue.number, newBody);
+                }
+                else {
+                    console.log(`Dashboard issue #${issue.number} is up to date`);
+                }
+            }
+            else {
+                console.info("Creating new dashboard issue");
+                await this.github.createIssue(Dashboard.TITLE, newBody);
+            }
+        }
+        catch (error) {
+            if (error instanceof Error &&
+                error.message.includes("Resource not accessible by integration")) {
+                console.error("Failed to create or update the dashboard issue. " +
+                    "Please ensure that the 'issues: write' permission is enabled in your workflow.");
+            }
+            throw error;
+        }
+    }
+    async findDashboardIssue() {
+        const issues = await this.github.getIssues(Dashboard.TITLE);
+        // Filter by exact title match to be safe
+        return issues.find((i) => i.title === Dashboard.TITLE);
+    }
+    parseDashboard(body) {
+        const entries = [];
+        const lines = body.split("\n");
+        let currentEntry = null;
+        const sectionRegex = /^## #(\d+) (.*)$/;
+        const itemRegex = /^- `(.*)`: #(\d+) (.*)$/;
+        for (const line of lines) {
+            const sectionMatch = line.match(sectionRegex);
+            if (sectionMatch) {
+                currentEntry = {
+                    originalPrNumber: parseInt(sectionMatch[1], 10),
+                    originalPrTitle: sectionMatch[2],
+                    backports: [],
+                };
+                entries.push(currentEntry);
+                continue;
+            }
+            const itemMatch = line.match(itemRegex);
+            if (itemMatch && currentEntry) {
+                currentEntry.backports.push({
+                    branch: itemMatch[1],
+                    number: parseInt(itemMatch[2], 10),
+                    title: itemMatch[3],
+                });
+            }
+        }
+        return entries;
+    }
+    renderDashboard(entries) {
+        let body = Dashboard.HEADER;
+        for (const entry of entries) {
+            body += `\n## #${entry.originalPrNumber} ${entry.originalPrTitle}\n`;
+            for (const bpr of entry.backports) {
+                body += `- \`${bpr.branch}\`: #${bpr.number} ${bpr.title}\n`;
+            }
+        }
+        return body;
+    }
+}
+exports.Dashboard = Dashboard;
 
 
 /***/ }),
@@ -1105,6 +1264,32 @@ class Github {
             return MergeStrategy.SQUASHED;
         }
         return MergeStrategy.UNKNOWN;
+    }
+    async getIssues(title) {
+        console.log(`Retrieve issues with title ${title}`);
+        return this.#octokit.rest.search
+            .issuesAndPullRequests({
+            q: `repo:${this.getRepo().owner}/${this.getRepo().repo} is:issue is:open in:title ${title}`,
+        })
+            .then((res) => res.data.items);
+    }
+    async createIssue(title, body) {
+        console.log(`Create issue ${title}`);
+        return this.#octokit.rest.issues
+            .create({
+            ...this.getRepo(),
+            title,
+            body,
+        })
+            .then((res) => res.data);
+    }
+    async updateIssue(number, body) {
+        console.log(`Update issue ${number}`);
+        await this.#octokit.rest.issues.update({
+            ...this.getRepo(),
+            issue_number: number,
+            body,
+        });
     }
 }
 exports.Github = Github;
