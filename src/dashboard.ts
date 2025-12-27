@@ -43,6 +43,33 @@ export class Dashboard {
     // Parse existing body
     const entries = this.parseDashboard(body);
 
+    // Check status of all backports in the dashboard
+    console.log(`Checking status of backports in ${entries.length} entries`);
+
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const entry = entries[i];
+      const activeBackports: BackportEntry[] = [];
+
+      for (const bpr of entry.backports) {
+        const pr = await this.github.getPullRequest(bpr.number);
+        if (pr.state === "open") {
+          activeBackports.push(bpr);
+          console.log(
+            `Original PR #${entry.originalPrNumber} still has active backports, keeping it in the dashboard`,
+          );
+        } else {
+          console.log(`Backport #${bpr.number} is closed or merged`);
+        }
+      }
+
+      if (activeBackports.length === 0) {
+        console.log(
+          `All backports for #${entry.originalPrNumber} are closed or merged, removing entry`,
+        );
+        entries.splice(i, 1);
+      }
+    }
+
     // Find or create entry for originalPR
     let prEntry = entries.find((e) => e.originalPrNumber === originalPR.number);
     if (!prEntry) {
@@ -67,33 +94,6 @@ export class Dashboard {
           branch: bpr.base.ref,
           title: originalPR.title,
         });
-      }
-    }
-
-    // Check status of all backports in this entry
-    console.log(
-      `Checking status of ${prEntry.backports.length} backports for #${originalPR.number}`,
-    );
-    const activeBackports: BackportEntry[] = [];
-    for (const bpr of prEntry.backports) {
-      const pr = await this.github.getPullRequest(bpr.number);
-      if (pr.state === "open") {
-        console.log(`Backport #${bpr.number} is still pending`);
-        activeBackports.push(bpr);
-      } else {
-        console.log(`Backport #${bpr.number} is closed or merged`);
-      }
-    }
-    prEntry.backports = activeBackports;
-
-    // If no backports left, remove the entry
-    if (prEntry.backports.length === 0) {
-      console.log(
-        `All backports for #${originalPR.number} are closed or merged, removing entry`,
-      );
-      const index = entries.indexOf(prEntry);
-      if (index > -1) {
-        entries.splice(index, 1);
       }
     }
 
