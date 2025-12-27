@@ -77,11 +77,11 @@ export class Dashboard {
     const activeBackports: BackportEntry[] = [];
     for (const bpr of prEntry.backports) {
       const pr = await this.github.getPullRequest(bpr.number);
-      if (!(await this.github.isMerged(pr))) {
+      if (pr.state === "open") {
         console.log(`Backport #${bpr.number} is still pending`);
         activeBackports.push(bpr);
       } else {
-        console.log(`Backport #${bpr.number} is merged`);
+        console.log(`Backport #${bpr.number} is closed or merged`);
       }
     }
     prEntry.backports = activeBackports;
@@ -89,7 +89,7 @@ export class Dashboard {
     // If no backports left, remove the entry
     if (prEntry.backports.length === 0) {
       console.log(
-        `All backports for #${originalPR.number} are merged, removing entry`,
+        `All backports for #${originalPR.number} are closed or merged, removing entry`,
       );
       const index = entries.indexOf(prEntry);
       if (index > -1) {

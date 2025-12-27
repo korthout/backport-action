@@ -445,6 +445,7 @@ export type PullRequest = {
   number: number;
   title: string;
   body: string | null;
+  state: string;
   merge_commit_sha: string | null;
   head: {
     sha: string;
