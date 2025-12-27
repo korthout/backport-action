@@ -41,6 +41,7 @@ on:
 permissions:
   contents: write # so it can comment
   pull-requests: write # so it can create pull requests
+  issues: write # so it can create the dashboard issue
 jobs:
   backport:
     name: Backport pull request
@@ -75,6 +76,7 @@ on:
 permissions:
   contents: write # so it can comment
   pull-requests: write # so it can create pull requests
+  issues: write # so it can create the dashboard issue
 jobs:
   backport:
     name: Backport pull request
