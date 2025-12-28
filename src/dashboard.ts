@@ -16,7 +16,7 @@ export class Dashboard {
   private github: GithubApi;
   private static readonly TITLE = "Backport Dashboard";
   private static readonly HEADER = dedent`\
-    <!-- VERSION: 1 -->\
+    <!-- VERSION: 1 -->
     This issue lists pull requests that have been backported by \
     [backport-action](https://github.com/korthout/backport-action). \
     The action automatically adds newly created backports. \
