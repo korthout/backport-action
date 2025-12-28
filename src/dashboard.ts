@@ -16,9 +16,16 @@ type DashboardEntry = {
 export class Dashboard {
   private github: GithubApi;
   private static readonly TITLE = "Backport Dashboard";
-  private static readonly HEADER = dedent`# ${Dashboard.TITLE}
-
-    This issue lists pull requests that have been backported by [backport-action](https://github.com/korthout/backport-action) that have not been merged yet.`;
+  private static readonly HEADER = dedent`\
+    This issue lists pull requests that have been backported by \
+    [backport-action](https://github.com/korthout/backport-action). \
+    The action automatically adds newly created backports. \
+    Pull requests where all backports are merged or closed are \
+    automatically removed from this list on subsequent runs. \
+    This allows maintainers to keep track of backports that still need attention.
+    
+    ---
+    `;
 
   constructor(github: GithubApi) {
     this.github = github;
