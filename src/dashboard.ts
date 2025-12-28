@@ -4,7 +4,6 @@ import { GithubApi, PullRequest, Issue } from "./github";
 type BackportEntry = {
   number: number;
   branch: string;
-  title: string;
 };
 
 type DashboardEntry = {
@@ -17,6 +16,7 @@ export class Dashboard {
   private github: GithubApi;
   private static readonly TITLE = "Backport Dashboard";
   private static readonly HEADER = dedent`\
+    <!-- VERSION: 1 -->\
     This issue lists pull requests that have been backported by \
     [backport-action](https://github.com/korthout/backport-action). \
     The action automatically adds newly created backports. \
@@ -99,7 +99,6 @@ export class Dashboard {
         prEntry.backports.push({
           number: bpr.number,
           branch: bpr.base.ref,
-          title: originalPR.title,
         });
       }
     }
@@ -145,10 +144,20 @@ export class Dashboard {
   private parseDashboard(body: string): DashboardEntry[] {
     const entries: DashboardEntry[] = [];
     const lines = body.split("\n");
+
+    if (lines.length === 0) {
+      return entries;
+    }
+
+    const versionRegex = /<!-- VERSION: (\d+) -->/;
+    const versionMatch = lines[0].match(versionRegex);
+    const version = versionMatch ? parseInt(versionMatch[1], 10) : 0;
+
     let currentEntry: DashboardEntry | null = null;
 
     const sectionRegex = /^## #(\d+) (.*)$/;
-    const itemRegex = /^- `(.*)`: #(\d+) (.*)$/;
+    const itemRegex =
+      version === 0 ? /^- `(.*)`: #(\d+) (.*)$/ : /^- `(.*)`: #(\d+)$/;
 
     for (const line of lines) {
       const sectionMatch = line.match(sectionRegex);
@@ -167,7 +176,6 @@ export class Dashboard {
         currentEntry.backports.push({
           branch: itemMatch[1],
           number: parseInt(itemMatch[2], 10),
-          title: itemMatch[3],
         });
       }
     }
@@ -179,7 +187,7 @@ export class Dashboard {
     for (const entry of entries) {
       body += `\n## #${entry.originalPrNumber} ${entry.originalPrTitle}\n`;
       for (const bpr of entry.backports) {
-        body += `- \`${bpr.branch}\`: #${bpr.number} ${bpr.title}\n`;
+        body += `- \`${bpr.branch}\`: #${bpr.number}\n`;
       }
     }
     return body;
