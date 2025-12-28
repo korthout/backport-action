@@ -41,7 +41,7 @@ export interface GithubApi {
     merge_commit_sha: string | null,
   ): Promise<string | null>;
   getMergeCommitSha(pull: PullRequest): Promise<string | null>;
-  getIssues(title: string): Promise<Issue[]>;
+  getIssues(title: string, options: string[]): Promise<Issue[]>;
   createIssue(title: string, body: string): Promise<Issue>;
   updateIssue(number: number, body: string): Promise<void>;
 }
@@ -393,11 +393,11 @@ export class Github implements GithubApi {
     return MergeStrategy.UNKNOWN;
   }
 
-  public async getIssues(title: string) {
+  public async getIssues(title: string, options: string[] = []) {
     console.log(`Retrieve issues with title ${title}`);
     return this.#octokit.rest.search
       .issuesAndPullRequests({
-        q: `repo:${this.getRepo().owner}/${this.getRepo().repo} is:issue is:open in:title ${title}`,
+        q: `repo:${this.getRepo().owner}/${this.getRepo().repo} is:issue in:title ${title} ${options.join(" ")}`,
       })
       .then((res) => res.data.items as Issue[]);
   }

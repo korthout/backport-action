@@ -134,7 +134,10 @@ export class Dashboard {
   }
 
   private async findDashboardIssue(): Promise<Issue | undefined> {
-    const issues = await this.github.getIssues(Dashboard.TITLE);
+    const issues = await this.github.getIssues(Dashboard.TITLE, [
+      "is:open",
+      "sort:created-asc",
+    ]);
     // Filter by exact title match to be safe
     return issues.find((i) => i.title === Dashboard.TITLE);
   }
