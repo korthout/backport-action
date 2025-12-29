@@ -80,11 +80,17 @@ export class Backport {
     this.github = github;
     this.config = config;
     this.git = git;
-    this.dashboard = new Dashboard(github);
 
     this.downstreamRepo = this.config.experimental.downstream_repo ?? undefined;
     this.downstreamOwner =
       this.config.experimental.downstream_owner ?? undefined;
+
+    const owner =
+      this.shouldUseDownstreamRepo() && this.downstreamOwner
+        ? this.downstreamOwner
+        : this.github.getRepo().owner;
+
+    this.dashboard = new Dashboard(github, owner, this.downstreamRepo);
   }
 
   shouldUseDownstreamRepo(): boolean {

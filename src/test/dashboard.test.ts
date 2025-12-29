@@ -154,4 +154,61 @@ describe("Dashboard", () => {
     expect(updatedBody).toContain("- `branch/old`: #101");
     expect(updatedBody).not.toContain("- `branch/old`: #101 Old PR");
   });
+
+  describe("when downstream repo is configured", () => {
+    let downstreamDashboard: Dashboard;
+
+    beforeEach(() => {
+      downstreamDashboard = new Dashboard(
+        mockGithubApi as unknown as GithubApi,
+        "downstream-owner",
+        "downstream-repo",
+      );
+    });
+
+    it("renders fully qualified links", async () => {
+      mockGithubApi.getIssues.mockResolvedValue([]);
+
+      await downstreamDashboard.createOrUpdateDashboard(originalPR, [
+        backportPR,
+      ]);
+
+      expect(mockGithubApi.createIssue).toHaveBeenCalledWith(
+        "Backport Dashboard",
+        expect.stringContaining(
+          "- `branch/x`: downstream-owner/downstream-repo#124",
+        ),
+      );
+    });
+
+    it("parses fully qualified links correctly", async () => {
+      mockGithubApi.getIssues.mockResolvedValue([
+        {
+          number: 1,
+          title: "Backport Dashboard",
+          body: dedent`<!-- VERSION: 1 -->
+            This issue lists pull requests...
+
+            ## #123 My bug fix
+            - \`branch/x\`: downstream-owner/downstream-repo#124`,
+        },
+      ]);
+
+      mockGithubApi.getPullRequest.mockResolvedValue({
+        number: 124,
+        state: "open",
+      });
+
+      await downstreamDashboard.createOrUpdateDashboard(originalPR, [
+        backportPR,
+      ]);
+
+      expect(mockGithubApi.updateIssue).toHaveBeenCalledWith(
+        1,
+        expect.stringContaining(
+          "- `branch/x`: downstream-owner/downstream-repo#124",
+        ),
+      );
+    });
+  });
 });

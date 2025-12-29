@@ -27,8 +27,17 @@ export class Dashboard {
     ---
     `;
 
-  constructor(github: GithubApi) {
+  private downstreamOwner?: string;
+  private downstreamRepo?: string;
+
+  constructor(
+    github: GithubApi,
+    downstreamOwner?: string,
+    downstreamRepo?: string,
+  ) {
     this.github = github;
+    this.downstreamOwner = downstreamOwner;
+    this.downstreamRepo = downstreamRepo;
   }
 
   public async createOrUpdateDashboard(
@@ -157,7 +166,9 @@ export class Dashboard {
 
     const sectionRegex = /^## #(\d+) (.*)$/;
     const itemRegex =
-      version === 0 ? /^- `(.*)`: #(\d+) (.*)$/ : /^- `(.*)`: #(\d+)$/;
+      version === 0
+        ? /^- `(.*)`: (?:[^/]+\/[^/]+)?#(\d+) (.*)$/
+        : /^- `(.*)`: (?:[^/]+\/[^/]+)?#(\d+)$/;
 
     for (const line of lines) {
       const sectionMatch = line.match(sectionRegex);
@@ -187,7 +198,11 @@ export class Dashboard {
     for (const entry of entries) {
       body += `\n## #${entry.originalPrNumber} ${entry.originalPrTitle}\n`;
       for (const bpr of entry.backports) {
-        body += `- \`${bpr.branch}\`: #${bpr.number}\n`;
+        const link =
+          this.downstreamOwner && this.downstreamRepo
+            ? `${this.downstreamOwner}/${this.downstreamRepo}#${bpr.number}`
+            : `#${bpr.number}`;
+        body += `- \`${bpr.branch}\`: ${link}\n`;
       }
     }
     return body;
