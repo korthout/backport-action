@@ -22,7 +22,15 @@ export class Dashboard {
     The action automatically adds newly created backports. \
     Pull requests where all backports are merged or closed are \
     automatically removed from this list on subsequent runs. \
-    This allows maintainers to keep track of backports that still need attention.
+    This allows maintainers to keep track of backports that still need \
+    attention.
+
+    > [!NOTE]
+    > Please do not edit this issue manually unless you need to resolve \
+    any issues. The action uses the issue as a data store. Additionally, \
+    please note that this dashboard is an experimental feature. If you \
+    notice any mistakes or problems, please report them in \
+    [the action's repo](https://github.com/korthout/backport-action/issues).
     
     ---
     `;
