@@ -264,6 +264,12 @@ export class Dashboard {
 
   private renderDashboard(entries: DashboardEntry[]): string {
     let body = Dashboard.HEADER;
+
+    if (entries.length === 0) {
+      body += "\nNo active backports.\n";
+      return body;
+    }
+
     for (const entry of entries) {
       const sanitizedTitle = entry.originalPrTitle.replace(/\n/g, " ");
       body += `\n## #${entry.originalPrNumber} ${sanitizedTitle}\n`;

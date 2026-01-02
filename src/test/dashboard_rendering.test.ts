@@ -89,4 +89,10 @@ describe("Dashboard Rendering", () => {
     expect(rendered).toContain("- `branch\\`with\\`escaped`: #124");
     expect(rendered).not.toContain("- `branch\\\\`with\\\\`escaped`: #124");
   });
+
+  it("renders a note when there are no entries", () => {
+    const entries: any[] = [];
+    const rendered = dashboard.renderDashboardPublic(entries);
+    expect(rendered).toContain("No active backports.");
+  });
 });
