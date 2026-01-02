@@ -101,27 +101,32 @@ export class Dashboard {
 
     // Find or create entry for originalPR
     let prEntry = entries.find((e) => e.originalPrNumber === originalPR.number);
-    if (!prEntry) {
-      prEntry = {
-        originalPrNumber: originalPR.number,
-        originalPrTitle: originalPR.title,
-        backports: [],
-      };
-      entries.push(prEntry);
-    }
 
-    // Add new backports
-    for (const bpr of backportPRs) {
-      if (
-        !prEntry.backports.some((existing) => existing.number === bpr.number)
-      ) {
-        console.log(
-          `Tracking backport #${bpr.number} for original PR #${originalPR.number}`,
-        );
-        prEntry.backports.push({
-          number: bpr.number,
-          branch: bpr.base.ref,
-        });
+    if (backportPRs.length <= 0) {
+      console.log(`No new backports to add for #${originalPR.number}`);
+    } else {
+      if (!prEntry) {
+        prEntry = {
+          originalPrNumber: originalPR.number,
+          originalPrTitle: originalPR.title,
+          backports: [],
+        };
+        entries.push(prEntry);
+      }
+
+      // Add new backports
+      for (const bpr of backportPRs) {
+        if (
+          !prEntry.backports.some((existing) => existing.number === bpr.number)
+        ) {
+          console.log(
+            `Tracking backport #${bpr.number} for original PR #${originalPR.number}`,
+          );
+          prEntry.backports.push({
+            number: bpr.number,
+            branch: bpr.base.ref,
+          });
+        }
       }
     }
 

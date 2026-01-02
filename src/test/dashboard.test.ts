@@ -238,4 +238,19 @@ describe("Dashboard", () => {
       );
     });
   });
+
+  it("does not create an entry if no backports are provided", async () => {
+    mockGithubApi.getIssues.mockResolvedValue([]);
+
+    await dashboard.createOrUpdateDashboard(originalPR, []);
+
+    expect(mockGithubApi.createIssue).toHaveBeenCalledWith(
+      "Backport Dashboard",
+      expect.stringContaining("No active backports."),
+    );
+    expect(mockGithubApi.createIssue).not.toHaveBeenCalledWith(
+      "Backport Dashboard",
+      expect.stringContaining("## #123 My bug fix"),
+    );
+  });
 });
