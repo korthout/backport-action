@@ -54,10 +54,15 @@ export class Dashboard {
       );
     }
 
-    let body = issue ? (issue.body ?? "") : Dashboard.HEADER;
+    const body = issue ? (issue.body ?? "") : Dashboard.HEADER;
 
     // Parse existing body
     const entries = this.parseDashboard(body);
+
+    if (!entries) {
+      console.log("Unsupported dashboard version detected, skipping update.");
+      return;
+    }
 
     // Check status of all backports in the dashboard
     console.log(`Checking status of backports in ${entries.length} entries`);
@@ -150,43 +155,99 @@ export class Dashboard {
     return issues.find((i) => i.title === Dashboard.TITLE);
   }
 
-  private parseDashboard(body: string): DashboardEntry[] {
+  /**
+   * The parser logic is robust against malformed entries.
+   * Such entries are simply ignored.
+   * Anything unrelated to the expected dashboard data is also ignored.
+   * If the body is completely malformed (e.g., unsupported version), undefined is returned.
+   */
+  private parseDashboard(body: string): DashboardEntry[] | undefined {
     const entries: DashboardEntry[] = [];
     const lines = body.split("\n");
 
     if (lines.length === 0) {
+      console.log("Dashboard body is empty, no entries parsed.");
       return entries;
     }
 
     const versionRegex = /<!-- VERSION: (\d+) -->/;
     const versionMatch = lines[0].match(versionRegex);
     const version = versionMatch ? parseInt(versionMatch[1], 10) : 0;
+    if (isNaN(version) || version < 1) {
+      console.log(`Unsupported dashboard version ${version} detected.`);
+      return undefined;
+    }
 
     let currentEntry: DashboardEntry | null = null;
 
-    const sectionRegex = /^## #(\d+) (.*)$/;
-    const itemRegex =
-      version === 0
-        ? /^- `(.*)`: (?:[^/]+\/[^/]+)?#(\d+) (.*)$/
-        : /^- `(.*)`: (?:[^/]+\/[^/]+)?#(\d+)$/;
-
     for (const line of lines) {
-      const sectionMatch = line.match(sectionRegex);
-      if (sectionMatch) {
+      const trimmedLine = line.trim();
+
+      // Parse Original PR: "## #<number> <title>"
+      if (trimmedLine.startsWith("## #")) {
+        const spaceIndex = trimmedLine.indexOf(" ", 4);
+        // If no space found, it might be "## #123" (empty title)
+        // But we require a title in the format usually.
+        // Let's be strict: require space.
+        if (spaceIndex === -1) continue;
+
+        const numberStr = trimmedLine.substring(4, spaceIndex);
+        const number = parseInt(numberStr, 10);
+        if (isNaN(number)) continue;
+
+        const title = trimmedLine.substring(spaceIndex + 1).trim();
+        // We allow empty title if it was just whitespace
+
         currentEntry = {
-          originalPrNumber: parseInt(sectionMatch[1], 10),
-          originalPrTitle: sectionMatch[2],
+          originalPrNumber: number,
+          originalPrTitle: title,
           backports: [],
         };
         entries.push(currentEntry);
         continue;
       }
 
-      const itemMatch = line.match(itemRegex);
-      if (itemMatch && currentEntry) {
+      // Parse Item: "- `<branch>`: <link>"
+      if (trimmedLine.startsWith("-") && currentEntry) {
+        const firstBacktick = trimmedLine.indexOf("`");
+        if (firstBacktick === -1) continue;
+
+        // Ensure only spaces between dash and backtick
+        if (trimmedLine.substring(1, firstBacktick).trim().length !== 0)
+          continue;
+
+        const colonIndex = trimmedLine.indexOf(":", firstBacktick + 1);
+        if (colonIndex === -1) continue;
+
+        const preColonPart = trimmedLine.substring(
+          firstBacktick + 1,
+          colonIndex,
+        );
+        const lastBacktickIndex = preColonPart.lastIndexOf("`");
+        if (lastBacktickIndex === -1) continue;
+
+        // Ensure only spaces between last backtick and colon
+        if (preColonPart.substring(lastBacktickIndex + 1).trim().length !== 0)
+          continue;
+
+        const branch = preColonPart.substring(0, lastBacktickIndex);
+        if (branch.length === 0) continue;
+
+        const rest = trimmedLine.substring(colonIndex + 1).trim();
+
+        // Find the last '#' to handle both "#123" and "owner/repo#123"
+        const hashIndex = rest.lastIndexOf("#");
+        if (hashIndex === -1) continue;
+
+        const numberStr = rest.substring(hashIndex + 1);
+        const numberMatch = numberStr.match(/^(\d+)/);
+        if (!numberMatch) continue;
+
+        const number = parseInt(numberMatch[1], 10);
+
         currentEntry.backports.push({
-          branch: itemMatch[1],
-          number: parseInt(itemMatch[2], 10),
+          branch,
+          number,
         });
       }
     }

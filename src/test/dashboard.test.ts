@@ -126,7 +126,7 @@ describe("Dashboard", () => {
     expect(updatedBody).toContain("- `branch/y`: #125");
   });
 
-  it("handles version 0 dashboard format", async () => {
+  it("does not update on unsupported dashboard version", async () => {
     mockGithubApi.getIssues.mockResolvedValue([
       {
         number: 1,
@@ -145,14 +145,7 @@ describe("Dashboard", () => {
 
     await dashboard.createOrUpdateDashboard(originalPR, [backportPR]);
 
-    const [issueNumber, updatedBody] = mockGithubApi.updateIssue.mock.lastCall;
-    expect(issueNumber).toBe(1);
-    // Should update to new format (VERSION 1)
-    expect(updatedBody).toContain("<!-- VERSION: 1 -->");
-
-    // Should keep the old entry but formatted correctly (without title in list item)
-    expect(updatedBody).toContain("- `branch/old`: #101");
-    expect(updatedBody).not.toContain("- `branch/old`: #101 Old PR");
+    expect(mockGithubApi.updateIssue).not.toHaveBeenCalled();
   });
 
   describe("when downstream repo is configured", () => {
