@@ -257,13 +257,17 @@ export class Dashboard {
   private renderDashboard(entries: DashboardEntry[]): string {
     let body = Dashboard.HEADER;
     for (const entry of entries) {
-      body += `\n## #${entry.originalPrNumber} ${entry.originalPrTitle}\n`;
+      const sanitizedTitle = entry.originalPrTitle.replace(/\n/g, " ");
+      body += `\n## #${entry.originalPrNumber} ${sanitizedTitle}\n`;
       for (const bpr of entry.backports) {
+        const sanitizedBranch = bpr.branch.replace(/(\\)?`/g, (match, p1) => {
+          return p1 ? match : "\\`";
+        });
         const link =
           this.downstreamOwner && this.downstreamRepo
             ? `${this.downstreamOwner}/${this.downstreamRepo}#${bpr.number}`
             : `#${bpr.number}`;
-        body += `- \`${bpr.branch}\`: ${link}\n`;
+        body += `- \`${sanitizedBranch}\`: ${link}\n`;
       }
     }
     return body;
