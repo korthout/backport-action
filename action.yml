@@ -90,6 +90,8 @@ inputs:
       It lists the original PRs and their backports.
       On subsequent runs, it removes items from the list for which all backports are merged or closed.
 
+      **Note:** This feature requires the `issues: write` permission to create and update the dashboard issue.
+
       By default, the dashboard is disabled.
 
       #### `downstream_repo`

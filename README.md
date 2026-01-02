@@ -41,7 +41,6 @@ on:
 permissions:
   contents: write # so it can comment
   pull-requests: write # so it can create pull requests
-  issues: write # so it can create the dashboard issue
 jobs:
   backport:
     name: Backport pull request
@@ -76,7 +75,6 @@ on:
 permissions:
   contents: write # so it can comment
   pull-requests: write # so it can create pull requests
-  issues: write # so it can create the dashboard issue
 jobs:
   backport:
     name: Backport pull request
@@ -294,6 +292,16 @@ When set to `true`, the action will maintain a "Backport Dashboard" issue in the
 This issue tracks the status of all backport pull requests created by the action.
 It lists the original PRs and their backports.
 On subsequent runs, it removes items from the list for which all backports are merged or closed.
+
+> [!Note]
+> This feature requires the `issues: write` permission to create and update the dashboard issue.
+>
+> ```yaml
+> permissions:
+>   contents: write
+>   pull-requests: write
+>   issues: write # Required for dashboard
+> ```
 
 > [!Note]
 > To prevent race conditions when running the action with `dashboard_enabled`, 
