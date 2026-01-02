@@ -252,6 +252,7 @@ export class Dashboard {
         if (!numberMatch) continue;
 
         const number = parseInt(numberMatch[1], 10);
+        if (Number.isNaN(number)) continue;
 
         currentEntry.backports.push({
           branch,
