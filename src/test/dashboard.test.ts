@@ -91,6 +91,40 @@ describe("Dashboard", () => {
     expect(updatedBody).toContain("## #123 My bug fix");
   });
 
+  it("keeps entries with mixed state backports", async () => {
+    mockGithubApi.getIssues.mockResolvedValue([
+      {
+        number: 1,
+        title: "Backport Dashboard",
+        body: dedent`<!-- VERSION: 1 -->
+          This issue lists pull requests...
+
+          ## #100 Old PR
+          - \`branch/old\`: #101
+          - \`branch/older\`: #102`,
+      },
+    ]);
+
+    mockGithubApi.getPullRequest.mockImplementation((number) => {
+      switch (number) {
+        case 101:
+          return Promise.resolve({ number: 101, state: "closed" });
+        case 102:
+          return Promise.resolve({ number: 102, state: "open" });
+        default:
+          return Promise.reject("Unknown PR");
+      }
+    });
+
+    await dashboard.createOrUpdateDashboard(originalPR, [backportPR]);
+
+    const [issueNumber, updatedBody] = mockGithubApi.updateIssue.mock.lastCall;
+    expect(issueNumber).toBe(1);
+    expect(updatedBody).toContain("## #100 Old PR");
+    expect(updatedBody).toContain("- `branch/old`: #101");
+    expect(updatedBody).toContain("- `branch/older`: #102");
+  });
+
   it("adds new backports to existing entries", async () => {
     mockGithubApi.getIssues.mockResolvedValue([
       {
