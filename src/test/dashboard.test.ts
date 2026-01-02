@@ -253,4 +253,39 @@ describe("Dashboard", () => {
       expect.stringContaining("## #123 My bug fix"),
     );
   });
+
+  it("keeps entry if fetching a backport fails", async () => {
+    mockGithubApi.getIssues.mockResolvedValue([
+      {
+        number: 1,
+        title: "Backport Dashboard",
+        body: dedent`<!-- VERSION: 1 -->
+          This issue lists pull requests...
+
+          ## #100 Old PR
+          - \`branch/old\`: #101
+          - \`branch/older\`: #102`,
+      },
+    ]);
+
+    mockGithubApi.getPullRequest.mockImplementation((number) => {
+      switch (number) {
+        case 101:
+          return Promise.resolve({ number: 101, state: "closed" });
+        case 102:
+          return Promise.reject(new Error("API Error"));
+        default:
+          return Promise.reject("Unknown PR");
+      }
+    });
+
+    await dashboard.createOrUpdateDashboard(originalPR, [backportPR]);
+
+    const [issueNumber, updatedBody] = mockGithubApi.updateIssue.mock.lastCall;
+    expect(issueNumber).toBe(1);
+    // Should still contain the entry because check failed
+    expect(updatedBody).toContain("## #100 Old PR");
+    expect(updatedBody).toContain("- `branch/old`: #101");
+    expect(updatedBody).toContain("- `branch/older`: #102");
+  });
 });

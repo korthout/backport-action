@@ -80,14 +80,22 @@ export class Dashboard {
       const activeBackports: BackportEntry[] = [];
 
       for (const bpr of entry.backports) {
-        const pr = await this.github.getPullRequest(bpr.number);
-        if (pr.state === "open") {
-          activeBackports.push(bpr);
-          console.log(
-            `Original PR #${entry.originalPrNumber} still has active backports, keeping it in the dashboard`,
+        try {
+          const pr = await this.github.getPullRequest(bpr.number);
+          if (pr.state === "open") {
+            activeBackports.push(bpr);
+            console.log(
+              `Original PR #${entry.originalPrNumber} still has active backports, keeping it in the dashboard`,
+            );
+          } else {
+            console.log(`Backport #${bpr.number} is closed or merged`);
+          }
+        } catch (error) {
+          console.error(
+            `Failed to fetch backport #${bpr.number} for original PR #${entry.originalPrNumber}. Treating it as still active.`,
+            error,
           );
-        } else {
-          console.log(`Backport #${bpr.number} is closed or merged`);
+          activeBackports.push(bpr);
         }
       }
 
