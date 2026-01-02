@@ -265,7 +265,8 @@ Default:
 
 ```json
 {
-  "detect_merge_method": false
+  "conflict_resolution": "fail",
+  "dashboard_enabled": false
 }
 ```
 
@@ -284,6 +285,26 @@ Behavior is defined by the option selected.
 - When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed.
 
 Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
+
+#### `dashboard_enabled`
+
+Default: `false`
+
+When set to `true`, the action will maintain a "Backport Dashboard" issue in the repository.
+This issue tracks the status of all backport pull requests created by the action.
+It lists the original PRs and their backports.
+On subsequent runs, it removes items from the list for which all backports are merged or closed.
+
+> [!Note]
+> To prevent race conditions when running the action with `dashboard_enabled`, 
+> it is recommended to use the `concurrency` feature of GitHub Actions.
+> Add the following to your job configuration:
+>
+> ```yaml
+> concurrency:
+>   group: backport-dashboard
+>   cancel-in-progress: false
+> ```
 
 #### `downstream_repo`
 
