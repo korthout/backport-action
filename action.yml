@@ -10,6 +10,9 @@ inputs:
   add_labels:
     description: >
       The action will add these labels (comma-delimited) to the backport pull request.
+      Placeholders can be used to define variable values.
+      These are indicated by a dollar sign and curly braces (`${placeholder}`).
+      Please refer to this action's README for all available placeholders.
       By default, no labels are added.
   auto_merge_enabled:
     description: >

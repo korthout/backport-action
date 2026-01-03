@@ -153,6 +153,9 @@ By default, the original author is not made an assignee.
 Default: `''` (disabled)
 
 The action will add these labels (comma-delimited) to the backport pull request.
+Placeholders can be used to define variable values.
+These are indicated by a dollar sign and curly braces (`${placeholder}`).
+Please refer to this action's README for all available [placeholders](#placeholders).
 By default, no labels are added.
 
 ### `auto_merge_enabled`
@@ -389,7 +392,7 @@ Can be used in addition to backport labels.
 By default, only backport labels are used to specify the target branches.
 
 ## Placeholders
-In the `pull_description` and `pull_title` inputs, placeholders can be used to define variable values.
+In the `pull_description`, `pull_title`, `branch_name`, and `add_labels` inputs, placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 The following placeholders are available and are replaced with:
 

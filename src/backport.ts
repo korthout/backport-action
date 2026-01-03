@@ -469,9 +469,12 @@ export class Backport {
             }
           }
 
-          // Combine the labels to be copied with the static labels and deduplicate them using a Set
+          // Combine copied labels with static labels (with placeholders resolved) and deduplicate them
+          const resolvedAddLabels = this.config.add_labels.map((label) =>
+            utils.replacePlaceholders(label, mainpr, target),
+          );
           const labels = [
-            ...new Set([...labelsToCopy, ...this.config.add_labels]),
+            ...new Set([...labelsToCopy, ...resolvedAddLabels]),
           ];
           if (labels.length > 0) {
             try {

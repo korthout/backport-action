@@ -1,4 +1,5 @@
 import { findTargetBranches } from "../backport";
+import { replacePlaceholders } from "../utils";
 
 const default_pattern = /^backport ([^ ]+)$/;
 
@@ -154,5 +155,51 @@ describe("find target branches", () => {
         ),
       ).toEqual(["feature/two"]);
     });
+  });
+});
+
+describe("compose labels", () => {
+  const main = {
+    number: 42,
+    body: "Mentions #123",
+    user: { login: "octocat" },
+    title: "Fix: sample",
+  };
+
+  const target = "release-1";
+
+  const compose = (
+    labelsToCopy: string[],
+    addLabels: string[],
+  ): string[] => [
+    ...new Set([
+      ...labelsToCopy,
+      ...addLabels.map((label) =>
+        replacePlaceholders(label, main, target),
+      ),
+    ]),
+  ];
+
+  it("replaces placeholders in add_labels", () => {
+    const labels = compose([], [
+      "backport-${target_branch}",
+      "from-${pull_author}",
+      "pr-${pull_number}",
+    ]);
+
+    expect(labels).toEqual([
+      "backport-release-1",
+      "from-octocat",
+      "pr-42",
+    ]);
+  });
+
+  it("deduplicates copied and added labels after replacement", () => {
+    const labels = compose(
+      ["existing", "backport-release-1"],
+      ["backport-${target_branch}", "existing"],
+    );
+
+    expect(labels).toEqual(["existing", "backport-release-1"]);
   });
 });
