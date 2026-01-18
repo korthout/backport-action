@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Set release version in package.json
-        uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
+        uses: jacobtomlinson/gha-find-replace@f1069b438f125e5395d84d1c6fd3b559a7880cb5 # 3.0.5
         with:
           find: '"version": "[0-9\.]+(-SNAPSHOT)?"'
           replace: '"version": "${{ inputs.releaseVersion }}"'
@@ -45,7 +45,7 @@ jobs:
         run: git show ${{ steps.commit-new-release.outputs.commit_sha }} | cat
 
       - name: Set development version in package.json
-        uses: jacobtomlinson/gha-find-replace@2ff30f644d2e0078fc028beb9193f5ff0dcad39e # v3
+        uses: jacobtomlinson/gha-find-replace@f1069b438f125e5395d84d1c6fd3b559a7880cb5 # 3.0.5
         with:
           find: '"version": "${{ inputs.releaseVersion }}"'
           replace: '"version": "${{ inputs.nextDevelopmentVersion }}"'
