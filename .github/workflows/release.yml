@@ -32,7 +32,7 @@ jobs:
 
       - name: Commit new release version
         id: commit-new-release
-        uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9
+        uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9.1.4
         with:
           commit: --signoff
           default_author: github_actions
@@ -71,7 +71,7 @@ jobs:
 
       - name: Commit next development version
         id: commit-next-dev
-        uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9
+        uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9.1.4
         with:
           commit: --signoff
           default_author: github_actions
