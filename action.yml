@@ -83,6 +83,17 @@ inputs:
 
       Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
 
+      #### `dashboard_enabled`
+
+      When set to `true`, the action will maintain a "Backport Dashboard" issue in the repository.
+      This issue tracks the status of all backport pull requests created by the action.
+      It lists the original PRs and their backports.
+      On subsequent runs, it removes items from the list for which all backports are merged or closed.
+
+      **Note:** This feature requires the `issues: write` permission to create and update the dashboard issue.
+
+      By default, the dashboard is disabled.
+
       #### `downstream_repo`
 
       Define if you want to backport to a repository other than where the workflow runs.
@@ -97,7 +108,8 @@ inputs:
       By default, uses the owner of the repository in which the workflow runs.
     default: >
       {
-        "conflict_resolution": "fail"
+        "conflict_resolution": "fail",
+        "dashboard_enabled": false
       }
   github_token:
     description: >
