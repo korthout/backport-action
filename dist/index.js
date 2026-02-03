@@ -1301,14 +1301,14 @@ const patterns = {
     // captures the `org`, `repo` and `number` of the issue
     // https://regex101.com/r/XKRl8q/5
     url: {
-        global: /(?:^| )(?:(?:https:\/\/)?(?:www\.)?github\.com\/(?<org>[^ \/\n]+)\/(?<repo>[^ \/\n]+)\/issues\/(?<number>[0-9]+)(?:\/)?)(?: |$)/gm,
-        first: /(?:^| )(?:(?:https:\/\/)?(?:www\.)?github\.com\/(?<org>[^ \/\n]+)\/(?<repo>[^ \/\n]+)\/issues\/(?<number>[0-9]+)(?:\/)?)(?: |$)/m,
+        global: /(?:^| )(?:(?:https:\/\/)?(?:www\.)?github\.com\/(?<org>[^ \/\n]+)\/(?<repo>[^ \/\n]+)\/issues\/(?<number>[1-9][0-9]*)(?:\/)?)(?: |$)/gm,
+        first: /(?:^| )(?:(?:https:\/\/)?(?:www\.)?github\.com\/(?<org>[^ \/\n]+)\/(?<repo>[^ \/\n]+)\/issues\/(?<number>[1-9][0-9]*)(?:\/)?)(?: |$)/m,
     },
     // matches `#123` at start, middle, end of line as individual word
     // may be lead and trailed by whitespace which should be trimmed
     // captures `number` of the issue (and optionally the `org` and `repo`)
     // https://regex101.com/r/2gAB8O/2
-    ref: /(?:^| )((?<org>[^\n #\/]+)\/(?<repo>[^\n #\/]+))?#(?<number>[0-9]+)(?: |$)/gm,
+    ref: /(?:^| )((?<org>[^\n #\/]+)\/(?<repo>[^\n #\/]+))?#(?<number>[1-9][0-9]*)(?: |$)/gm,
 };
 const toRef = (url) => {
     // matchAll is not yet available to directly access the captured groups of all matches
