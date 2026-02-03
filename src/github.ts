@@ -41,6 +41,9 @@ export interface GithubApi {
     merge_commit_sha: string | null,
   ): Promise<string | null>;
   getMergeCommitSha(pull: PullRequest): Promise<string | null>;
+  getIssues(title: string, options: string[]): Promise<Issue[]>;
+  createIssue(title: string, body: string): Promise<Issue>;
+  updateIssue(number: number, body: string): Promise<void>;
 }
 
 export class Github implements GithubApi {
@@ -389,6 +392,35 @@ export class Github implements GithubApi {
 
     return MergeStrategy.UNKNOWN;
   }
+
+  public async getIssues(title: string, options: string[] = []) {
+    console.log(`Retrieve issues with title ${title}`);
+    return this.#octokit.rest.search
+      .issuesAndPullRequests({
+        q: `repo:${this.getRepo().owner}/${this.getRepo().repo} is:issue in:title ${title} ${options.join(" ")}`,
+      })
+      .then((res) => res.data.items as Issue[]);
+  }
+
+  public async createIssue(title: string, body: string) {
+    console.log(`Create issue ${title}`);
+    return this.#octokit.rest.issues
+      .create({
+        ...this.getRepo(),
+        title,
+        body,
+      })
+      .then((res) => res.data as Issue);
+  }
+
+  public async updateIssue(number: number, body: string) {
+    console.log(`Update issue ${number}`);
+    await this.#octokit.rest.issues.update({
+      ...this.getRepo(),
+      issue_number: number,
+      body,
+    });
+  }
 }
 
 export enum MergeStrategy {
@@ -397,6 +429,12 @@ export enum MergeStrategy {
   MERGECOMMIT = "mergecommit",
   UNKNOWN = "unknown",
 }
+
+export type Issue = {
+  number: number;
+  title: string;
+  body: string | null;
+};
 
 export type Repo = {
   owner: string;
@@ -407,6 +445,7 @@ export type PullRequest = {
   number: number;
   title: string;
   body: string | null;
+  state: string;
   merge_commit_sha: string | null;
   head: {
     sha: string;
@@ -414,7 +453,9 @@ export type PullRequest = {
   };
   base: {
     sha: string;
+    ref: string;
   };
+  html_url: string;
   user: {
     login: string;
   };
@@ -442,6 +483,10 @@ export type CreatePullRequestResponse = {
   status: number;
   data: {
     number: number;
+    html_url: string;
+    base: {
+      ref: string;
+    };
     requested_reviewers?: ({ login: string } | null)[] | null;
   };
 };
