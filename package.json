@@ -27,7 +27,7 @@
     "node": ">=24.0.0 <25"
   },
   "dependencies": {
-    "@actions/core": "2.0.2",
+    "@actions/core": "2.0.3",
     "@actions/exec": "2.0.0",
     "@actions/github": "7.0.0",
     "dedent": "1.7.1"
