@@ -6,10 +6,10 @@ import {
   PullRequest,
   MergeStrategy,
   RequestError,
-} from "./github";
-import { GithubApi } from "./github";
-import { Git, GitRefNotFoundError } from "./git";
-import * as utils from "./utils";
+} from "./github.js";
+import { GithubApi } from "./github.js";
+import { Git, GitRefNotFoundError } from "./git.js";
+import * as utils from "./utils.js";
 
 type PRContent = {
   title: string;

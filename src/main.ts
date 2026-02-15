@@ -4,9 +4,9 @@ import {
   Config,
   experimentalDefaults,
   deprecatedExperimental,
-} from "./backport";
-import { Github } from "./github";
-import { Git } from "./git";
+} from "./backport.js";
+import { Github } from "./github.js";
+import { Git } from "./git.js";
 import dedent from "dedent";
 
 /**

@@ -1,5 +1,5 @@
 import dedent from "dedent";
-import { getMentionedIssueRefs, replacePlaceholders } from "../utils";
+import { getMentionedIssueRefs, replacePlaceholders } from "../utils.js";
 
 describe("get mentioned issues", () => {
   describe("returns an empty list", () => {

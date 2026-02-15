@@ -1,13 +1,9 @@
-import { Git, GitRefNotFoundError } from "../git";
+import { jest, describe, it, expect } from "@jest/globals";
 
-const git = new Git(
-  "github-actions[bot]",
-  "github-actions[bot]@users.noreply.github.com",
-);
 let response = { exitCode: 0, stdout: "" };
 let responseCommit = { exitCode: 0, stdout: "" };
 
-jest.mock("@actions/exec", () => ({
+jest.unstable_mockModule("@actions/exec", () => ({
   getExecOutput: jest.fn(
     (command: string, args?: readonly string[] | undefined) => {
       if (command === "git" && args) {
@@ -21,6 +17,13 @@ jest.mock("@actions/exec", () => ({
     },
   ),
 }));
+
+const { Git, GitRefNotFoundError } = await import("../git.js");
+
+const git = new Git(
+  "github-actions[bot]",
+  "github-actions[bot]@users.noreply.github.com",
+);
 
 describe("git.fetch", () => {
   describe("throws GitRefNotFoundError", () => {

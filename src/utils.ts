@@ -1,4 +1,4 @@
-import { PullRequest } from "./github";
+import { PullRequest } from "./github.js";
 
 /**
  * @param template The template potentially containing placeholders
