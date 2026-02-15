@@ -433,7 +433,8 @@ export class Backport {
           }
 
           if (this.config.copy_assignees == true) {
-            const assignees = mainpr.assignees.map((label) => label.login);
+            const assignees =
+              mainpr.assignees?.map((label) => label.login) ?? [];
             if (assignees.length > 0) {
               console.info("Setting assignees " + assignees);
               try {
@@ -449,10 +450,10 @@ export class Backport {
           }
 
           if (this.config.copy_requested_reviewers == true) {
-            const reviewers = mainpr.requested_reviewers?.map(
-              (reviewer) => reviewer.login,
-            );
-            if (reviewers?.length > 0) {
+            const reviewers =
+              mainpr.requested_reviewers?.map((reviewer) => reviewer.login) ??
+              [];
+            if (reviewers.length > 0) {
               console.info("Setting reviewers " + reviewers);
               const reviewRequest = {
                 owner,

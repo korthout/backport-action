@@ -82,7 +82,7 @@ export class Github implements GithubApi {
         ...this.getRepo(),
         pull_number,
       })
-      .then((response) => response.data as PullRequest);
+      .then((response: { data: PullRequest }) => response.data as PullRequest);
   }
 
   public async isMerged(pull: PullRequest) {
@@ -90,7 +90,7 @@ export class Github implements GithubApi {
     return this.#octokit.rest.pulls
       .checkIfMerged({ ...this.getRepo(), pull_number: pull.number })
       .then(() => true /* status is always 204 */)
-      .catch((error) => {
+      .catch((error: { status?: number }) => {
         if (error?.status == 404) return false;
         else throw error;
       });
@@ -119,7 +119,9 @@ export class Github implements GithubApi {
           per_page: 100,
           page: page,
         })
-        .then((commits) => commits.data.map((commit) => commit.sha));
+        .then((response: { data: { sha: string }[] }) =>
+          response.data.map((commit) => commit.sha),
+        );
 
     for (let page = 1; page <= Math.ceil(pull.commits / 100); page++) {
       const commitsOnPage = await getCommitsPaged(page);
@@ -285,7 +287,9 @@ export class Github implements GithubApi {
     const assoc_pr_data = assoc_pr.data;
     // commits can be associated with multiple PRs
     // checks if any of the assoc_prs is the same as the pull
-    return assoc_pr_data.some((pr) => pr.number == pull.number);
+    return assoc_pr_data.some(
+      (pr: { number: number }) => pr.number == pull.number,
+    );
   }
 
   /**
@@ -421,22 +425,26 @@ export type PullRequest = {
   labels: {
     name: string;
   }[];
-  requested_reviewers: {
-    login: string;
-  }[];
+  requested_reviewers?:
+    | {
+        login: string;
+      }[]
+    | null;
   commits: number;
   milestone: {
     number: number;
     id: number;
     title: string;
-  };
-  assignees: {
-    login: string;
-    id: number;
-  }[];
+  } | null;
+  assignees?:
+    | {
+        login: string;
+        id: number;
+      }[]
+    | null;
   merged_by: {
     login: string;
-  };
+  } | null;
 };
 export type CreatePullRequestResponse = {
   status: number;
