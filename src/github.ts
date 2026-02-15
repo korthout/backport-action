@@ -425,22 +425,26 @@ export type PullRequest = {
   labels: {
     name: string;
   }[];
-  requested_reviewers: {
-    login: string;
-  }[];
+  requested_reviewers?:
+    | {
+        login: string;
+      }[]
+    | null;
   commits: number;
   milestone: {
     number: number;
     id: number;
     title: string;
-  };
-  assignees: {
-    login: string;
-    id: number;
-  }[];
+  } | null;
+  assignees?:
+    | {
+        login: string;
+        id: number;
+      }[]
+    | null;
   merged_by: {
     login: string;
-  };
+  } | null;
 };
 export type CreatePullRequestResponse = {
   status: number;
