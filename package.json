@@ -8,7 +8,7 @@
     "build": "tsc",
     "format": "prettier --write \"**.ts\"",
     "format-check": "prettier --check \"**.ts\"",
-    "package": "ncc build --source-map --license licenses.txt",
+    "package": "esbuild src/main.ts --bundle --platform=node --target=node24 --outfile=dist/index.js",
     "test": "jest --silent",
     "test-verbose": "jest",
     "all": "npm run format && npm run build && npm run package && npm test"
