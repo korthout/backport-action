@@ -9,7 +9,7 @@
     "build": "tsc",
     "format": "prettier --write \"**.ts\"",
     "format-check": "prettier --check \"**.ts\"",
-    "package": "esbuild src/main.ts --bundle --platform=node --target=node24 --format=esm --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\" --minify --outfile=dist/index.js",
+    "package": "node esbuild.config.mjs",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest --silent",
     "test-verbose": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "all": "npm run format && npm run build && npm run package && npm test"
