@@ -34,7 +34,7 @@
     "dedent": "1.7.1"
   },
   "devDependencies": {
-    "@octokit/request-error": "^7.1.0",
+    "@octokit/request-error": "7.1.0",
     "@types/dedent": "0.7.2",
     "@types/jest": "30.0.0",
     "esbuild": "0.27.3",
