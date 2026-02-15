@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2024",
-    "module": "commonjs",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "isolatedModules": true,
     "outDir": "./lib",
     "rootDir": "./src",
     "strict": true,

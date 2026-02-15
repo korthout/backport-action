@@ -1,4 +1,4 @@
-import { findTargetBranches } from "../backport";
+import { findTargetBranches } from "../backport.js";
 
 const default_pattern = /^backport ([^ ]+)$/;
 

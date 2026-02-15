@@ -3,14 +3,15 @@
   "version": "4.1.0-SNAPSHOT",
   "private": false,
   "description": "GitHub action to automatically backport pull requests",
+  "type": "module",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
     "format": "prettier --write \"**.ts\"",
     "format-check": "prettier --check \"**.ts\"",
-    "package": "esbuild src/main.ts --bundle --platform=node --target=node24 --minify --outfile=dist/index.js",
-    "test": "jest --silent",
-    "test-verbose": "jest",
+    "package": "esbuild src/main.ts --bundle --platform=node --target=node24 --format=esm --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\" --minify --outfile=dist/index.js",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --silent",
+    "test-verbose": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "all": "npm run format && npm run build && npm run package && npm test"
   },
   "repository": {
