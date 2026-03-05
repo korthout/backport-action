@@ -36,6 +36,7 @@ export type Config = {
   copy_assignees: boolean;
   copy_requested_reviewers: boolean;
   add_author_as_assignee: boolean;
+  add_author_as_reviewer: boolean;
   auto_merge_enabled: boolean;
   auto_merge_method: "merge" | "squash" | "rebase";
   experimental: Experimental;
@@ -494,6 +495,22 @@ export class Backport {
               await this.github.addAssignees(new_pr.number, [author], {
                 owner,
                 repo,
+              });
+            } catch (error) {
+              if (!(error instanceof RequestError)) throw error;
+              console.error(JSON.stringify(error.response));
+            }
+          }
+
+          if (this.config.add_author_as_reviewer == true) {
+            const author = mainpr.user.login;
+            console.info("Requesting review from " + author);
+            try {
+              await this.github.requestReviewers({
+                owner,
+                repo,
+                pull_number: new_pr.number,
+                reviewers: [author],
               });
             } catch (error) {
               if (!(error instanceof RequestError)) throw error;

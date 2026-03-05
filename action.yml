@@ -7,6 +7,11 @@ inputs:
     description: >
       Controls whether to set the author of the original pull request as an assignee on the backport pull request.
       By default, the original author is not made an assignee.
+  add_author_as_reviewer:
+    description: >
+      Controls whether to request a review from the author of the original pull request on the backport pull request.
+      By default, the original author is not requested for review.
+    default: false
   add_labels:
     description: >
       The action will add these labels (comma-delimited) to the backport pull request.

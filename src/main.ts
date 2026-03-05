@@ -32,6 +32,7 @@ async function run(): Promise<void> {
   const copy_milestone = core.getInput("copy_milestone");
   const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
   const add_author_as_assignee = core.getInput("add_author_as_assignee");
+  const add_author_as_reviewer = core.getInput("add_author_as_reviewer");
   const auto_merge_enabled = core.getInput("auto_merge_enabled");
   const auto_merge_method = core.getInput("auto_merge_method");
   const experimental = JSON.parse(core.getInput("experimental"));
@@ -57,6 +58,16 @@ async function run(): Promise<void> {
     auto_merge_method !== "rebase"
   ) {
     const message = `Expected input 'auto_merge_method' to be either 'merge', 'squash', or 'rebase', but was '${auto_merge_method}'`;
+    console.error(message);
+    core.setFailed(message);
+    return;
+  }
+
+  if (
+    copy_requested_reviewers === "true" &&
+    add_author_as_reviewer === "true"
+  ) {
+    const message = `Expected only one of 'copy_requested_reviewers' and 'add_author_as_reviewer', to be enabled but both were'`;
     console.error(message);
     core.setFailed(message);
     return;
@@ -103,6 +114,7 @@ async function run(): Promise<void> {
     copy_milestone: copy_milestone === "true",
     copy_requested_reviewers: copy_requested_reviewers === "true",
     add_author_as_assignee: add_author_as_assignee === "true",
+    add_author_as_reviewer: add_author_as_reviewer === "true",
     auto_merge_enabled: auto_merge_enabled === "true",
     auto_merge_method: auto_merge_method as "merge" | "squash" | "rebase",
     experimental: { ...experimentalDefaults, ...experimental },
