@@ -148,6 +148,13 @@ Default: `false` (disabled)
 Controls whether to set the author of the original pull request as an assignee on the backport pull request.
 By default, the original author is not made an assignee.
 
+### `add_author_as_reviewer`
+
+Default: `false` (disabled)
+
+Controls whether to request a review from the author of the original pull request on the backport pull request.
+By default, the original author is not requested for review.
+
 ### `add_labels`
 
 Default: `''` (disabled)
