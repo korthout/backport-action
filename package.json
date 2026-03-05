@@ -31,7 +31,7 @@
     "@actions/core": "3.0.0",
     "@actions/exec": "3.0.0",
     "@actions/github": "9.0.0",
-    "dedent": "1.7.1"
+    "dedent": "1.7.2"
   },
   "devDependencies": {
     "@octokit/request-error": "7.1.0",
