@@ -30,6 +30,7 @@ async function run(): Promise<void> {
   const merge_commits = core.getInput("merge_commits");
   const copy_assignees = core.getInput("copy_assignees");
   const copy_milestone = core.getInput("copy_milestone");
+  const copy_all_reviewers = core.getInput("copy_all_reviewers");
   const copy_requested_reviewers = core.getInput("copy_requested_reviewers");
   const add_author_as_assignee = core.getInput("add_author_as_assignee");
   const add_author_as_reviewer = core.getInput("add_author_as_reviewer");
@@ -112,6 +113,7 @@ async function run(): Promise<void> {
     commits: { cherry_picking, merge_commits },
     copy_assignees: copy_assignees === "true",
     copy_milestone: copy_milestone === "true",
+    copy_all_reviewers: copy_all_reviewers === "true",
     copy_requested_reviewers: copy_requested_reviewers === "true",
     add_author_as_assignee: add_author_as_assignee === "true",
     add_author_as_reviewer: add_author_as_reviewer === "true",

@@ -34,6 +34,7 @@ export type Config = {
   };
   copy_milestone: boolean;
   copy_assignees: boolean;
+  copy_all_reviewers: boolean;
   copy_requested_reviewers: boolean;
   add_author_as_assignee: boolean;
   add_author_as_reviewer: boolean;
@@ -443,6 +444,48 @@ export class Backport {
                   owner,
                   repo,
                 });
+              } catch (error) {
+                if (!(error instanceof RequestError)) throw error;
+                console.error(JSON.stringify(error.response));
+              }
+            }
+          }
+
+          if (this.config.copy_all_reviewers == true) {
+			const requestedReviewers =
+              mainpr.requested_reviewers?.map((reviewer) => reviewer.login) ??
+				  [];
+			
+			let submittedReviewers: string[] = [];
+			try {
+			  const { data: reviews } = await this.github.listReviews(owner, repo, mainpr.number);
+
+			  submittedReviewers = [
+				...new Set(
+				  reviews
+					.map((review) => review.user?.login)
+					.filter((login): login is string => Boolean(login))
+				),
+			  ];
+			} catch (error) {
+			  if (!(error instanceof RequestError)) throw error;
+			  console.error(JSON.stringify(error.response));
+			}
+
+            const reviewers = [
+              ...new Set([...requestedReviewers, ...submittedReviewers]),
+            ];
+
+            if (reviewers.length > 0) {
+              console.info("Setting reviewers " + reviewers);
+              const reviewRequest = {
+                owner,
+                repo,
+                pull_number: new_pr.number,
+                reviewers: reviewers,
+              };
+              try {
+                await this.github.requestReviewers(reviewRequest);
               } catch (error) {
                 if (!(error instanceof RequestError)) throw error;
                 console.error(JSON.stringify(error.response));
