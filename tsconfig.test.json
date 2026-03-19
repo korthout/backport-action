@@ -2,7 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./lib/jest",
-    "types": ["jest", "node"]
+    "types": ["node"]
   },
-  "include": ["jest.config.ts", "src/**/*.test.ts", "src/**/*.d.ts"]
+  "include": ["src/**/*.test.ts", "src/**/*.d.ts"]
 }
