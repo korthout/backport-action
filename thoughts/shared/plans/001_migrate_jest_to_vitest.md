@@ -192,16 +192,16 @@ No other changes — no mocking used.
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `npm test` passes (all 3 test files, same test count)
-- [ ] `npm run test-verbose` passes
-- [ ] `npm run build` passes (TypeScript compilation)
-- [ ] `npm run format-check` passes
-- [ ] `npm run package` passes
-- [ ] No jest-related packages in `node_modules` after clean install
+- [x] `npm test` passes (all 3 test files, same test count)
+- [x] `npm run test-verbose` passes
+- [x] `npm run build` passes (TypeScript compilation)
+- [x] `npm run format-check` passes
+- [x] `npm run package` passes
+- [x] No jest-related packages in `node_modules` after clean install
 
 #### Manual Verification:
-- [ ] `npm run test-verbose` shows same test names and counts as before
-- [ ] No `--experimental-vm-modules` warnings in output
+- [x] `npm run test-verbose` shows same test names and counts as before
+- [x] No `--experimental-vm-modules` warnings in output
 
 ## Testing Strategy
 This is a test infrastructure migration — the tests themselves ARE the verification. If all existing tests pass with the same assertions, the migration is correct.
