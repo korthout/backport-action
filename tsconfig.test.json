@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "./lib/jest",
+    "outDir": "./lib/test",
     "types": ["node"]
   },
   "include": ["src/**/*.test.ts", "src/**/*.d.ts"]
