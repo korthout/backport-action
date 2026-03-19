@@ -1,10 +1,10 @@
-import { jest, describe, it, expect } from "@jest/globals";
+import { describe, it, expect, vi } from "vitest";
 
 let response = { exitCode: 0, stdout: "" };
 let responseCommit = { exitCode: 0, stdout: "" };
 
-jest.unstable_mockModule("@actions/exec", () => ({
-  getExecOutput: jest.fn(
+vi.mock("@actions/exec", () => ({
+  getExecOutput: vi.fn(
     (command: string, args?: readonly string[] | undefined) => {
       if (command === "git" && args) {
         const subCommand = args[0];

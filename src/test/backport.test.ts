@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import { findTargetBranches } from "../backport.js";
 
 const default_pattern = /^backport ([^ ]+)$/;
