@@ -82,6 +82,38 @@ export function pushBranch(dir: string): void {
 }
 
 /**
+ * Sets up conflicting commits between main and a target branch.
+ * Creates a commit changing `file` on main, then a different commit
+ * changing the same `file` on the target branch.
+ * Returns the SHA of the commit on main (to use as the PR merge_commit_sha).
+ */
+export async function addConflictingCommits(
+  dir: string,
+  targetBranch: string,
+  file: string,
+): Promise<string> {
+  const featureSha = await addCommit(
+    dir,
+    file,
+    "conflicting content from main",
+    `Change ${file} on main`,
+  );
+  pushBranch(dir);
+
+  gitCmd(`checkout ${targetBranch}`, dir);
+  await addCommit(
+    dir,
+    file,
+    "different content",
+    `Change ${file} on ${targetBranch}`,
+  );
+  gitCmd(`push origin ${targetBranch}`, dir);
+  gitCmd("checkout main", dir);
+
+  return featureSha;
+}
+
+/**
  * Creates a pull request ref in the bare remote, simulating what GitHub does.
  * This allows `git fetch origin refs/pull/<number>/head` to succeed.
  */

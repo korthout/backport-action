@@ -40,6 +40,7 @@ import { makeConfig } from "./helpers/config.js";
 import {
   createTestRepo,
   addCommit,
+  addConflictingCommits,
   createBranch,
   pushBranch,
   createPullRequestRef,
@@ -123,25 +124,12 @@ describe("Backport.run() with real git", () => {
 
     createBranch(repo.workDir, "release", repo.initialCommitSha);
 
-    const featureSha = await addCommit(
+    const featureSha = await addConflictingCommits(
       repo.workDir,
+      "release",
       "README.md",
-      "conflicting content from main",
-      "Change README on main",
     );
-    pushBranch(repo.workDir);
     createPullRequestRef(repo.workDir, 42, featureSha);
-
-    // Add conflicting changes on release
-    gitCmd("checkout release", repo.workDir);
-    await addCommit(
-      repo.workDir,
-      "README.md",
-      "different content",
-      "Change README on release",
-    );
-    gitCmd("push origin release", repo.workDir);
-    gitCmd("checkout main", repo.workDir);
 
     const pr = makePullRequest({
       merge_commit_sha: featureSha,
@@ -174,24 +162,12 @@ describe("Backport.run() with real git", () => {
 
     createBranch(repo.workDir, "release", repo.initialCommitSha);
 
-    const featureSha = await addCommit(
+    const featureSha = await addConflictingCommits(
       repo.workDir,
+      "release",
       "README.md",
-      "conflicting content from main",
-      "Change README on main",
     );
-    pushBranch(repo.workDir);
     createPullRequestRef(repo.workDir, 42, featureSha);
-
-    gitCmd("checkout release", repo.workDir);
-    await addCommit(
-      repo.workDir,
-      "README.md",
-      "different content",
-      "Change README on release",
-    );
-    gitCmd("push origin release", repo.workDir);
-    gitCmd("checkout main", repo.workDir);
 
     const pr = makePullRequest({
       merge_commit_sha: featureSha,
