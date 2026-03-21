@@ -8,7 +8,31 @@ export class GitRefNotFoundError extends Error {
   }
 }
 
-export class Git {
+export interface GitApi {
+  fetch(
+    ref: string,
+    pwd: string,
+    depth: number,
+    remote?: string,
+  ): Promise<void>;
+  remoteAdd(
+    pwd: string,
+    shortname: string,
+    owner: string | undefined,
+    repo: string | undefined,
+  ): Promise<void>;
+  findCommitsInRange(range: string, pwd: string): Promise<string[]>;
+  findMergeCommits(commitShas: string[], pwd: string): Promise<string[]>;
+  push(branchname: string, remote: string, pwd: string): Promise<number>;
+  checkout(branch: string, start: string, pwd: string): Promise<void>;
+  cherryPick(
+    commitShas: string[],
+    conflictResolution: string,
+    pwd: string,
+  ): Promise<string[] | null>;
+}
+
+export class Git implements GitApi {
   constructor(
     private gitCommitterName: string,
     private gitCommitterEmail: string,
