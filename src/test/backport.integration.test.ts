@@ -220,9 +220,7 @@ describe("Backport.run() orchestration", () => {
 
     // After push fails, the recovery fetch should also fail
     // We need to allow the initial fetches to succeed but fail the recovery fetch
-    let fetchCallCount = 0;
     fetchMock.mockImplementation(async (ref: string) => {
-      fetchCallCount++;
       // The recovery fetch is the one for the branch name
       if (ref.startsWith("backport-")) {
         throw new GitRefNotFoundError("not found", ref);
