@@ -48,9 +48,6 @@ vi.mock("@actions/core", () => ({
 import * as core from "@actions/core";
 
 describe("Backport.run() orchestration", () => {
-  let github: GithubApi;
-  let git: GitApi;
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -61,19 +58,19 @@ describe("Backport.run() orchestration", () => {
     gitOverrides?: Partial<GitApi>,
   ) {
     const pr = makePullRequest();
-    github = createMockGithub({
+    const github = createMockGithub({
       getPullRequest: vi.fn().mockResolvedValue(pr),
       getCommits: vi.fn().mockResolvedValue(["abc123"]),
       getMergeCommitSha: vi.fn().mockResolvedValue("abc123"),
       ...githubOverrides,
     });
-    git = createMockGit(gitOverrides);
+    const git = createMockGit(gitOverrides);
     const config = makeConfig(configOverrides);
-    return { pr, config };
+    return { github, git, pr, config };
   }
 
   it("happy path: creates backport PR and posts success comment", async () => {
-    const { config } = setup();
+    const { github, git, config } = setup();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -91,7 +88,7 @@ describe("Backport.run() orchestration", () => {
     const pr = makePullRequest({
       labels: [{ name: "backport main" }, { name: "backport release" }],
     });
-    const { config } = setup(undefined, {
+    const { github, git, config } = setup(undefined, {
       getPullRequest: vi.fn().mockResolvedValue(pr),
       getCommits: vi.fn().mockResolvedValue(["abc123"]),
       getMergeCommitSha: vi.fn().mockResolvedValue("abc123"),
@@ -104,7 +101,7 @@ describe("Backport.run() orchestration", () => {
 
   it("no matching labels: no PRs created, no comments", async () => {
     const pr = makePullRequest({ labels: [{ name: "bug" }] });
-    const { config } = setup(undefined, {
+    const { github, git, config } = setup(undefined, {
       getPullRequest: vi.fn().mockResolvedValue(pr),
     });
     const backport = new Backport(github, config, git);
@@ -115,7 +112,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("unmerged PR: posts 'not merged' comment, no PRs", async () => {
-    const { config } = setup(undefined, {
+    const { github, git, config } = setup(undefined, {
       isMerged: vi.fn().mockResolvedValue(false),
     });
     const backport = new Backport(github, config, git);
@@ -144,7 +141,7 @@ describe("Backport.run() orchestration", () => {
         throw new GitRefNotFoundError("not found", "nonexistent");
       });
 
-    const { config } = setup(
+    const { github, git, config } = setup(
       undefined,
       {
         getPullRequest: vi.fn().mockResolvedValue(pr),
@@ -166,7 +163,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("cherry-pick fails: posts failure comment with manual instructions", async () => {
-    const { config } = setup(undefined, undefined, {
+    const { github, git, config } = setup(undefined, undefined, {
       cherryPick: vi.fn().mockRejectedValue(new Error("cherry-pick failed")),
     });
     const backport = new Backport(github, config, git);
@@ -181,7 +178,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("cherry-pick with conflicts (draft mode): creates draft PR, posts conflict comment", async () => {
-    const { config } = setup(
+    const { github, git, config } = setup(
       { experimental: { conflict_resolution: "draft_commit_conflicts" } },
       undefined,
       {
@@ -202,7 +199,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("push fails, branch exists: recovers and creates PR", async () => {
-    const { config } = setup(undefined, undefined, {
+    const { github, git, config } = setup(undefined, undefined, {
       push: vi.fn().mockResolvedValue(1),
     });
     const backport = new Backport(github, config, git);
@@ -213,7 +210,7 @@ describe("Backport.run() orchestration", () => {
 
   it("push fails, branch doesn't exist: posts failure comment", async () => {
     const fetchMock = vi.fn().mockResolvedValue(undefined);
-    const { config } = setup(undefined, undefined, {
+    const { github, git, config } = setup(undefined, undefined, {
       push: vi.fn().mockResolvedValue(1),
       fetch: fetchMock,
     });
@@ -255,7 +252,7 @@ describe("Backport.run() orchestration", () => {
       },
       request: { method: "POST", url: "", headers: {} },
     });
-    const { config } = setup(undefined, {
+    const { github, git, config } = setup(undefined, {
       createPR: vi.fn().mockRejectedValue(requestError),
     });
     const backport = new Backport(github, config, git);
@@ -274,7 +271,7 @@ describe("Backport.run() orchestration", () => {
     const pr = makePullRequest({
       milestone: { number: 5, id: 123, title: "v1.0" },
     });
-    const { config } = setup(
+    const { github, git, config } = setup(
       { copy_milestone: true },
       {
         getPullRequest: vi.fn().mockResolvedValue(pr),
@@ -292,7 +289,7 @@ describe("Backport.run() orchestration", () => {
     const pr = makePullRequest({
       assignees: [{ login: "user1", id: 1 }],
     });
-    const { config } = setup(
+    const { github, git, config } = setup(
       { copy_assignees: true },
       {
         getPullRequest: vi.fn().mockResolvedValue(pr),
@@ -314,7 +311,7 @@ describe("Backport.run() orchestration", () => {
     const pr = makePullRequest({
       requested_reviewers: [{ login: "reviewer1" }],
     });
-    const { config } = setup(
+    const { github, git, config } = setup(
       { copy_requested_reviewers: true },
       {
         getPullRequest: vi.fn().mockResolvedValue(pr),
@@ -334,7 +331,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("add author as assignee: calls addAssignees with author", async () => {
-    const { config } = setup({ add_author_as_assignee: true });
+    const { github, git, config } = setup({ add_author_as_assignee: true });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -346,7 +343,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("add author as reviewer: calls requestReviewers with author", async () => {
-    const { config } = setup({ add_author_as_reviewer: true });
+    const { github, git, config } = setup({ add_author_as_reviewer: true });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -366,7 +363,7 @@ describe("Backport.run() orchestration", () => {
         { name: "enhancement" },
       ],
     });
-    const { config } = setup(
+    const { github, git, config } = setup(
       { copy_labels_pattern: /.*/ },
       {
         getPullRequest: vi.fn().mockResolvedValue(pr),
@@ -388,7 +385,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("add static labels: calls labelPR", async () => {
-    const { config } = setup({ add_labels: ["bug"] });
+    const { github, git, config } = setup({ add_labels: ["bug"] });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -400,7 +397,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("auto-merge enabled: calls enableAutoMerge", async () => {
-    const { config } = setup({ auto_merge_enabled: true });
+    const { github, git, config } = setup({ auto_merge_enabled: true });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -412,7 +409,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("custom PR title template: replaces placeholders", async () => {
-    const { config } = setup();
+    const { github, git, config } = setup();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -429,7 +426,7 @@ describe("Backport.run() orchestration", () => {
     });
 
     let cherryPickCallCount = 0;
-    const { config } = setup(
+    const { github, git, config } = setup(
       undefined,
       {
         getPullRequest: vi.fn().mockResolvedValue(pr),
@@ -452,7 +449,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("merge commits detected (fail mode): posts failure comment, no PR", async () => {
-    const { config } = setup(undefined, undefined, {
+    const { github, git, config } = setup(undefined, undefined, {
       findMergeCommits: vi.fn().mockResolvedValue(["merge123"]),
     });
     const backport = new Backport(github, config, git);
@@ -467,7 +464,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("merge commits detected (skip mode): cherry-picks only non-merge commits", async () => {
-    const { config } = setup(
+    const { github, git, config } = setup(
       { commits: { cherry_picking: "auto", merge_commits: "skip" } },
       {
         getPullRequest: vi.fn().mockResolvedValue(makePullRequest()),
@@ -486,7 +483,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("outputs: sets was_successful, was_successful_by_target, created_pull_numbers", async () => {
-    const { config } = setup();
+    const { github, git, config } = setup();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -499,7 +496,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("downstream repo: calls remoteAdd, uses 'downstream' remote", async () => {
-    const { config } = setup({
+    const { github, git, config } = setup({
       experimental: {
         conflict_resolution: "fail",
         downstream_repo: "downstream-repo",
