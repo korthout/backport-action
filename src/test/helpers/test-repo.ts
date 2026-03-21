@@ -20,7 +20,7 @@ const gitEnv = {
   HOME: "", // prevent reading user .gitconfig
 };
 
-function git(args: string, cwd: string): string {
+export function gitCmd(args: string, cwd: string): string {
   return execSync(
     `git -c commit.gpgsign=false -c init.defaultBranch=main ${args}`,
     {
@@ -31,26 +31,24 @@ function git(args: string, cwd: string): string {
   ).trim();
 }
 
-export { gitEnv };
-
 export async function createTestRepo(): Promise<TestRepo> {
   const baseDir = await mkdtemp(join(tmpdir(), "backport-test-"));
   const bareDir = join(baseDir, "bare.git");
   const workDir = join(baseDir, "work");
 
   // Create bare remote
-  git(`init --bare ${bareDir}`, baseDir);
+  gitCmd(`init --bare ${bareDir}`, baseDir);
 
   // Clone it
-  git(`clone ${bareDir} ${workDir}`, baseDir);
+  gitCmd(`clone ${bareDir} ${workDir}`, baseDir);
 
   // Create initial commit on main
   await writeFile(join(workDir, "README.md"), "initial");
-  git("add README.md", workDir);
-  git('commit -m "initial commit"', workDir);
-  git("push origin HEAD", workDir);
+  gitCmd("add README.md", workDir);
+  gitCmd('commit -m "initial commit"', workDir);
+  gitCmd("push origin HEAD", workDir);
 
-  const initialCommitSha = git("rev-parse HEAD", workDir);
+  const initialCommitSha = gitCmd("rev-parse HEAD", workDir);
 
   return {
     workDir,
@@ -69,18 +67,18 @@ export async function addCommit(
   message: string,
 ): Promise<string> {
   await writeFile(join(dir, file), content);
-  git(`add ${file}`, dir);
-  git(`commit -m "${message}"`, dir);
-  return git("rev-parse HEAD", dir);
+  gitCmd(`add ${file}`, dir);
+  gitCmd(`commit -m "${message}"`, dir);
+  return gitCmd("rev-parse HEAD", dir);
 }
 
 export function createBranch(dir: string, branch: string, from: string): void {
-  git(`branch ${branch} ${from}`, dir);
-  git(`push origin ${branch}`, dir);
+  gitCmd(`branch ${branch} ${from}`, dir);
+  gitCmd(`push origin ${branch}`, dir);
 }
 
 export function pushBranch(dir: string): void {
-  git("push origin HEAD", dir);
+  gitCmd("push origin HEAD", dir);
 }
 
 /**
@@ -92,5 +90,5 @@ export function createPullRequestRef(
   pullNumber: number,
   sha: string,
 ): void {
-  git(`push origin ${sha}:refs/pull/${pullNumber}/head`, dir);
+  gitCmd(`push origin ${sha}:refs/pull/${pullNumber}/head`, dir);
 }
