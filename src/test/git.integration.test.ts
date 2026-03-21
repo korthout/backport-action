@@ -134,12 +134,12 @@ describe("Backport.run() with real git", () => {
 
     // Add conflicting changes on release
     gitCmd("checkout release", repo.workDir);
-    execSync('echo "different content" > README.md', {
-      cwd: repo.workDir,
-      encoding: "utf-8",
-    });
-    gitCmd("add README.md", repo.workDir);
-    gitCmd('commit -m "Change README on release"', repo.workDir);
+    await addCommit(
+      repo.workDir,
+      "README.md",
+      "different content",
+      "Change README on release",
+    );
     gitCmd("push origin release", repo.workDir);
     gitCmd("checkout main", repo.workDir);
 
@@ -184,12 +184,12 @@ describe("Backport.run() with real git", () => {
     createPullRequestRef(repo.workDir, 42, featureSha);
 
     gitCmd("checkout release", repo.workDir);
-    execSync('echo "different content" > README.md', {
-      cwd: repo.workDir,
-      encoding: "utf-8",
-    });
-    gitCmd("add README.md", repo.workDir);
-    gitCmd('commit -m "Change README on release"', repo.workDir);
+    await addCommit(
+      repo.workDir,
+      "README.md",
+      "different content",
+      "Change README on release",
+    );
     gitCmd("push origin release", repo.workDir);
     gitCmd("checkout main", repo.workDir);
 
