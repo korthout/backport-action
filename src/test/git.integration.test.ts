@@ -43,7 +43,7 @@ import {
   createBranch,
   pushBranch,
   createPullRequestRef,
-  gitEnv,
+  gitCmd,
   type TestRepo,
 } from "./helpers/test-repo.js";
 
@@ -51,14 +51,6 @@ vi.mock("@actions/core", () => ({
   setFailed: vi.fn(),
   setOutput: vi.fn(),
 }));
-
-function gitCmd(args: string, cwd: string): string {
-  return execSync(`git -c commit.gpgsign=false ${args}`, {
-    cwd,
-    encoding: "utf-8",
-    env: gitEnv,
-  }).trim();
-}
 
 describe("Backport.run() with real git", () => {
   let repo: TestRepo;
