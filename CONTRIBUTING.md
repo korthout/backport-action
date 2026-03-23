@@ -51,13 +51,15 @@ Run all tests with additional console output.
 npm run test-verbose
 ```
 
+For guidance on writing tests — where to add them, which helpers to use, and testing conventions — see [TESTING.md](TESTING.md).
+
 Shorthand for format, build, package and test.
 
 ```
 npm run all
 ```
 
-This action can also be tested using [korthout/backport-action-test](https://github.com/korthout/backport-action-test).
+This action can also be tested end-to-end using [korthout/backport-action-test](https://github.com/korthout/backport-action-test).
 
 ### Releases
 
