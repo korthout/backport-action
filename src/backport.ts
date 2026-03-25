@@ -452,25 +452,29 @@ export class Backport {
           }
 
           if (this.config.copy_all_reviewers == true) {
-			const requestedReviewers =
+            const requestedReviewers =
               mainpr.requested_reviewers?.map((reviewer) => reviewer.login) ??
-				  [];
-			
-			let submittedReviewers: string[] = [];
-			try {
-			  const { data: reviews } = await this.github.listReviews(owner, repo, mainpr.number);
+              [];
 
-			  submittedReviewers = [
-				...new Set(
-				  reviews
-					.map((review) => review.user?.login)
-					.filter((login): login is string => Boolean(login))
-				),
-			  ];
-			} catch (error) {
-			  if (!(error instanceof RequestError)) throw error;
-			  console.error(JSON.stringify(error.response));
-			}
+            let submittedReviewers: string[] = [];
+            try {
+              const { data: reviews } = await this.github.listReviews(
+                owner,
+                repo,
+                mainpr.number,
+              );
+
+              submittedReviewers = [
+                ...new Set(
+                  reviews
+                    .map((review) => review.user?.login)
+                    .filter((login): login is string => Boolean(login)),
+                ),
+              ];
+            } catch (error) {
+              if (!(error instanceof RequestError)) throw error;
+              console.error(JSON.stringify(error.response));
+            }
 
             const reviewers = [
               ...new Set([...requestedReviewers, ...submittedReviewers]),

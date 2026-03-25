@@ -24,7 +24,11 @@ export interface GithubApi {
     labels: string[],
     repo: Repo,
   ): Promise<LabelPullRequestResponse>;
-  listReviews(owner: string, repo: string, pull_number: number): Promise<ListReviewsResponse>;
+  listReviews(
+    owner: string,
+    repo: string,
+    pull_number: number,
+  ): Promise<ListReviewsResponse>;
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
   addAssignees(
     pr: number,
@@ -152,7 +156,7 @@ export class Github implements GithubApi {
       owner,
       repo,
       pull_number,
-    })
+    });
   }
 
   public async requestReviewers(request: ReviewRequest) {
