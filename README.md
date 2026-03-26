@@ -234,6 +234,15 @@ Specifically, those reachable from the pull request's head and not reachable fro
 
 By default, the action cherry-picks the commits based on the method used to merge the pull request.
 
+### `copy_all_reviewers`
+
+Default: `false` (disabled)
+
+Controls whether to copy all reviewers from the original pull request to the backport pull request.
+Note that this requests reviews from both requested reviewers, and people that have already reviewed the original pull request.
+Use `copy_requested_reviewers` instead to only request reviews from requested reviewers.
+By default, all reviewers are not copied.
+
 ### `copy_assignees`
 
 Default: `false` (disabled)
@@ -262,6 +271,7 @@ Default: `false` (disabled)
 
 Controls whether to copy the requested reviewers from the original pull request to the backport pull request.
 Note that this does not request reviews from those users who already reviewed the original pull request.
+Use `copy_all_reviewers` instead to also request reviews from those users.
 By default, the requested reviewers are not copied.
 
 ### `experimental`

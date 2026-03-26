@@ -24,6 +24,11 @@ export interface GithubApi {
     labels: string[],
     repo: Repo,
   ): Promise<LabelPullRequestResponse>;
+  listReviews(
+    owner: string,
+    repo: string,
+    pull_number: number,
+  ): Promise<ListReviewsResponse>;
   requestReviewers(request: ReviewRequest): Promise<RequestReviewersResponse>;
   addAssignees(
     pr: number,
@@ -134,6 +139,24 @@ export class Github implements GithubApi {
   public async createPR(pr: CreatePullRequest) {
     console.log(`Create PR: ${pr.body}`);
     return this.#octokit.rest.pulls.create(pr);
+  }
+
+  /**
+   * Retrieves a list of reviews for a specific pull request.
+
+   * @param owner - The account owner of the repository.
+   * @param repo - The name of the repository.
+   * @param pull_number - The unique identifier of the pull request.
+   * @returns A promise that resolves to the list of reviews from the GitHub API.
+   * @throws Will throw an error if the Octokit request fails (e.g., 404 Not Found).
+   */
+  public async listReviews(owner: string, repo: string, pull_number: number) {
+    console.log(`Retrieving reviews from pull request: ${pull_number}`);
+    return this.#octokit.rest.pulls.listReviews({
+      owner,
+      repo,
+      pull_number,
+    });
   }
 
   public async requestReviewers(request: ReviewRequest) {
@@ -454,6 +477,17 @@ export type CreatePullRequestResponse = {
   };
 };
 export type RequestReviewersResponse = CreatePullRequestResponse;
+
+export type PullRequestReview = {
+  user: {
+    login: string;
+  } | null;
+};
+
+export type ListReviewsResponse = {
+  status: number;
+  data: PullRequestReview[];
+};
 
 export type GenericResponse = {
   status: number;
