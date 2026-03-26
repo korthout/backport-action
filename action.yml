@@ -51,6 +51,12 @@ inputs:
 
       By default, the action cherry-picks the commits based on the method used to merge the pull request.
     default: auto
+  copy_all_reviewers:
+    description: >
+      Controls whether to copy all reviewers from the original pull request to the backport pull request.
+      Note that this requests reviews from both requested reviewers, and people that have already reviewed the original pull request.
+      By default, all reviewers are not copied.
+    default: false
   copy_assignees:
     description: >
       Controls whether to copy the assignees from the original pull request to the backport pull request.
@@ -65,12 +71,6 @@ inputs:
     description: >
       Controls whether to copy the milestone from the original pull request to the backport pull request.
       By default, the milestone is not copied.
-    default: false
-  copy_all_reviewers:
-    description: >
-      Controls whether to copy all reviewers from the original pull request to the backport pull request.
-      Note that this requests reviews from both requested reviewers, and people that have already reviewed the original pull request.
-      By default, all reviewers are not copied.
     default: false
   copy_requested_reviewers:
     description: >
