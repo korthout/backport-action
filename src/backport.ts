@@ -459,8 +459,8 @@ export class Backport {
             let submittedReviewers: string[] = [];
             try {
               const { data: reviews } = await this.github.listReviews(
-                owner,
-                repo,
+                workflowOwner,
+                workflowRepo,
                 mainpr.number,
               );
 
