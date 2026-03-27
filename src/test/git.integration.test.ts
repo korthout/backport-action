@@ -2,7 +2,7 @@
  * Real-git integration tests for Backport.run()
  *
  * These tests use REAL git operations on temporary repositories with a
- * MOCKED GithubApi. They verify that cherry-picks, conflicts, and branch
+ * FAKE GithubApi. They verify that cherry-picks, conflicts, and branch
  * operations produce correct results end-to-end.
  *
  * ## When to add tests HERE:
@@ -23,19 +23,11 @@
  * git repositories. Keep this file focused on scenarios that genuinely
  * need real git — use orchestration tests for everything else.
  */
-import {
-  describe,
-  it,
-  expect,
-  vi,
-  beforeEach,
-  afterEach,
-  type Mock,
-} from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Backport } from "../backport.js";
 import { Git } from "../git.js";
 import { MergeStrategy } from "../github.js";
-import { createMockGithub, makePullRequest } from "./helpers/mock-github.js";
+import { FakeGithub } from "./helpers/fake-github.js";
 import { makeConfig } from "./helpers/config.js";
 import {
   createTestRepo,
@@ -92,30 +84,25 @@ describe("Backport.run() with real git", () => {
     pushBranch(repo.workDir);
     createPullRequestRef(repo.workDir, 42, featureSha);
 
-    const pr = makePullRequest({
-      merge_commit_sha: featureSha,
-      labels: [{ name: "backport release" }],
-      commits: 1,
-    });
-
-    const github = createMockGithub({
-      getPullRequest: vi.fn().mockResolvedValue(pr),
-      getCommits: vi.fn().mockResolvedValue([featureSha]),
-      getMergeCommitSha: vi.fn().mockResolvedValue(featureSha),
-      mergeStrategy: vi.fn().mockResolvedValue(MergeStrategy.SQUASHED),
+    const github = new FakeGithub({
+      sourcePr: {
+        merge_commit_sha: featureSha,
+        labels: [{ name: "backport release" }],
+        commits: 1,
+      },
+      commitShas: [featureSha],
+      mergeCommitSha: featureSha,
     });
 
     const config = makeConfig({ pwd: repo.workDir });
     const backport = new Backport(github, config, git);
     await backport.run();
 
-    expect(github.createPR).toHaveBeenCalledOnce();
-    expect(github.createPR).toHaveBeenCalledWith(
-      expect.objectContaining({
-        base: "release",
-        draft: false,
-      }),
-    );
+    expect(github.createdPRs).toHaveLength(1);
+    expect(github.createdPRs[0]).toMatchObject({
+      base: "release",
+      draft: false,
+    });
   });
 
   it("cherry-pick conflict (fail mode): posts failure comment", async () => {
@@ -131,29 +118,26 @@ describe("Backport.run() with real git", () => {
     );
     createPullRequestRef(repo.workDir, 42, featureSha);
 
-    const pr = makePullRequest({
-      merge_commit_sha: featureSha,
-      labels: [{ name: "backport release" }],
-      commits: 1,
-    });
-
-    const github = createMockGithub({
-      getPullRequest: vi.fn().mockResolvedValue(pr),
-      getCommits: vi.fn().mockResolvedValue([featureSha]),
-      getMergeCommitSha: vi.fn().mockResolvedValue(featureSha),
-      mergeStrategy: vi.fn().mockResolvedValue(MergeStrategy.SQUASHED),
+    const github = new FakeGithub({
+      sourcePr: {
+        merge_commit_sha: featureSha,
+        labels: [{ name: "backport release" }],
+        commits: 1,
+      },
+      commitShas: [featureSha],
+      mergeCommitSha: featureSha,
     });
 
     const config = makeConfig({ pwd: repo.workDir });
     const backport = new Backport(github, config, git);
     await backport.run();
 
-    expect(github.createPR).not.toHaveBeenCalled();
-    const commentCalls = (github.createComment as Mock).mock.calls;
-    const failureComment = commentCalls.find((c: any[]) =>
-      c[0].body.includes("unable to cherry-pick"),
+    expect(github.createdPRs).toHaveLength(0);
+    expect(github.comments).toContainEqual(
+      expect.objectContaining({
+        body: expect.stringContaining("unable to cherry-pick"),
+      }),
     );
-    expect(failureComment).toBeDefined();
   });
 
   it("cherry-pick conflict (draft mode): creates draft PR with conflict comment", async () => {
@@ -169,17 +153,14 @@ describe("Backport.run() with real git", () => {
     );
     createPullRequestRef(repo.workDir, 42, featureSha);
 
-    const pr = makePullRequest({
-      merge_commit_sha: featureSha,
-      labels: [{ name: "backport release" }],
-      commits: 1,
-    });
-
-    const github = createMockGithub({
-      getPullRequest: vi.fn().mockResolvedValue(pr),
-      getCommits: vi.fn().mockResolvedValue([featureSha]),
-      getMergeCommitSha: vi.fn().mockResolvedValue(featureSha),
-      mergeStrategy: vi.fn().mockResolvedValue(MergeStrategy.SQUASHED),
+    const github = new FakeGithub({
+      sourcePr: {
+        merge_commit_sha: featureSha,
+        labels: [{ name: "backport release" }],
+        commits: 1,
+      },
+      commitShas: [featureSha],
+      mergeCommitSha: featureSha,
     });
 
     const config = makeConfig({
@@ -189,9 +170,7 @@ describe("Backport.run() with real git", () => {
     const backport = new Backport(github, config, git);
     await backport.run();
 
-    expect(github.createPR).toHaveBeenCalledWith(
-      expect.objectContaining({ draft: true }),
-    );
+    expect(github.createdPRs[0]).toMatchObject({ draft: true });
   });
 
   it("multiple commits cherry-picked in order", async () => {
@@ -221,27 +200,23 @@ describe("Backport.run() with real git", () => {
     pushBranch(repo.workDir);
     createPullRequestRef(repo.workDir, 42, sha3);
 
-    const pr = makePullRequest({
-      merge_commit_sha: sha3,
-      labels: [{ name: "backport release" }],
-      commits: 3,
-    });
-
-    const github = createMockGithub({
-      getPullRequest: vi.fn().mockResolvedValue(pr),
-      getCommits: vi.fn().mockResolvedValue([sha1, sha2, sha3]),
-      getMergeCommitSha: vi.fn().mockResolvedValue(sha3),
-      mergeStrategy: vi.fn().mockResolvedValue(MergeStrategy.MERGECOMMIT),
+    const github = new FakeGithub({
+      sourcePr: {
+        merge_commit_sha: sha3,
+        labels: [{ name: "backport release" }],
+        commits: 3,
+      },
+      commitShas: [sha1, sha2, sha3],
+      mergeCommitSha: sha3,
+      mergeStrategyResult: MergeStrategy.MERGECOMMIT,
     });
 
     const config = makeConfig({ pwd: repo.workDir });
     const backport = new Backport(github, config, git);
     await backport.run();
 
-    expect(github.createPR).toHaveBeenCalledOnce();
-    expect(github.createPR).toHaveBeenCalledWith(
-      expect.objectContaining({ draft: false }),
-    );
+    expect(github.createdPRs).toHaveLength(1);
+    expect(github.createdPRs[0]).toMatchObject({ draft: false });
   });
 
   it("target branch doesn't exist: posts failure comment", async () => {
@@ -257,29 +232,26 @@ describe("Backport.run() with real git", () => {
     pushBranch(repo.workDir);
     createPullRequestRef(repo.workDir, 42, featureSha);
 
-    const pr = makePullRequest({
-      merge_commit_sha: featureSha,
-      labels: [{ name: "backport nonexistent" }],
-      commits: 1,
-    });
-
-    const github = createMockGithub({
-      getPullRequest: vi.fn().mockResolvedValue(pr),
-      getCommits: vi.fn().mockResolvedValue([featureSha]),
-      getMergeCommitSha: vi.fn().mockResolvedValue(featureSha),
-      mergeStrategy: vi.fn().mockResolvedValue(MergeStrategy.SQUASHED),
+    const github = new FakeGithub({
+      sourcePr: {
+        merge_commit_sha: featureSha,
+        labels: [{ name: "backport nonexistent" }],
+        commits: 1,
+      },
+      commitShas: [featureSha],
+      mergeCommitSha: featureSha,
     });
 
     const config = makeConfig({ pwd: repo.workDir });
     const backport = new Backport(github, config, git);
     await backport.run();
 
-    expect(github.createPR).not.toHaveBeenCalled();
-    const commentCalls = (github.createComment as Mock).mock.calls;
-    const failureComment = commentCalls.find((c: any[]) =>
-      c[0].body.includes("couldn't find remote ref"),
+    expect(github.createdPRs).toHaveLength(0);
+    expect(github.comments).toContainEqual(
+      expect.objectContaining({
+        body: expect.stringContaining("couldn't find remote ref"),
+      }),
     );
-    expect(failureComment).toBeDefined();
   });
 
   it("merge commit detection: findMergeCommits identifies merge commits", async () => {
