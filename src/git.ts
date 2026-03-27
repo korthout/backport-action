@@ -36,11 +36,12 @@ export class Git implements GitApi {
   constructor(
     private gitCommitterName: string,
     private gitCommitterEmail: string,
+    private silent: boolean = false,
   ) {}
 
   private async git(command: string, args: string[], pwd: string) {
     const options: ExecOptions = {
-      silent: false,
+      silent: this.silent,
       cwd: pwd,
       env: {
         ...process.env,

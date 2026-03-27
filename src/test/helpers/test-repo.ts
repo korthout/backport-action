@@ -26,6 +26,7 @@ export function gitCmd(args: string, cwd: string): string {
     {
       cwd,
       encoding: "utf-8",
+      stdio: process.env.GIT_SILENT === "1" ? "pipe" : undefined,
       env: gitEnv,
     },
   ).trim();

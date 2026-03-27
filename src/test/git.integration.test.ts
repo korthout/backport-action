@@ -66,7 +66,7 @@ describe("Backport.run() with real git", () => {
   });
 
   function setupGit() {
-    return new Git("Test", "test@test.com");
+    return new Git("Test", "test@test.com", process.env.GIT_SILENT === "1");
   }
 
   it("happy path: cherry-picks commit to target branch and creates PR", async () => {

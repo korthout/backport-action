@@ -23,6 +23,7 @@ const { Git, GitRefNotFoundError } = await import("../git.js");
 const git = new Git(
   "github-actions[bot]",
   "github-actions[bot]@users.noreply.github.com",
+  process.env.GIT_SILENT === "1",
 );
 
 describe("git.fetch", () => {
