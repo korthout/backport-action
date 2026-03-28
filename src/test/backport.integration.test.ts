@@ -33,9 +33,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Backport } from "../backport.js";
 import { GitRefNotFoundError } from "../git.js";
-import type { GitApi } from "../git.js";
 import { RequestError } from "../github.js";
-import { FakeGithub, type FakeGithubOptions } from "./helpers/fake-github.js";
+import { FakeGithub } from "./helpers/fake-github.js";
 import { createMockGit } from "./helpers/mock-git.js";
 import { makeConfig } from "./helpers/config.js";
 
@@ -51,19 +50,10 @@ describe("Backport.run() orchestration", () => {
     vi.clearAllMocks();
   });
 
-  function setup(
-    configOverrides?: Parameters<typeof makeConfig>[0],
-    githubOptions?: FakeGithubOptions,
-    gitOverrides?: Partial<GitApi>,
-  ) {
-    const github = new FakeGithub(githubOptions);
-    const git = createMockGit(gitOverrides);
-    const config = makeConfig(configOverrides);
-    return { github, git, config };
-  }
-
   it("happy path: creates backport PR and posts success comment", async () => {
-    const { github, git, config } = setup();
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -77,11 +67,13 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("multiple targets: creates two backport PRs", async () => {
-    const { github, git, config } = setup(undefined, {
+    const github = new FakeGithub({
       sourcePr: {
         labels: [{ name: "backport main" }, { name: "backport release" }],
       },
     });
+    const git = createMockGit();
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -89,9 +81,11 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("no matching labels: no PRs created, no comments", async () => {
-    const { github, git, config } = setup(undefined, {
+    const github = new FakeGithub({
       sourcePr: { labels: [{ name: "bug" }] },
     });
+    const git = createMockGit();
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -100,7 +94,9 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("unmerged PR: posts 'not merged' comment, no PRs", async () => {
-    const { github, git, config } = setup(undefined, { merged: false });
+    const github = new FakeGithub({ merged: false });
+    const git = createMockGit();
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -113,21 +109,19 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("target branch fetch fails with GitRefNotFoundError: posts failure comment, continues", async () => {
-    const fetchMock = vi.fn().mockImplementation(async (ref: string) => {
-      if (ref === "nonexistent") {
-        throw new GitRefNotFoundError("not found", "nonexistent");
-      }
-    });
-
-    const { github, git, config } = setup(
-      undefined,
-      {
-        sourcePr: {
-          labels: [{ name: "backport nonexistent" }, { name: "backport main" }],
-        },
+    const github = new FakeGithub({
+      sourcePr: {
+        labels: [{ name: "backport nonexistent" }, { name: "backport main" }],
       },
-      { fetch: fetchMock },
-    );
+    });
+    const git = createMockGit({
+      fetch: vi.fn().mockImplementation(async (ref: string) => {
+        if (ref === "nonexistent") {
+          throw new GitRefNotFoundError("not found", "nonexistent");
+        }
+      }),
+    });
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -140,9 +134,11 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("cherry-pick fails: posts failure comment with manual instructions", async () => {
-    const { github, git, config } = setup(undefined, undefined, {
+    const github = new FakeGithub();
+    const git = createMockGit({
       cherryPick: vi.fn().mockRejectedValue(new Error("cherry-pick failed")),
     });
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -155,13 +151,13 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("cherry-pick with conflicts (draft mode): creates draft PR, posts conflict comment", async () => {
-    const { github, git, config } = setup(
-      { experimental: { conflict_resolution: "draft_commit_conflicts" } },
-      undefined,
-      {
-        cherryPick: vi.fn().mockResolvedValue(["abc123"]),
-      },
-    );
+    const github = new FakeGithub();
+    const git = createMockGit({
+      cherryPick: vi.fn().mockResolvedValue(["abc123"]),
+    });
+    const config = makeConfig({
+      experimental: { conflict_resolution: "draft_commit_conflicts" },
+    });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -174,9 +170,11 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("push fails, branch exists: recovers and creates PR", async () => {
-    const { github, git, config } = setup(undefined, undefined, {
+    const github = new FakeGithub();
+    const git = createMockGit({
       push: vi.fn().mockResolvedValue(1),
     });
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -184,17 +182,19 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("push fails, branch doesn't exist: posts failure comment", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(undefined);
-    const { github, git, config } = setup(undefined, undefined, {
+    const github = new FakeGithub();
+    const git = createMockGit({
       push: vi.fn().mockResolvedValue(1),
-      fetch: fetchMock,
+      fetch: vi
+        .fn()
+        .mockResolvedValue(undefined)
+        .mockImplementation(async (ref: string) => {
+          if (ref.startsWith("backport-")) {
+            throw new GitRefNotFoundError("not found", ref);
+          }
+        }),
     });
-
-    fetchMock.mockImplementation(async (ref: string) => {
-      if (ref.startsWith("backport-")) {
-        throw new GitRefNotFoundError("not found", ref);
-      }
-    });
+    const config = makeConfig();
 
     const backport = new Backport(github, config, git);
     await backport.run();
@@ -208,27 +208,30 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("PR already exists (422): skips silently", async () => {
-    const requestError = new RequestError("Validation Failed", 422, {
-      response: {
-        url: "",
-        status: 422,
-        headers: {},
-        data: {
-          errors: [
-            {
-              message:
-                "A pull request already exists for test-owner:backport-42-to-main",
-            },
-          ],
-        },
-      },
-      request: { method: "POST", url: "", headers: {} },
-    });
-    const { github, git, config } = setup(undefined, {
+    const github = new FakeGithub({
       overrides: {
-        createPR: vi.fn().mockRejectedValue(requestError),
+        createPR: vi.fn().mockRejectedValue(
+          new RequestError("Validation Failed", 422, {
+            response: {
+              url: "",
+              status: 422,
+              headers: {},
+              data: {
+                errors: [
+                  {
+                    message:
+                      "A pull request already exists for test-owner:backport-42-to-main",
+                  },
+                ],
+              },
+            },
+            request: { method: "POST", url: "", headers: {} },
+          }),
+        ),
       },
     });
+    const git = createMockGit();
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -239,10 +242,11 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("copy milestone: sets milestone on backport PR", async () => {
-    const { github, git, config } = setup(
-      { copy_milestone: true },
-      { sourcePr: { milestone: { number: 5, id: 123, title: "v1.0" } } },
-    );
+    const github = new FakeGithub({
+      sourcePr: { milestone: { number: 5, id: 123, title: "v1.0" } },
+    });
+    const git = createMockGit();
+    const config = makeConfig({ copy_milestone: true });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -250,10 +254,11 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("copy assignees: assigns same users to backport PR", async () => {
-    const { github, git, config } = setup(
-      { copy_assignees: true },
-      { sourcePr: { assignees: [{ login: "user1", id: 1 }] } },
-    );
+    const github = new FakeGithub({
+      sourcePr: { assignees: [{ login: "user1", id: 1 }] },
+    });
+    const git = createMockGit();
+    const config = makeConfig({ copy_assignees: true });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -261,10 +266,11 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("copy requested reviewers: requests same reviewers on backport PR", async () => {
-    const { github, git, config } = setup(
-      { copy_requested_reviewers: true },
-      { sourcePr: { requested_reviewers: [{ login: "reviewer1" }] } },
-    );
+    const github = new FakeGithub({
+      sourcePr: { requested_reviewers: [{ login: "reviewer1" }] },
+    });
+    const git = createMockGit();
+    const config = makeConfig({ copy_requested_reviewers: true });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -272,7 +278,9 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("add author as assignee: assigns PR author to backport PR", async () => {
-    const { github, git, config } = setup({ add_author_as_assignee: true });
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig({ add_author_as_assignee: true });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -280,7 +288,9 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("add author as reviewer: requests PR author as reviewer on backport PR", async () => {
-    const { github, git, config } = setup({ add_author_as_reviewer: true });
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig({ add_author_as_reviewer: true });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -288,18 +298,17 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("copy labels: copies matching labels excluding backport labels", async () => {
-    const { github, git, config } = setup(
-      { copy_labels_pattern: /.*/ },
-      {
-        sourcePr: {
-          labels: [
-            { name: "backport main" },
-            { name: "bug" },
-            { name: "enhancement" },
-          ],
-        },
+    const github = new FakeGithub({
+      sourcePr: {
+        labels: [
+          { name: "backport main" },
+          { name: "bug" },
+          { name: "enhancement" },
+        ],
       },
-    );
+    });
+    const git = createMockGit();
+    const config = makeConfig({ copy_labels_pattern: /.*/ });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -310,7 +319,9 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("add static labels: adds configured labels to backport PR", async () => {
-    const { github, git, config } = setup({ add_labels: ["bug"] });
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig({ add_labels: ["bug"] });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -318,7 +329,9 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("auto-merge enabled: enables auto-merge on backport PR", async () => {
-    const { github, git, config } = setup({ auto_merge_enabled: true });
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig({ auto_merge_enabled: true });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -326,7 +339,9 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("custom PR title template: replaces placeholders", async () => {
-    const { github, git, config } = setup();
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -337,21 +352,19 @@ describe("Backport.run() orchestration", () => {
 
   it("partial failure: one PR created, one failure, was_successful = false", async () => {
     let cherryPickCallCount = 0;
-    const { github, git, config } = setup(
-      undefined,
-      {
-        sourcePr: {
-          labels: [{ name: "backport main" }, { name: "backport release" }],
-        },
+    const github = new FakeGithub({
+      sourcePr: {
+        labels: [{ name: "backport main" }, { name: "backport release" }],
       },
-      {
-        cherryPick: vi.fn().mockImplementation(async () => {
-          cherryPickCallCount++;
-          if (cherryPickCallCount === 1) return null;
-          throw new Error("cherry-pick failed");
-        }),
-      },
-    );
+    });
+    const git = createMockGit({
+      cherryPick: vi.fn().mockImplementation(async () => {
+        cherryPickCallCount++;
+        if (cherryPickCallCount === 1) return null;
+        throw new Error("cherry-pick failed");
+      }),
+    });
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -360,9 +373,11 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("merge commits detected (fail mode): posts failure comment, no PR", async () => {
-    const { github, git, config } = setup(undefined, undefined, {
+    const github = new FakeGithub();
+    const git = createMockGit({
       findMergeCommits: vi.fn().mockResolvedValue(["merge123"]),
     });
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -375,11 +390,13 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("merge commits detected (skip mode): cherry-picks only non-merge commits", async () => {
-    const { github, git, config } = setup(
-      { commits: { cherry_picking: "auto", merge_commits: "skip" } },
-      undefined,
-      { findMergeCommits: vi.fn().mockResolvedValue(["abc123"]) },
-    );
+    const github = new FakeGithub();
+    const git = createMockGit({
+      findMergeCommits: vi.fn().mockResolvedValue(["abc123"]),
+    });
+    const config = makeConfig({
+      commits: { cherry_picking: "auto", merge_commits: "skip" },
+    });
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -387,7 +404,9 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("outputs: sets was_successful, was_successful_by_target, created_pull_numbers", async () => {
-    const { github, git, config } = setup();
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
@@ -400,7 +419,9 @@ describe("Backport.run() orchestration", () => {
   });
 
   it("downstream repo: calls remoteAdd, uses 'downstream' remote", async () => {
-    const { github, git, config } = setup({
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig({
       experimental: {
         conflict_resolution: "fail",
         downstream_repo: "downstream-repo",
