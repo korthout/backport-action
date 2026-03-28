@@ -7,7 +7,7 @@ import type {
   ReviewRequest,
   PullRequestReview,
 } from "../../github.js";
-import { MergeStrategy } from "../../github.js";
+import { MergeStrategy, RequestError } from "../../github.js";
 
 function makePullRequest(overrides?: Partial<PullRequest>): PullRequest {
   return {
@@ -112,6 +112,23 @@ export class FakeGithub implements GithubApi {
   }
 
   async createPR(pr: CreatePullRequest) {
+    if (this._existingPRBranches.has(pr.head)) {
+      throw new RequestError("Validation Failed", 422, {
+        request: { method: "POST", url: "", headers: {} },
+        response: {
+          url: "",
+          status: 422,
+          headers: {},
+          data: {
+            errors: [
+              {
+                message: `A pull request already exists for ${pr.owner}:${pr.head}`,
+              },
+            ],
+          },
+        },
+      });
+    }
     const number = this._nextPrNumber++;
     this.createdPRs.push({ ...pr, number });
     return { status: 201 as const, data: { number } };

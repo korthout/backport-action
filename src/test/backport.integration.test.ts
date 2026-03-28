@@ -33,7 +33,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Backport } from "../backport.js";
 import { GitRefNotFoundError } from "../git.js";
-import { RequestError } from "../github.js";
 import { FakeGithub } from "./helpers/fake-github.js";
 import { createMockGit } from "./helpers/mock-git.js";
 import { makeConfig } from "./helpers/config.js";
@@ -209,26 +208,7 @@ describe("Backport.run() orchestration", () => {
 
   it("PR already exists (422): skips silently", async () => {
     const github = new FakeGithub({
-      overrides: {
-        createPR: vi.fn().mockRejectedValue(
-          new RequestError("Validation Failed", 422, {
-            response: {
-              url: "",
-              status: 422,
-              headers: {},
-              data: {
-                errors: [
-                  {
-                    message:
-                      "A pull request already exists for test-owner:backport-42-to-main",
-                  },
-                ],
-              },
-            },
-            request: { method: "POST", url: "", headers: {} },
-          }),
-        ),
-      },
+      existingPRBranches: ["backport-42-to-main"],
     });
     const git = createMockGit();
     const config = makeConfig();
