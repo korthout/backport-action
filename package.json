@@ -10,8 +10,8 @@
     "format": "prettier --write \"**.ts\"",
     "format-check": "prettier --check \"**.ts\"",
     "package": "node esbuild.config.mjs",
-    "test": "GIT_SILENT=1 vitest run --reporter=dot --silent",
-    "test-verbose": "vitest run",
+    "test": "GIT_SILENT=1 vitest run --silent=true",
+    "test-verbose": "GIT_SILENT=1 vitest run --reporter=verbose --silent=true",
     "all": "npm run format && npm run build && npm run package && npm test"
   },
   "repository": {
