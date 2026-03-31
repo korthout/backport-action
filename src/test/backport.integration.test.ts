@@ -257,6 +257,62 @@ describe("Backport.run() orchestration", () => {
     expect(github.reviewersByPR.get(100)).toEqual(["reviewer1"]);
   });
 
+  it("copy all reviewers: requests both requested and submitted reviewers", async () => {
+    const github = new FakeGithub({
+      sourcePr: { requested_reviewers: [{ login: "reviewer1" }] },
+      reviews: [{ user: { login: "reviewer2" } }],
+    });
+    const git = createMockGit();
+    const config = makeConfig({ copy_all_reviewers: true });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.reviewersByPR.get(100)).toEqual(
+      expect.arrayContaining(["reviewer1", "reviewer2"]),
+    );
+    expect(github.reviewersByPR.get(100)).toHaveLength(2);
+  });
+
+  it("copy all reviewers: deduplicates reviewers appearing in both requested and submitted", async () => {
+    const github = new FakeGithub({
+      sourcePr: { requested_reviewers: [{ login: "reviewer1" }] },
+      reviews: [{ user: { login: "reviewer1" } }],
+    });
+    const git = createMockGit();
+    const config = makeConfig({ copy_all_reviewers: true });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.reviewersByPR.get(100)).toEqual(["reviewer1"]);
+  });
+
+  it("copy all reviewers: copies submitted reviewers when no reviewers are requested", async () => {
+    const github = new FakeGithub({
+      reviews: [{ user: { login: "submitted-reviewer" } }],
+    });
+    const git = createMockGit();
+    const config = makeConfig({ copy_all_reviewers: true });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.reviewersByPR.get(100)).toEqual(["submitted-reviewer"]);
+  });
+
+  it("copy all reviewers and copy requested reviewers: both request reviewers independently", async () => {
+    const github = new FakeGithub({
+      sourcePr: { requested_reviewers: [{ login: "reviewer1" }] },
+    });
+    const git = createMockGit();
+    const config = makeConfig({
+      copy_all_reviewers: true,
+      copy_requested_reviewers: true,
+    });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.reviewersByPR.get(100)).toEqual(["reviewer1", "reviewer1"]);
+  });
+
   it("add author as assignee: assigns PR author to backport PR", async () => {
     const github = new FakeGithub();
     const git = createMockGit();
