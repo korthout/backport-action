@@ -23,14 +23,23 @@
  * git repositories. Keep this file focused on scenarios that genuinely
  * need real git — use orchestration tests for everything else.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from "vitest";
 import { Backport } from "../backport.js";
 import { Git } from "../git.js";
 import { MergeStrategy } from "../github.js";
 import { FakeGithub } from "./helpers/fake-github.js";
 import { makeConfig } from "./helpers/config.js";
 import {
-  createTestRepo,
+  createRepoTemplate,
   addCommit,
   addConflictingCommits,
   createBranch,
@@ -38,6 +47,7 @@ import {
   createPullRequestRef,
   gitCmd,
   type TestRepo,
+  type RepoTemplate,
 } from "./helpers/test-repo.js";
 
 vi.mock("@actions/core", () => ({
@@ -47,6 +57,7 @@ vi.mock("@actions/core", () => ({
 
 describe("Backport.run() with real git", () => {
   let repo: TestRepo;
+  let template: RepoTemplate;
   const savedEnv: Record<string, string | undefined> = {};
 
   beforeEach(() => {
@@ -55,6 +66,14 @@ describe("Backport.run() with real git", () => {
     savedEnv.GIT_CONFIG_NOSYSTEM = process.env.GIT_CONFIG_NOSYSTEM;
     process.env.GIT_CONFIG_GLOBAL = "/dev/null";
     process.env.GIT_CONFIG_NOSYSTEM = "1";
+  });
+
+  beforeAll(async () => {
+    template = await createRepoTemplate();
+  });
+
+  afterAll(async () => {
+    await template.cleanup();
   });
 
   afterEach(async () => {
@@ -70,7 +89,7 @@ describe("Backport.run() with real git", () => {
   }
 
   it("happy path: cherry-picks commit to target branch and creates PR", async () => {
-    repo = await createTestRepo();
+    repo = await template.createTestRepo();
     const git = setupGit();
 
     createBranch(repo.workDir, "release", repo.initialCommitSha);
@@ -106,7 +125,7 @@ describe("Backport.run() with real git", () => {
   });
 
   it("cherry-pick conflict (fail mode): posts failure comment", async () => {
-    repo = await createTestRepo();
+    repo = await template.createTestRepo();
     const git = setupGit();
 
     createBranch(repo.workDir, "release", repo.initialCommitSha);
@@ -141,7 +160,7 @@ describe("Backport.run() with real git", () => {
   });
 
   it("cherry-pick conflict (draft mode): creates draft PR with conflict comment", async () => {
-    repo = await createTestRepo();
+    repo = await template.createTestRepo();
     const git = setupGit();
 
     createBranch(repo.workDir, "release", repo.initialCommitSha);
@@ -174,7 +193,7 @@ describe("Backport.run() with real git", () => {
   });
 
   it("multiple commits cherry-picked in order", async () => {
-    repo = await createTestRepo();
+    repo = await template.createTestRepo();
     const git = setupGit();
 
     createBranch(repo.workDir, "release", repo.initialCommitSha);
@@ -220,7 +239,7 @@ describe("Backport.run() with real git", () => {
   });
 
   it("target branch doesn't exist: posts failure comment", async () => {
-    repo = await createTestRepo();
+    repo = await template.createTestRepo();
     const git = setupGit();
 
     const featureSha = await addCommit(
@@ -255,7 +274,7 @@ describe("Backport.run() with real git", () => {
   });
 
   it("merge commit detection: findMergeCommits identifies merge commits", async () => {
-    repo = await createTestRepo();
+    repo = await template.createTestRepo();
     const git = setupGit();
 
     // Add a regular commit on main so all commits have parents

@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "fs/promises";
+import { mkdtemp, rm, writeFile, cp } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { execSync } from "child_process";
@@ -56,6 +56,58 @@ export async function createTestRepo(): Promise<TestRepo> {
     bareDir,
     initialCommitSha,
     cleanup: async () => {
+      await rm(baseDir, { recursive: true, force: true });
+    },
+  };
+}
+
+export type RepoTemplate = {
+  createTestRepo(): Promise<TestRepo>;
+  cleanup(): Promise<void>;
+};
+
+/**
+ * Builds a template repo (bare remote + clone + initial commit) once.
+ * Returns a factory that creates test repos by copying the template.
+ * Call this from beforeAll and call cleanup() in afterAll.
+ */
+export async function createRepoTemplate(): Promise<RepoTemplate> {
+  const baseDir = await mkdtemp(join(tmpdir(), "backport-template-"));
+  const bareDir = join(baseDir, "bare.git");
+  const workDir = join(baseDir, "work");
+
+  gitCmd(`init --bare ${bareDir}`, baseDir);
+  gitCmd(`clone ${bareDir} ${workDir}`, baseDir);
+  await writeFile(join(workDir, "README.md"), "initial");
+  gitCmd("add README.md", workDir);
+  gitCmd('commit -m "initial commit"', workDir);
+  gitCmd("push origin HEAD", workDir);
+
+  const initialCommitSha = gitCmd("rev-parse HEAD", workDir);
+
+  return {
+    async createTestRepo(): Promise<TestRepo> {
+      const copyDir = await mkdtemp(join(tmpdir(), "backport-test-"));
+      await cp(baseDir, copyDir, { recursive: true });
+
+      const copyWorkDir = join(copyDir, "work");
+      const copyBareDir = join(copyDir, "bare.git");
+
+      // Fix remote URL: the copied work dir's origin still points to the
+      // template's bare dir. Update it to point to the copied bare dir so
+      // each test has its own isolated remote.
+      gitCmd(`remote set-url origin ${copyBareDir}`, copyWorkDir);
+
+      return {
+        workDir: copyWorkDir,
+        bareDir: copyBareDir,
+        initialCommitSha,
+        cleanup: async () => {
+          await rm(copyDir, { recursive: true, force: true });
+        },
+      };
+    },
+    async cleanup(): Promise<void> {
       await rm(baseDir, { recursive: true, force: true });
     },
   };
