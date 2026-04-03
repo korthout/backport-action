@@ -48,7 +48,8 @@ inputs:
       Please refer to this action's README for all available placeholders.
     default: backport-${pull_number}-to-${target_branch}
   cherry_picking:
-    description: Determines which commits are cherry-picked.
+    description: >
+      Determines which commits are cherry-picked.
 
       When set to `auto`, the action cherry-picks the commits based on the method used to merge the pull request.
       - For "Squash and merge", the action cherry-picks the squashed commit.
@@ -132,10 +133,10 @@ inputs:
     default: ${{ github.workspace }}
   git_committer_name:
     description: Name of the committer for the cherry-picked commit.
-    default: "github-actions[bot]"
+    default: 'github-actions[bot]'
   git_committer_email:
     description: Email of the committer for the cherry-picked commit.
-    default: "github-actions[bot]@users.noreply.github.com"
+    default: 'github-actions[bot]@users.noreply.github.com'
   label_pattern:
     description: >
       Regex pattern to match the backport labels on the merged pull request.
