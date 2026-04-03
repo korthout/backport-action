@@ -39,6 +39,7 @@ export type Config = {
   add_author_as_assignee: boolean;
   add_author_as_reviewer: boolean;
   add_reviewers: string[];
+  add_team_reviewers: string[];
   auto_merge_enabled: boolean;
   auto_merge_method: "merge" | "squash" | "rebase";
   experimental: Experimental;
@@ -576,6 +577,25 @@ export class Backport {
                 pull_number: new_pr.number,
                 reviewers: addedReviewers,
               });
+            } catch (error) {
+              if (!(error instanceof RequestError)) throw error;
+              console.error(JSON.stringify(error.response));
+            }
+          }
+
+          const addedTeamReviewers = [
+            ...new Set(this.config.add_team_reviewers),
+          ];
+          if (addedTeamReviewers.length > 0) {
+            console.info("Adding team reviewers: " + addedTeamReviewers);
+            try {
+              await this.github.requestReviewers({
+                owner,
+                repo,
+                pull_number: new_pr.number,
+                reviewers: [],
+                team_reviewers: addedTeamReviewers,
+              } as any);
             } catch (error) {
               if (!(error instanceof RequestError)) throw error;
               console.error(JSON.stringify(error.response));

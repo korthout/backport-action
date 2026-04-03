@@ -35,6 +35,7 @@ async function run(): Promise<void> {
   const add_author_as_assignee = core.getInput("add_author_as_assignee");
   const add_author_as_reviewer = core.getInput("add_author_as_reviewer");
   const add_reviewers = core.getInput("add_reviewers");
+  const add_team_reviewers = core.getInput("add_team_reviewers");
   const auto_merge_enabled = core.getInput("auto_merge_enabled");
   const auto_merge_method = core.getInput("auto_merge_method");
   const experimental = JSON.parse(core.getInput("experimental"));
@@ -122,6 +123,13 @@ async function run(): Promise<void> {
       add_reviewers === ""
         ? []
         : add_reviewers
+            .split(",")
+            .map((r) => r.trim())
+            .filter(Boolean),
+    add_team_reviewers:
+      add_team_reviewers === ""
+        ? []
+        : add_team_reviewers
             .split(",")
             .map((r) => r.trim())
             .filter(Boolean),

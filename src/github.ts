@@ -520,6 +520,7 @@ export type ReviewRequest = {
   repo: string;
   pull_number: number;
   reviewers: string[];
+  team_reviewers?: string[];
 };
 
 type Payload = {
