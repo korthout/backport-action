@@ -125,8 +125,20 @@ describe("Backport.run() with real git", () => {
       expect(github.createdPRs).toHaveLength(1);
       expect(github.createdPRs[0]).toMatchObject({
         base: "release",
+        head: "backport-42-to-release",
         draft: false,
       });
+
+      await git
+        .findCommitsInRange("release..backport-42-to-release", repo.workDir)
+        .then((commits) => {
+          expect(commits).toHaveLength(1);
+          const content = gitCmd(`show ${commits[0]}`, repo.workDir);
+          expect(content).toContain("Add feature");
+          expect(content).toContain(
+            `(cherry picked from commit ${featureSha})`,
+          );
+        });
     },
   );
 
@@ -191,6 +203,7 @@ describe("Backport.run() with real git", () => {
         },
         commitShas: [featureSha],
         mergeCommitSha: featureSha,
+        nextPrNumber: 999,
       });
 
       const config = makeConfig({
@@ -201,6 +214,21 @@ describe("Backport.run() with real git", () => {
       await backport.run();
 
       expect(github.createdPRs[0]).toMatchObject({ draft: true });
+      expect(github.comments).toContainEqual(
+        expect.objectContaining({
+          body: expect.stringMatching(
+            /- #999 with remaining conflicts!\n\nPlease cherry-pick the changes locally and resolve any conflicts\./,
+          ),
+        }),
+      );
+
+      await git
+        .findCommitsInRange("release..backport-42-to-release", repo.workDir)
+        .then((commits) => {
+          expect(commits).toHaveLength(1);
+          const content = gitCmd(`show ${commits[0]}`, repo.workDir);
+          expect(content).toContain("BACKPORT-CONFLICT");
+        });
     },
   );
 
@@ -248,6 +276,24 @@ describe("Backport.run() with real git", () => {
 
     expect(github.createdPRs).toHaveLength(1);
     expect(github.createdPRs[0]).toMatchObject({ draft: false });
+
+    await git
+      .findCommitsInRange("release..backport-42-to-release", repo.workDir)
+      .then((commits) => {
+        expect(commits).toHaveLength(3);
+        const expectedCommits = [
+          { message: "First commit", cherryPickedFrom: sha1 },
+          { message: "Second commit", cherryPickedFrom: sha2 },
+          { message: "Third commit", cherryPickedFrom: sha3 },
+        ];
+        expectedCommits.forEach(({ message, cherryPickedFrom }, index) => {
+          const content = gitCmd(`show ${commits[index]}`, repo.workDir);
+          expect(content).toContain(message);
+          expect(content).toContain(
+            `(cherry picked from commit ${cherryPickedFrom})`,
+          );
+        });
+      });
   });
 
   it.concurrent(
