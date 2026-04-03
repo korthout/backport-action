@@ -23,8 +23,8 @@ inputs:
     default: ""
   add_team_reviewers:
     description: >
-      The action will add these team reviewers (comma-delimited) to the backport pull request.
-      By default, no team reviewers are added.
+      The action will add these teams as reviewers (comma-delimited) to the backport pull request.
+      By default, no teams are added.
     default: ""
   auto_merge_enabled:
     description: >
