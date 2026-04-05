@@ -108,10 +108,9 @@ describe("Backport.run() with real git", () => {
       pushBranch(repo.workDir);
       createPullRequestRef(repo.workDir, 42, featureSha);
 
-      // todo: I wonder whether we can deduplicate the sourcePr and the commitShas in FakeGithub
-      //  since they always need to be kept in sync for the tests to work. Maybe just pass an array
-      //  of commits and construct sourcePr.merge_commit_sha as the last one, and sourcePr.commits
-      //  as the length of the array? Could work for the other props as well.
+      // todo: the test setup has no real GitHub merge step — mergeCommitSha is always
+      //  a commit that already exists on the PR branch. Consider whether we need to
+      //  simulate real GitHub merge/squash/rebase to properly test those code paths.
       const github = new FakeGithub({
         sourcePr: {
           labels: [{ name: "backport release" }],
