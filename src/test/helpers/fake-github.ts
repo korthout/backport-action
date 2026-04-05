@@ -61,12 +61,14 @@ export class FakeGithub implements GithubApi {
 
   constructor(options?: FakeGithubOptions) {
     const commitShas = options?.commitShas ?? ["abc123"];
+    const mergeCommitSha = options?.mergeCommitSha ?? "abc123";
     this._sourcePr = makePullRequest({
       ...options?.sourcePr,
       commits: commitShas.length,
+      merge_commit_sha: mergeCommitSha,
     });
     this._commitShas = commitShas;
-    this._mergeCommitSha = options?.mergeCommitSha ?? "abc123";
+    this._mergeCommitSha = mergeCommitSha;
     this._merged = options?.merged ?? true;
     this._mergeStrategyResult =
       options?.mergeStrategyResult ?? MergeStrategy.SQUASHED;
