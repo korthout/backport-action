@@ -376,4 +376,164 @@ describe("Backport.run() with real git", () => {
       expect(mergeCommits).not.toContain(regularSha);
     },
   );
+
+  it.concurrent(
+    "merge commits (fail mode): posts failure comment, no PR",
+    async (ctx) => {
+      const repo = (ctx.repo = await template.createTestRepo());
+      const git = setupGit();
+
+      // Create backport target branch
+      createBranch(repo.workDir, "release", repo.initialCommitSha);
+
+      // Start feature branch from initial commit
+      gitCmd("checkout -b my-feature", repo.workDir);
+      const feature1Sha = await addCommit(
+        repo.workDir,
+        "feature1.txt",
+        "first feature",
+        "First feature commit",
+      );
+
+      // Add a commit on main (simulates base branch moving forward)
+      gitCmd("checkout main", repo.workDir);
+      await addCommit(
+        repo.workDir,
+        "base-change.txt",
+        "base change",
+        "Base branch change",
+      );
+
+      // "Update branch": merge main into feature branch (creates the merge commit)
+      gitCmd("checkout my-feature", repo.workDir);
+      gitCmd("merge --no-ff main -m 'Update branch from main'", repo.workDir);
+      const updateMergeSha = gitCmd("rev-parse HEAD", repo.workDir);
+
+      // Another feature commit after the update
+      const feature2Sha = await addCommit(
+        repo.workDir,
+        "feature2.txt",
+        "second feature",
+        "Second feature commit",
+      );
+
+      // Push both branches so all objects are available on the remote.
+      // The PR ref points to the feature branch tip (like real GitHub).
+      pushBranch(repo.workDir);
+      gitCmd("push origin main", repo.workDir);
+      createPullRequestRef(repo.workDir, 42, feature2Sha);
+
+      const github = new FakeGithub({
+        sourcePr: {
+          merge_commit_sha: feature2Sha,
+          labels: [{ name: "backport release" }],
+          commits: 3,
+        },
+        commitShas: [feature1Sha, updateMergeSha, feature2Sha],
+        mergeCommitSha: feature2Sha,
+        mergeStrategyResult: MergeStrategy.MERGECOMMIT,
+      });
+
+      const config = makeConfig({ pwd: repo.workDir });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs).toHaveLength(0);
+      expect(github.comments).toContainEqual(
+        expect.objectContaining({
+          body: expect.stringContaining("merge commits"),
+        }),
+      );
+    },
+  );
+
+  it.concurrent(
+    "merge commits (skip mode): cherry-picks only non-merge commits",
+    async (ctx) => {
+      const repo = (ctx.repo = await template.createTestRepo());
+      const git = setupGit();
+
+      // Create backport target branch
+      createBranch(repo.workDir, "release", repo.initialCommitSha);
+
+      // Start feature branch from initial commit
+      gitCmd("checkout -b my-feature", repo.workDir);
+      const feature1Sha = await addCommit(
+        repo.workDir,
+        "feature1.txt",
+        "first feature",
+        "First feature commit",
+      );
+
+      // Add a commit on main (simulates base branch moving forward)
+      gitCmd("checkout main", repo.workDir);
+      await addCommit(
+        repo.workDir,
+        "base-change.txt",
+        "base change",
+        "Base branch change",
+      );
+
+      // "Update branch": merge main into feature branch (creates the merge commit)
+      gitCmd("checkout my-feature", repo.workDir);
+      gitCmd("merge --no-ff main -m 'Update branch from main'", repo.workDir);
+      const updateMergeSha = gitCmd("rev-parse HEAD", repo.workDir);
+
+      // Another feature commit after the update
+      const feature2Sha = await addCommit(
+        repo.workDir,
+        "feature2.txt",
+        "second feature",
+        "Second feature commit",
+      );
+
+      // Push both branches so all objects are available on the remote.
+      // The PR ref points to the feature branch tip (like real GitHub).
+      pushBranch(repo.workDir);
+      gitCmd("push origin main", repo.workDir);
+      createPullRequestRef(repo.workDir, 42, feature2Sha);
+
+      const github = new FakeGithub({
+        sourcePr: {
+          merge_commit_sha: feature2Sha,
+          labels: [{ name: "backport release" }],
+          commits: 3,
+        },
+        commitShas: [feature1Sha, updateMergeSha, feature2Sha],
+        mergeCommitSha: feature2Sha,
+        mergeStrategyResult: MergeStrategy.MERGECOMMIT,
+      });
+
+      const config = makeConfig({
+        pwd: repo.workDir,
+        commits: { cherry_picking: "auto", merge_commits: "skip" },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs).toHaveLength(1);
+      expect(github.createdPRs[0]).toMatchObject({
+        base: "release",
+        head: "backport-42-to-release",
+      });
+
+      // Verify only the two feature commits were cherry-picked (not the update-merge)
+      await git
+        .findCommitsInRange("release..backport-42-to-release", repo.workDir)
+        .then((commits) => {
+          expect(commits).toHaveLength(2);
+          const expectedCommits = [
+            { message: "First feature commit", cherryPickedFrom: feature1Sha },
+            { message: "Second feature commit", cherryPickedFrom: feature2Sha },
+          ];
+          expectedCommits.forEach(({ message, cherryPickedFrom }, index) => {
+            const content = gitCmd(`show ${commits[index]}`, repo.workDir);
+            expect(content).toContain(message);
+            expect(content).toContain(
+              `(cherry picked from commit ${cherryPickedFrom})`,
+            );
+          });
+        });
+    },
+  );
 });
