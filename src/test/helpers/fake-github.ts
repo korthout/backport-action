@@ -60,8 +60,12 @@ export class FakeGithub implements GithubApi {
   readonly autoMergeByPR = new Map<number, string>();
 
   constructor(options?: FakeGithubOptions) {
-    this._sourcePr = makePullRequest(options?.sourcePr);
-    this._commitShas = options?.commitShas ?? ["abc123"];
+    const commitShas = options?.commitShas ?? ["abc123"];
+    this._sourcePr = makePullRequest({
+      ...options?.sourcePr,
+      commits: commitShas.length,
+    });
+    this._commitShas = commitShas;
     this._mergeCommitSha = options?.mergeCommitSha ?? "abc123";
     this._merged = options?.merged ?? true;
     this._mergeStrategyResult =
