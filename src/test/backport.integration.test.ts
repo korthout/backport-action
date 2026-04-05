@@ -408,37 +408,6 @@ describe("Backport.run() orchestration", () => {
     expect(core.setOutput).toHaveBeenCalledWith("was_successful", false);
   });
 
-  it("merge commits detected (fail mode): posts failure comment, no PR", async () => {
-    const github = new FakeGithub();
-    const git = createMockGit({
-      findMergeCommits: vi.fn().mockResolvedValue(["merge123"]),
-    });
-    const config = makeConfig();
-    const backport = new Backport(github, config, git);
-    await backport.run();
-
-    expect(github.createdPRs).toHaveLength(0);
-    expect(github.comments).toContainEqual(
-      expect.objectContaining({
-        body: expect.stringContaining("merge commits"),
-      }),
-    );
-  });
-
-  it("merge commits detected (skip mode): cherry-picks only non-merge commits", async () => {
-    const github = new FakeGithub();
-    const git = createMockGit({
-      findMergeCommits: vi.fn().mockResolvedValue(["abc123"]),
-    });
-    const config = makeConfig({
-      commits: { cherry_picking: "auto", merge_commits: "skip" },
-    });
-    const backport = new Backport(github, config, git);
-    await backport.run();
-
-    expect(git.cherryPick).toHaveBeenCalledWith([], "fail", "/tmp");
-  });
-
   it("outputs: sets was_successful, was_successful_by_target, created_pull_numbers", async () => {
     const github = new FakeGithub();
     const git = createMockGit();

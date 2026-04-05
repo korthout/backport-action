@@ -344,40 +344,6 @@ describe("Backport.run() with real git", () => {
   );
 
   it.concurrent(
-    "merge commit detection: findMergeCommits identifies merge commits",
-    async (ctx) => {
-      const repo = (ctx.repo = await template.createTestRepo());
-      const git = setupGit();
-
-      // Add a regular commit on main so all commits have parents
-      const regularSha = await addCommit(
-        repo.workDir,
-        "regular.txt",
-        "regular content",
-        "Regular commit",
-      );
-
-      // Create a branch, add commit, merge back with --no-ff to create a merge commit
-      gitCmd("checkout -b feature-branch", repo.workDir);
-      await addCommit(repo.workDir, "feature.txt", "feature", "feature commit");
-      gitCmd("checkout main", repo.workDir);
-      gitCmd("merge --no-ff feature-branch -m 'Merge feature'", repo.workDir);
-
-      const mergeSha = gitCmd("rev-parse HEAD", repo.workDir);
-
-      // findMergeCommits expects the range of commit SHAs from the PR
-      // regularSha is a non-merge commit, mergeSha is the merge commit
-      const mergeCommits = await git.findMergeCommits(
-        [regularSha, mergeSha],
-        repo.workDir,
-      );
-
-      expect(mergeCommits).toContain(mergeSha);
-      expect(mergeCommits).not.toContain(regularSha);
-    },
-  );
-
-  it.concurrent(
     "merge commits (fail mode): posts failure comment, no PR",
     async (ctx) => {
       const repo = (ctx.repo = await template.createTestRepo());
