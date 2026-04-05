@@ -108,6 +108,10 @@ describe("Backport.run() with real git", () => {
       pushBranch(repo.workDir);
       createPullRequestRef(repo.workDir, 42, featureSha);
 
+      // todo: I wonder whether we can deduplicate the sourcePr and the commitShas in FakeGithub
+      //  since they always need to be kept in sync for the tests to work. Maybe just pass an array
+      //  of commits and construct sourcePr.merge_commit_sha as the last one, and sourcePr.commits
+      //  as the length of the array? Could work for the other props as well.
       const github = new FakeGithub({
         sourcePr: {
           merge_commit_sha: featureSha,
@@ -277,6 +281,11 @@ describe("Backport.run() with real git", () => {
     expect(github.createdPRs).toHaveLength(1);
     expect(github.createdPRs[0]).toMatchObject({ draft: false });
 
+    // todo: move this to a helper in test-repo so it can be easily reused across tests.
+    //  The move should keep the assertion readable from the callsite of the test, such
+    //  that it's clear what the test is verifying without needing to jump to the helper.
+    //  We might be able to reuse this helper for verifying any cherry-picked commits, even
+    //  those cases with just one commit.
     await git
       .findCommitsInRange("release..backport-42-to-release", repo.workDir)
       .then((commits) => {
