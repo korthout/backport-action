@@ -113,11 +113,7 @@ describe("Backport.run() with real git", () => {
       //  of commits and construct sourcePr.merge_commit_sha as the last one, and sourcePr.commits
       //  as the length of the array? Could work for the other props as well.
       const github = new FakeGithub({
-        sourcePr: {
-          merge_commit_sha: featureSha,
-          labels: [{ name: "backport release" }],
-          commits: 1,
-        },
+        sourcePr: { labels: [{ name: "backport release" }] },
         commitShas: [featureSha],
         mergeCommitSha: featureSha,
       });
@@ -162,11 +158,7 @@ describe("Backport.run() with real git", () => {
       createPullRequestRef(repo.workDir, 42, featureSha);
 
       const github = new FakeGithub({
-        sourcePr: {
-          merge_commit_sha: featureSha,
-          labels: [{ name: "backport release" }],
-          commits: 1,
-        },
+        sourcePr: { labels: [{ name: "backport release" }] },
         commitShas: [featureSha],
         mergeCommitSha: featureSha,
       });
@@ -200,11 +192,7 @@ describe("Backport.run() with real git", () => {
       createPullRequestRef(repo.workDir, 42, featureSha);
 
       const github = new FakeGithub({
-        sourcePr: {
-          merge_commit_sha: featureSha,
-          labels: [{ name: "backport release" }],
-          commits: 1,
-        },
+        sourcePr: { labels: [{ name: "backport release" }] },
         commitShas: [featureSha],
         mergeCommitSha: featureSha,
         nextPrNumber: 999,
@@ -264,11 +252,7 @@ describe("Backport.run() with real git", () => {
     createPullRequestRef(repo.workDir, 42, sha3);
 
     const github = new FakeGithub({
-      sourcePr: {
-        merge_commit_sha: sha3,
-        labels: [{ name: "backport release" }],
-        commits: 3,
-      },
+      sourcePr: { labels: [{ name: "backport release" }] },
       commitShas: [sha1, sha2, sha3],
       mergeCommitSha: sha3,
       mergeStrategyResult: MergeStrategy.MERGECOMMIT,
@@ -321,11 +305,7 @@ describe("Backport.run() with real git", () => {
       createPullRequestRef(repo.workDir, 42, featureSha);
 
       const github = new FakeGithub({
-        sourcePr: {
-          merge_commit_sha: featureSha,
-          labels: [{ name: "backport nonexistent" }],
-          commits: 1,
-        },
+        sourcePr: { labels: [{ name: "backport nonexistent" }] },
         commitShas: [featureSha],
         mergeCommitSha: featureSha,
       });
@@ -390,11 +370,7 @@ describe("Backport.run() with real git", () => {
       createPullRequestRef(repo.workDir, 42, feature2Sha);
 
       const github = new FakeGithub({
-        sourcePr: {
-          merge_commit_sha: feature2Sha,
-          labels: [{ name: "backport release" }],
-          commits: 3,
-        },
+        sourcePr: { labels: [{ name: "backport release" }] },
         commitShas: [feature1Sha, updateMergeSha, feature2Sha],
         mergeCommitSha: feature2Sha,
         mergeStrategyResult: MergeStrategy.MERGECOMMIT,
@@ -460,11 +436,7 @@ describe("Backport.run() with real git", () => {
       createPullRequestRef(repo.workDir, 42, feature2Sha);
 
       const github = new FakeGithub({
-        sourcePr: {
-          merge_commit_sha: feature2Sha,
-          labels: [{ name: "backport release" }],
-          commits: 3,
-        },
+        sourcePr: { labels: [{ name: "backport release" }] },
         commitShas: [feature1Sha, updateMergeSha, feature2Sha],
         mergeCommitSha: feature2Sha,
         mergeStrategyResult: MergeStrategy.MERGECOMMIT,
