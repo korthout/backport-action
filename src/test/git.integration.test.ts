@@ -147,16 +147,12 @@ describe("Backport.run() with real git", () => {
         draft: false,
       });
 
-      await git
-        .findCommitsInRange("release..backport-42-to-release", repo.workDir)
-        .then((commits) => {
-          expect(commits).toHaveLength(1);
-          const content = gitCmd(`show ${commits[0]}`, repo.workDir);
-          expect(content).toContain("Add feature");
-          expect(content).toContain(
-            `(cherry picked from commit ${featureSha})`,
-          );
-        });
+      await expectCherryPickedCommits(
+        git,
+        repo.workDir,
+        "release..backport-42-to-release",
+        [{ message: "Add feature", cherryPickedFrom: featureSha }],
+      );
     },
   );
 
@@ -289,28 +285,16 @@ describe("Backport.run() with real git", () => {
     expect(github.createdPRs).toHaveLength(1);
     expect(github.createdPRs[0]).toMatchObject({ draft: false });
 
-    // todo: move this to a helper in test-repo so it can be easily reused across tests.
-    //  The move should keep the assertion readable from the callsite of the test, such
-    //  that it's clear what the test is verifying without needing to jump to the helper.
-    //  We might be able to reuse this helper for verifying any cherry-picked commits, even
-    //  those cases with just one commit.
-    await git
-      .findCommitsInRange("release..backport-42-to-release", repo.workDir)
-      .then((commits) => {
-        expect(commits).toHaveLength(3);
-        const expectedCommits = [
-          { message: "First commit", cherryPickedFrom: sha1 },
-          { message: "Second commit", cherryPickedFrom: sha2 },
-          { message: "Third commit", cherryPickedFrom: sha3 },
-        ];
-        expectedCommits.forEach(({ message, cherryPickedFrom }, index) => {
-          const content = gitCmd(`show ${commits[index]}`, repo.workDir);
-          expect(content).toContain(message);
-          expect(content).toContain(
-            `(cherry picked from commit ${cherryPickedFrom})`,
-          );
-        });
-      });
+    await expectCherryPickedCommits(
+      git,
+      repo.workDir,
+      "release..backport-42-to-release",
+      [
+        { message: "First commit", cherryPickedFrom: sha1 },
+        { message: "Second commit", cherryPickedFrom: sha2 },
+        { message: "Third commit", cherryPickedFrom: sha3 },
+      ],
+    );
   });
 
   it.concurrent(
@@ -486,22 +470,15 @@ describe("Backport.run() with real git", () => {
       });
 
       // Verify only the two feature commits were cherry-picked (not the update-merge)
-      await git
-        .findCommitsInRange("release..backport-42-to-release", repo.workDir)
-        .then((commits) => {
-          expect(commits).toHaveLength(2);
-          const expectedCommits = [
-            { message: "First feature commit", cherryPickedFrom: feature1Sha },
-            { message: "Second feature commit", cherryPickedFrom: feature2Sha },
-          ];
-          expectedCommits.forEach(({ message, cherryPickedFrom }, index) => {
-            const content = gitCmd(`show ${commits[index]}`, repo.workDir);
-            expect(content).toContain(message);
-            expect(content).toContain(
-              `(cherry picked from commit ${cherryPickedFrom})`,
-            );
-          });
-        });
+      await expectCherryPickedCommits(
+        git,
+        repo.workDir,
+        "release..backport-42-to-release",
+        [
+          { message: "First feature commit", cherryPickedFrom: feature1Sha },
+          { message: "Second feature commit", cherryPickedFrom: feature2Sha },
+        ],
+      );
     },
   );
 });
