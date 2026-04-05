@@ -40,12 +40,12 @@ export interface FakeSourcePr {
   requested_reviewers?: { login: string }[] | null;
   head?: { ref: string; sha: string };
   base?: { sha: string };
+  commitShas?: string[];
+  mergeCommitSha?: string;
 }
 
 export interface FakeGithubOptions {
   sourcePr?: FakeSourcePr;
-  commitShas?: string[];
-  mergeCommitSha?: string | null;
   merged?: boolean;
   mergeStrategyResult?: string | null;
   nextPrNumber?: number;
@@ -74,10 +74,15 @@ export class FakeGithub implements GithubApi {
   readonly autoMergeByPR = new Map<number, string>();
 
   constructor(options?: FakeGithubOptions) {
-    const commitShas = options?.commitShas ?? ["abc123"];
-    const mergeCommitSha = options?.mergeCommitSha ?? "abc123";
+    const {
+      commitShas: shas,
+      mergeCommitSha: mcs,
+      ...prFields
+    } = options?.sourcePr ?? {};
+    const commitShas = shas ?? ["abc123"];
+    const mergeCommitSha = mcs ?? "abc123";
     this._sourcePr = makePullRequest({
-      ...options?.sourcePr,
+      ...prFields,
       commits: commitShas.length,
       merge_commit_sha: mergeCommitSha,
     });
