@@ -92,19 +92,20 @@ describe("Backport.run() with real git", () => {
   }
 
   async function expectCherryPickedCommits(
+    ctx: { expect: typeof expect },
     git: Git,
     workDir: string,
     range: string,
     expected: Array<{ message: string; cherryPickedFrom: string }>,
   ): Promise<void> {
     const commits = await git.findCommitsInRange(range, workDir);
-    expect(commits).toHaveLength(expected.length);
+    ctx.expect(commits).toHaveLength(expected.length);
     expected.forEach(({ message, cherryPickedFrom }, index) => {
       const content = gitCmd(`show ${commits[index]}`, workDir);
-      expect(content).toContain(message);
-      expect(content).toContain(
-        `(cherry picked from commit ${cherryPickedFrom})`,
-      );
+      ctx.expect(content).toContain(message);
+      ctx
+        .expect(content)
+        .toContain(`(cherry picked from commit ${cherryPickedFrom})`);
     });
   }
 
@@ -140,14 +141,15 @@ describe("Backport.run() with real git", () => {
       const backport = new Backport(github, config, git);
       await backport.run();
 
-      expect(github.createdPRs).toHaveLength(1);
-      expect(github.createdPRs[0]).toMatchObject({
+      ctx.expect(github.createdPRs).toHaveLength(1);
+      ctx.expect(github.createdPRs[0]).toMatchObject({
         base: "release",
         head: "backport-42-to-release",
         draft: false,
       });
 
       await expectCherryPickedCommits(
+        ctx,
         git,
         repo.workDir,
         "release..backport-42-to-release",
@@ -183,10 +185,10 @@ describe("Backport.run() with real git", () => {
       const backport = new Backport(github, config, git);
       await backport.run();
 
-      expect(github.createdPRs).toHaveLength(0);
-      expect(github.comments).toContainEqual(
-        expect.objectContaining({
-          body: expect.stringContaining("unable to cherry-pick"),
+      ctx.expect(github.createdPRs).toHaveLength(0);
+      ctx.expect(github.comments).toContainEqual(
+        ctx.expect.objectContaining({
+          body: ctx.expect.stringContaining("unable to cherry-pick"),
         }),
       );
     },
@@ -223,10 +225,10 @@ describe("Backport.run() with real git", () => {
       const backport = new Backport(github, config, git);
       await backport.run();
 
-      expect(github.createdPRs[0]).toMatchObject({ draft: true });
-      expect(github.comments).toContainEqual(
-        expect.objectContaining({
-          body: expect.stringMatching(
+      ctx.expect(github.createdPRs[0]).toMatchObject({ draft: true });
+      ctx.expect(github.comments).toContainEqual(
+        ctx.expect.objectContaining({
+          body: ctx.expect.stringMatching(
             /- #999 with remaining conflicts!\n\nPlease cherry-pick the changes locally and resolve any conflicts\./,
           ),
         }),
@@ -235,9 +237,9 @@ describe("Backport.run() with real git", () => {
       await git
         .findCommitsInRange("release..backport-42-to-release", repo.workDir)
         .then((commits) => {
-          expect(commits).toHaveLength(1);
+          ctx.expect(commits).toHaveLength(1);
           const content = gitCmd(`show ${commits[0]}`, repo.workDir);
-          expect(content).toContain("BACKPORT-CONFLICT");
+          ctx.expect(content).toContain("BACKPORT-CONFLICT");
         });
     },
   );
@@ -282,10 +284,11 @@ describe("Backport.run() with real git", () => {
     const backport = new Backport(github, config, git);
     await backport.run();
 
-    expect(github.createdPRs).toHaveLength(1);
-    expect(github.createdPRs[0]).toMatchObject({ draft: false });
+    ctx.expect(github.createdPRs).toHaveLength(1);
+    ctx.expect(github.createdPRs[0]).toMatchObject({ draft: false });
 
     await expectCherryPickedCommits(
+      ctx,
       git,
       repo.workDir,
       "release..backport-42-to-release",
@@ -324,10 +327,10 @@ describe("Backport.run() with real git", () => {
       const backport = new Backport(github, config, git);
       await backport.run();
 
-      expect(github.createdPRs).toHaveLength(0);
-      expect(github.comments).toContainEqual(
-        expect.objectContaining({
-          body: expect.stringContaining("couldn't find remote ref"),
+      ctx.expect(github.createdPRs).toHaveLength(0);
+      ctx.expect(github.comments).toContainEqual(
+        ctx.expect.objectContaining({
+          body: ctx.expect.stringContaining("couldn't find remote ref"),
         }),
       );
     },
@@ -392,10 +395,10 @@ describe("Backport.run() with real git", () => {
       const backport = new Backport(github, config, git);
       await backport.run();
 
-      expect(github.createdPRs).toHaveLength(0);
-      expect(github.comments).toContainEqual(
-        expect.objectContaining({
-          body: expect.stringContaining("merge commits"),
+      ctx.expect(github.createdPRs).toHaveLength(0);
+      ctx.expect(github.comments).toContainEqual(
+        ctx.expect.objectContaining({
+          body: ctx.expect.stringContaining("merge commits"),
         }),
       );
     },
@@ -463,14 +466,15 @@ describe("Backport.run() with real git", () => {
       const backport = new Backport(github, config, git);
       await backport.run();
 
-      expect(github.createdPRs).toHaveLength(1);
-      expect(github.createdPRs[0]).toMatchObject({
+      ctx.expect(github.createdPRs).toHaveLength(1);
+      ctx.expect(github.createdPRs[0]).toMatchObject({
         base: "release",
         head: "backport-42-to-release",
       });
 
       // Verify only the two feature commits were cherry-picked (not the update-merge)
       await expectCherryPickedCommits(
+        ctx,
         git,
         repo.workDir,
         "release..backport-42-to-release",
