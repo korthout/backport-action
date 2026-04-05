@@ -91,6 +91,23 @@ describe("Backport.run() with real git", () => {
     return new Git("Test", "test@test.com", process.env.GIT_SILENT === "1");
   }
 
+  async function expectCherryPickedCommits(
+    git: Git,
+    workDir: string,
+    range: string,
+    expected: Array<{ message: string; cherryPickedFrom: string }>,
+  ): Promise<void> {
+    const commits = await git.findCommitsInRange(range, workDir);
+    expect(commits).toHaveLength(expected.length);
+    expected.forEach(({ message, cherryPickedFrom }, index) => {
+      const content = gitCmd(`show ${commits[index]}`, workDir);
+      expect(content).toContain(message);
+      expect(content).toContain(
+        `(cherry picked from commit ${cherryPickedFrom})`,
+      );
+    });
+  }
+
   it.concurrent(
     "happy path: cherry-picks commit to target branch and creates PR",
     async (ctx) => {
