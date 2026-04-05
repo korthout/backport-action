@@ -28,8 +28,22 @@ function makePullRequest(overrides?: Partial<PullRequest>): PullRequest {
   };
 }
 
+export interface FakeSourcePr {
+  number?: number;
+  title?: string;
+  body?: string | null;
+  labels?: { name: string }[];
+  milestone?: { number: number; id: number; title: string } | null;
+  assignees?: { login: string; id: number }[] | null;
+  user?: { login: string };
+  merged_by?: { login: string } | null;
+  requested_reviewers?: { login: string }[] | null;
+  head?: { ref: string; sha: string };
+  base?: { sha: string };
+}
+
 export interface FakeGithubOptions {
-  sourcePr?: Partial<PullRequest>;
+  sourcePr?: FakeSourcePr;
   commitShas?: string[];
   mergeCommitSha?: string | null;
   merged?: boolean;
