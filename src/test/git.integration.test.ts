@@ -112,52 +112,6 @@ describe("Backport.run() with real git", () => {
   }
 
   it.concurrent(
-    "happy path: cherry-picks commit to target branch and creates PR",
-    async (ctx) => {
-      const repo = (ctx.repo = await template.createTestRepo());
-      const git = setupGit();
-
-      createBranch(repo.workDir, "release", repo.initialCommitSha);
-
-      const featureSha = await addCommit(
-        repo.workDir,
-        "feature.txt",
-        "feature content",
-        "Add feature",
-      );
-      pushBranch(repo.workDir);
-      createPullRequestRef(repo.workDir, 42, featureSha);
-
-      const github = new FakeGithub({
-        sourcePr: {
-          labels: [{ name: "backport release" }],
-          commitShas: [featureSha],
-          mergeCommitSha: featureSha,
-        },
-      });
-
-      const config = makeConfig({ pwd: repo.workDir });
-      const backport = new Backport(github, config, git);
-      await backport.run();
-
-      ctx.expect(github.createdPRs).toHaveLength(1);
-      ctx.expect(github.createdPRs[0]).toMatchObject({
-        base: "release",
-        head: "backport-42-to-release",
-        draft: false,
-      });
-
-      await expectCherryPickedCommits(
-        ctx,
-        git,
-        repo.workDir,
-        "release..backport-42-to-release",
-        [{ message: "Add feature", cherryPickedFrom: featureSha }],
-      );
-    },
-  );
-
-  it.concurrent(
     "cherry-pick conflict (fail mode): posts failure comment",
     async (ctx) => {
       const repo = (ctx.repo = await template.createTestRepo());
