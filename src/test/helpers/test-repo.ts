@@ -177,3 +177,32 @@ export function createPullRequestRef(
 ): void {
   gitCmd(`push origin ${sha}:refs/pull/${pullNumber}/head`, dir);
 }
+
+/**
+ * Simulates GitHub's "Squash and merge" by squash-merging a feature branch
+ * into main. Returns the SHA of the squash commit on main.
+ */
+export function squashMerge(dir: string, featureBranch: string): string {
+  gitCmd("checkout main", dir);
+  gitCmd(`merge --squash ${featureBranch}`, dir);
+  gitCmd(`commit -m "Squash merge ${featureBranch}"`, dir);
+  gitCmd("push origin main", dir);
+  return gitCmd("rev-parse HEAD", dir);
+}
+
+/**
+ * Simulates GitHub's "Rebase and merge" by rebasing a feature branch onto
+ * main and fast-forwarding main. Returns the rebased commit SHAs in order.
+ */
+export function rebaseMerge(dir: string, featureBranch: string): string[] {
+  gitCmd("checkout main", dir);
+  const oldMainSha = gitCmd("rev-parse HEAD", dir);
+  gitCmd(`checkout ${featureBranch}`, dir);
+  gitCmd("rebase main", dir);
+  gitCmd("checkout main", dir);
+  gitCmd(`merge --ff-only ${featureBranch}`, dir);
+  gitCmd("push origin main", dir);
+  return gitCmd(`log ${oldMainSha}..main --format=%H --reverse`, dir)
+    .split("\n")
+    .filter(Boolean);
+}
