@@ -126,9 +126,6 @@ describe("Backport.run() with real git", () => {
       pushBranch(repo.workDir);
       createPullRequestRef(repo.workDir, 42, featureSha);
 
-      // todo: the test setup has no real GitHub merge step — mergeCommitSha is always
-      //  a commit that already exists on the PR branch. Consider whether we need to
-      //  simulate real GitHub merge/squash/rebase to properly test those code paths.
       const github = new FakeGithub({
         sourcePr: {
           labels: [{ name: "backport release" }],
@@ -380,13 +377,20 @@ describe("Backport.run() with real git", () => {
       // The PR ref points to the feature branch tip (like real GitHub).
       pushBranch(repo.workDir);
       gitCmd("push origin main", repo.workDir);
+
+      // Simulate GitHub merging the PR into main
+      gitCmd("checkout main", repo.workDir);
+      gitCmd("merge --no-ff my-feature -m 'Merge PR #42'", repo.workDir);
+      const mergeOnMainSha = gitCmd("rev-parse HEAD", repo.workDir);
+      gitCmd("push origin main", repo.workDir);
+
       createPullRequestRef(repo.workDir, 42, feature2Sha);
 
       const github = new FakeGithub({
         sourcePr: {
           labels: [{ name: "backport release" }],
           commitShas: [feature1Sha, updateMergeSha, feature2Sha],
-          mergeCommitSha: feature2Sha,
+          mergeCommitSha: mergeOnMainSha,
         },
         mergeStrategyResult: MergeStrategy.MERGECOMMIT,
       });
@@ -448,13 +452,20 @@ describe("Backport.run() with real git", () => {
       // The PR ref points to the feature branch tip (like real GitHub).
       pushBranch(repo.workDir);
       gitCmd("push origin main", repo.workDir);
+
+      // Simulate GitHub merging the PR into main
+      gitCmd("checkout main", repo.workDir);
+      gitCmd("merge --no-ff my-feature -m 'Merge PR #42'", repo.workDir);
+      const mergeOnMainSha = gitCmd("rev-parse HEAD", repo.workDir);
+      gitCmd("push origin main", repo.workDir);
+
       createPullRequestRef(repo.workDir, 42, feature2Sha);
 
       const github = new FakeGithub({
         sourcePr: {
           labels: [{ name: "backport release" }],
           commitShas: [feature1Sha, updateMergeSha, feature2Sha],
-          mergeCommitSha: feature2Sha,
+          mergeCommitSha: mergeOnMainSha,
         },
         mergeStrategyResult: MergeStrategy.MERGECOMMIT,
       });
