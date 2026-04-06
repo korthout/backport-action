@@ -24,7 +24,7 @@ Unit tests (fast, isolated)
 
 Integration tests (still fast, specific focus)
 ├── backport.integration.test.ts  — orchestration tests using FakeGithub + MockGit
-└── git.integration.test.ts       — orchestration tests using MockGithub + Real Git
+└── git.integration.test.ts       — real-git tests using FakeGithub + Real Git
 
 E2E tests (separate repository)
 └── korthout/backport-action-test  — real GitHub Actions + real GitHub API
