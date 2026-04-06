@@ -48,6 +48,8 @@ import {
   createBranch,
   pushBranch,
   createPullRequestRef,
+  squashMerge,
+  rebaseMerge,
   gitCmd,
   type RepoTemplate,
 } from "./helpers/test-repo.js";
@@ -496,4 +498,67 @@ describe("Backport.run() with real git", () => {
       );
     },
   );
+
+  it.concurrent("squash merge: cherry-picks the squash commit", async (ctx) => {
+    const repo = (ctx.repo = await template.createTestRepo());
+    const git = setupGit();
+
+    // Create backport target branch
+    createBranch(repo.workDir, "release", repo.initialCommitSha);
+
+    // Start feature branch with two commits
+    gitCmd("checkout -b my-feature", repo.workDir);
+    const feature1Sha = await addCommit(
+      repo.workDir,
+      "feature1.txt",
+      "first feature",
+      "First feature commit",
+    );
+    const feature2Sha = await addCommit(
+      repo.workDir,
+      "feature2.txt",
+      "second feature",
+      "Second feature commit",
+    );
+    pushBranch(repo.workDir);
+
+    // Simulate GitHub squash-merging the PR into main
+    const squashSha = squashMerge(repo.workDir, "my-feature");
+
+    createPullRequestRef(repo.workDir, 42, feature2Sha);
+
+    const github = new FakeGithub({
+      sourcePr: {
+        labels: [{ name: "backport release" }],
+        commitShas: [feature1Sha, feature2Sha],
+        mergeCommitSha: squashSha,
+      },
+      mergeStrategyResult: MergeStrategy.SQUASHED,
+    });
+
+    const config = makeConfig({ pwd: repo.workDir });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    ctx.expect(github.createdPRs).toHaveLength(1);
+    ctx.expect(github.createdPRs[0]).toMatchObject({
+      base: "release",
+      head: "backport-42-to-release",
+    });
+
+    // Verify the single squash commit was cherry-picked (not the original
+    // feature commits — demonstrating that squash collapses two into one)
+    await expectCherryPickedCommits(
+      ctx,
+      git,
+      repo.workDir,
+      "release..backport-42-to-release",
+      [
+        {
+          message: "Squash merge my-feature",
+          cherryPickedFrom: squashSha,
+        },
+      ],
+    );
+  });
 });
