@@ -221,6 +221,29 @@ describe("Backport.run() orchestration", () => {
     expect(failureComment).toBeUndefined();
   });
 
+  it("pull_request_head cherry-picking: uses PR commits, not merge commit", async () => {
+    const github = new FakeGithub({
+      sourcePr: {
+        commitShas: ["sha1", "sha2"],
+        mergeCommitSha: "squash-sha",
+      },
+      mergeStrategyResult: "SQUASHED",
+    });
+    const git = createMockGit();
+    const config = makeConfig({
+      commits: { cherry_picking: "pull_request_head", merge_commits: "fail" },
+    });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.createdPRs).toHaveLength(1);
+    expect(git.cherryPick).toHaveBeenCalledWith(
+      ["sha1", "sha2"],
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
   it("copy milestone: sets milestone on backport PR", async () => {
     const github = new FakeGithub({
       sourcePr: { milestone: { number: 5, id: 123, title: "v1.0" } },
