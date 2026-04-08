@@ -33,7 +33,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Backport } from "../backport.js";
 import { GitRefNotFoundError } from "../git.js";
-import { FakeGithub } from "./helpers/fake-github.js";
+import { FakeGithub, requestError } from "./helpers/fake-github.js";
 import { createMockGit } from "./helpers/mock-git.js";
 import { makeConfig } from "./helpers/config.js";
 
@@ -402,6 +402,46 @@ describe("Backport.run() orchestration", () => {
     await backport.run();
 
     expect(github.autoMergeByPR.get(100)).toBe("merge");
+  });
+
+  it("RequestError in post-creation step: continues with remaining steps", async () => {
+    const github = new FakeGithub({
+      sourcePr: {
+        milestone: { number: 1, id: 1, title: "v1" },
+        assignees: [{ login: "user1", id: 1 }],
+      },
+    });
+    github.failOn("setMilestone", requestError(403));
+    const git = createMockGit();
+    const config = makeConfig({ copy_milestone: true, copy_assignees: true });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.createdPRs).toHaveLength(1);
+    expect(github.milestonesByPR.size).toBe(0);
+    expect(github.assigneesByPR.get(100)).toEqual(["user1"]);
+    expect(github.comments).toContainEqual(
+      expect.objectContaining({
+        body: expect.stringContaining("Successfully created backport PR"),
+      }),
+    );
+    expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+  });
+
+  it("non-RequestError in post-creation step: target marked as failed", async () => {
+    const github = new FakeGithub({
+      sourcePr: { milestone: { number: 1, id: 1, title: "v1" } },
+    });
+    github.failOn("setMilestone", new Error("unexpected"));
+    const git = createMockGit();
+    const config = makeConfig({ copy_milestone: true });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.createdPRs).toHaveLength(1);
+    expect(github.milestonesByPR.size).toBe(0);
+    // todo: this might be a small bug, we probably should still mark it as successful as the PR was created successfully
+    expect(core.setOutput).toHaveBeenCalledWith("was_successful", false);
   });
 
   it("custom PR title template: replaces placeholders", async () => {
