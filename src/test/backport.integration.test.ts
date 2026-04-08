@@ -63,6 +63,13 @@ describe("Backport.run() orchestration", () => {
       }),
     );
     expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+
+    // No post-creation side-effects when all toggles are off
+    expect(github.milestonesByPR.size).toBe(0);
+    expect(github.assigneesByPR.size).toBe(0);
+    expect(github.reviewersByPR.size).toBe(0);
+    expect(github.labelsByPR.size).toBe(0);
+    expect(github.autoMergeByPR.size).toBe(0);
   });
 
   it("multiple targets: creates two backport PRs", async () => {
