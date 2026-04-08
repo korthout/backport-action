@@ -9,6 +9,16 @@ import type {
 } from "../../github.js";
 import { MergeStrategy, RequestError } from "../../github.js";
 
+export function requestError(
+  status: number,
+  message: string = "API Error",
+): RequestError {
+  return new RequestError(message, status, {
+    request: { method: "POST", url: "", headers: {} },
+    response: { url: "", status, headers: {}, data: {} },
+  });
+}
+
 function makePullRequest(overrides?: Partial<PullRequest>): PullRequest {
   return {
     number: 42,
