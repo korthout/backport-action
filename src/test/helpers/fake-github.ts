@@ -64,6 +64,7 @@ export class FakeGithub implements GithubApi {
   private _nextPrNumber: number;
   private _existingPRBranches: Set<string>;
   private _reviews: PullRequestReview[];
+  private _failures = new Map<keyof GithubApi, Error>();
 
   readonly createdPRs: Array<CreatePullRequest & { number: number }> = [];
   readonly comments: Comment[] = [];
@@ -94,6 +95,10 @@ export class FakeGithub implements GithubApi {
     this._nextPrNumber = options?.nextPrNumber ?? 100;
     this._existingPRBranches = new Set(options?.existingPRBranches ?? []);
     this._reviews = options?.reviews ?? [];
+  }
+
+  failOn(method: keyof GithubApi, error: Error): void {
+    this._failures.set(method, error);
   }
 
   getRepo(): Repo {
@@ -132,6 +137,8 @@ export class FakeGithub implements GithubApi {
   }
 
   async createComment(comment: Comment): Promise<{}> {
+    if (this._failures.has("createComment"))
+      throw this._failures.get("createComment")!;
     this.comments.push(comment);
     return {};
   }
@@ -160,16 +167,21 @@ export class FakeGithub implements GithubApi {
   }
 
   async labelPR(pr: number, labels: string[], _repo: Repo) {
+    if (this._failures.has("labelPR")) throw this._failures.get("labelPR")!;
     const existing = this.labelsByPR.get(pr) ?? [];
     this.labelsByPR.set(pr, [...existing, ...labels]);
     return { status: 200 as const };
   }
 
   async listReviews(_owner: string, _repo: string, _pull_number: number) {
+    if (this._failures.has("listReviews"))
+      throw this._failures.get("listReviews")!;
     return { status: 200 as const, data: this._reviews };
   }
 
   async requestReviewers(request: ReviewRequest) {
+    if (this._failures.has("requestReviewers"))
+      throw this._failures.get("requestReviewers")!;
     const existing = this.reviewersByPR.get(request.pull_number) ?? [];
     this.reviewersByPR.set(request.pull_number, [
       ...existing,
@@ -179,12 +191,16 @@ export class FakeGithub implements GithubApi {
   }
 
   async addAssignees(pr: number, assignees: string[], _repo: Repo) {
+    if (this._failures.has("addAssignees"))
+      throw this._failures.get("addAssignees")!;
     const existing = this.assigneesByPR.get(pr) ?? [];
     this.assigneesByPR.set(pr, [...existing, ...assignees]);
     return { status: 201 as const };
   }
 
   async setMilestone(pr: number, milestone: number) {
+    if (this._failures.has("setMilestone"))
+      throw this._failures.get("setMilestone")!;
     this.milestonesByPR.set(pr, milestone);
     return { status: 200 as const };
   }
@@ -194,6 +210,8 @@ export class FakeGithub implements GithubApi {
     _repo: Repo,
     mergeMethod: "merge" | "squash" | "rebase",
   ) {
+    if (this._failures.has("enableAutoMerge"))
+      throw this._failures.get("enableAutoMerge")!;
     this.autoMergeByPR.set(pr, mergeMethod);
     return { status: 200 as const };
   }
