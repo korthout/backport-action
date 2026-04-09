@@ -16,6 +16,16 @@ inputs:
     description: >
       The action will add these labels (comma-delimited) to the backport pull request.
       By default, no labels are added.
+  add_reviewers:
+    description: >
+      The action will add these reviewers (comma-delimited) to the backport pull request.
+      By default, no reviewers are added.
+    default: ""
+  add_team_reviewers:
+    description: >
+      The action will add these teams as reviewers (comma-delimited) to the backport pull request.
+      By default, no teams are added.
+    default: ""
   auto_merge_enabled:
     description: >
       Controls whether to auto-merge the created backport pull request.
@@ -38,7 +48,7 @@ inputs:
       Please refer to this action's README for all available placeholders.
     default: backport-${pull_number}-to-${target_branch}
   cherry_picking:
-    description:
+    description: >
       Determines which commits are cherry-picked.
 
       When set to `auto`, the action cherry-picks the commits based on the method used to merge the pull request.
