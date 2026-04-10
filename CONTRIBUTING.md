@@ -45,7 +45,7 @@ Run all tests.
 npm test
 ```
 
-Run all tests with additional console output.
+Run all tests with verbose reporter output (individual test names).
 
 ```
 npm run test-verbose

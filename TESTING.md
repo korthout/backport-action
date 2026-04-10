@@ -6,7 +6,7 @@
 npm test
 ```
 
-For verbose output:
+To see individual test names (verbose reporter):
 
 ```
 npm run test-verbose
