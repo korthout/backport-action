@@ -68,6 +68,7 @@ describe("Backport.run() orchestration", () => {
     expect(github.milestonesByPR.size).toBe(0);
     expect(github.assigneesByPR.size).toBe(0);
     expect(github.reviewersByPR.size).toBe(0);
+    expect(github.teamReviewersByPR.size).toBe(0);
     expect(github.labelsByPR.size).toBe(0);
     expect(github.autoMergeByPR.size).toBe(0);
   });
@@ -351,6 +352,74 @@ describe("Backport.run() orchestration", () => {
     await backport.run();
 
     expect(github.assigneesByPR.get(100)).toEqual(["author"]);
+  });
+
+  it("add reviewers: requests configured reviewers on backport PR", async () => {
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig({ add_reviewers: ["alice", "bob"] });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.reviewersByPR.get(100)).toEqual(["alice", "bob"]);
+  });
+
+  it("add reviewers: deduplicates reviewers", async () => {
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig({ add_reviewers: ["alice", "alice"] });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.reviewersByPR.get(100)).toEqual(["alice"]);
+  });
+
+  it("add reviewers: RequestError is swallowed and backport succeeds", async () => {
+    const github = new FakeGithub();
+    github.failOn("requestReviewers", requestError(422));
+    const git = createMockGit();
+    const config = makeConfig({ add_reviewers: ["alice"] });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.createdPRs).toHaveLength(1);
+    expect(github.reviewersByPR.size).toBe(0);
+    expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+  });
+
+  it("add team reviewers: requests configured team reviewers on backport PR", async () => {
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig({ add_team_reviewers: ["team-a", "team-b"] });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.teamReviewersByPR.get(100)).toEqual(["team-a", "team-b"]);
+  });
+
+  it("add team reviewers: deduplicates team reviewers", async () => {
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig({
+      add_team_reviewers: ["team-a", "team-a"],
+    });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.teamReviewersByPR.get(100)).toEqual(["team-a"]);
+  });
+
+  it("add team reviewers: RequestError is swallowed and backport succeeds", async () => {
+    const github = new FakeGithub();
+    github.failOn("requestReviewers", requestError(422));
+    const git = createMockGit();
+    const config = makeConfig({ add_team_reviewers: ["team-a"] });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.createdPRs).toHaveLength(1);
+    expect(github.teamReviewersByPR.size).toBe(0);
+    expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
   });
 
   it("add author as reviewer: requests PR author as reviewer on backport PR", async () => {
