@@ -162,6 +162,20 @@ Default: `''` (disabled)
 The action will add these labels (comma-delimited) to the backport pull request.
 By default, no labels are added.
 
+### `add_reviewers`
+
+Default: `''` (disabled)
+
+The action will add these reviewers (comma-delimited) to the backport pull request.
+By default, no reviewers are added.
+
+### `add_team_reviewers`
+
+Default: `''` (disabled)
+
+The action will add these teams as reviewers (comma-delimited) to the backport pull request.
+By default, no teams are added.
+
 ### `auto_merge_enabled`
 
 Default: `false` (disabled)
