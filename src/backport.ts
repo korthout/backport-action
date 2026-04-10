@@ -807,7 +807,6 @@ export class Backport {
         cd .worktree/${branchname}
         git reset --hard HEAD^
         git cherry-pick -x ${commitShasToCherryPick.join(" ")}
-        git push --force-with-lease
         \`\`\``;
       } else {
         return "";
