@@ -81,6 +81,7 @@ export class FakeGithub implements GithubApi {
   readonly labelsByPR = new Map<number, string[]>();
   readonly assigneesByPR = new Map<number, string[]>();
   readonly reviewersByPR = new Map<number, string[]>();
+  readonly teamReviewersByPR = new Map<number, string[]>();
   readonly milestonesByPR = new Map<number, number>();
   readonly autoMergeByPR = new Map<number, string>();
 
@@ -197,6 +198,14 @@ export class FakeGithub implements GithubApi {
       ...existing,
       ...request.reviewers,
     ]);
+    if (request.team_reviewers?.length) {
+      const existingTeams =
+        this.teamReviewersByPR.get(request.pull_number) ?? [];
+      this.teamReviewersByPR.set(request.pull_number, [
+        ...existingTeams,
+        ...request.team_reviewers,
+      ]);
+    }
     return { status: 201 as const, data: { number: request.pull_number } };
   }
 
