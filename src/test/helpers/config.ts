@@ -10,6 +10,8 @@ export function makeConfig(overrides?: Partial<Config>): Config {
       branch_name: "backport-${pull_number}-to-${target_branch}",
     },
     add_labels: [],
+    add_reviewers: [],
+    add_team_reviewers: [],
     commits: { cherry_picking: "auto", merge_commits: "fail" },
     copy_milestone: false,
     copy_assignees: false,
