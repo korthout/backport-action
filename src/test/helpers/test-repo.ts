@@ -10,15 +10,17 @@ export type TestRepo = {
   cleanup: () => Promise<void>;
 };
 
-const gitEnv = {
-  ...process.env,
-  GIT_COMMITTER_NAME: "Test",
-  GIT_COMMITTER_EMAIL: "test@test.com",
-  GIT_AUTHOR_NAME: "Test",
-  GIT_AUTHOR_EMAIL: "test@test.com",
-  GIT_CONFIG_NOSYSTEM: "1",
-  HOME: "", // prevent reading user .gitconfig
-};
+function gitEnv() {
+  return {
+    ...process.env,
+    GIT_COMMITTER_NAME: "Test",
+    GIT_COMMITTER_EMAIL: "test@test.com",
+    GIT_AUTHOR_NAME: "Test",
+    GIT_AUTHOR_EMAIL: "test@test.com",
+    GIT_CONFIG_NOSYSTEM: "1",
+    HOME: "", // prevent reading user .gitconfig
+  };
+}
 
 export function gitCmd(args: string, cwd: string): string {
   return execSync(
@@ -27,7 +29,7 @@ export function gitCmd(args: string, cwd: string): string {
       cwd,
       encoding: "utf-8",
       stdio: process.env.GIT_SILENT === "1" ? "pipe" : undefined,
-      env: gitEnv,
+      env: gitEnv(),
     },
   ).trim();
 }
