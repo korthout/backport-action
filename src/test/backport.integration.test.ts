@@ -49,6 +49,8 @@ describe("Backport.run() orchestration", () => {
     vi.clearAllMocks();
   });
 
+  // --- Core behavior ---
+
   it("happy path: creates backport PR and posts success comment", async () => {
     const github = new FakeGithub();
     const git = createMockGit();
@@ -115,6 +117,70 @@ describe("Backport.run() orchestration", () => {
     );
   });
 
+  it("partial failure: one PR created, one failure, was_successful = false", async () => {
+    let cherryPickCallCount = 0;
+    const github = new FakeGithub({
+      sourcePr: {
+        labels: [{ name: "backport main" }, { name: "backport release" }],
+      },
+    });
+    const git = createMockGit({
+      cherryPick: vi.fn().mockImplementation(async () => {
+        cherryPickCallCount++;
+        if (cherryPickCallCount === 1) return null;
+        throw new Error("cherry-pick failed");
+      }),
+    });
+    const config = makeConfig();
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.createdPRs).toHaveLength(1);
+    expect(core.setOutput).toHaveBeenCalledWith("was_successful", false);
+  });
+
+  it("RequestError in post-creation step: continues with remaining steps", async () => {
+    const github = new FakeGithub({
+      sourcePr: {
+        milestone: { number: 1, id: 1, title: "v1" },
+        assignees: [{ login: "user1", id: 1 }],
+      },
+    });
+    github.failOn("setMilestone", requestError(403));
+    const git = createMockGit();
+    const config = makeConfig({ copy_milestone: true, copy_assignees: true });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.createdPRs).toHaveLength(1);
+    expect(github.milestonesByPR.size).toBe(0);
+    expect(github.assigneesByPR.get(100)).toEqual(["user1"]);
+    expect(github.comments).toContainEqual(
+      expect.objectContaining({
+        body: expect.stringContaining("Successfully created backport PR"),
+      }),
+    );
+    expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+  });
+
+  it("non-RequestError in post-creation step: target marked as failed", async () => {
+    const github = new FakeGithub({
+      sourcePr: { milestone: { number: 1, id: 1, title: "v1" } },
+    });
+    github.failOn("setMilestone", new Error("unexpected"));
+    const git = createMockGit();
+    const config = makeConfig({ copy_milestone: true });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.createdPRs).toHaveLength(1);
+    expect(github.milestonesByPR.size).toBe(0);
+    // todo: this might be a small bug, we probably should still mark it as successful as the PR was created successfully
+    expect(core.setOutput).toHaveBeenCalledWith("was_successful", false);
+  });
+
+  // --- Fetch ---
+
   it("target branch fetch fails with GitRefNotFoundError: posts failure comment, continues", async () => {
     const github = new FakeGithub({
       sourcePr: {
@@ -138,6 +204,31 @@ describe("Backport.run() orchestration", () => {
       }),
     );
     expect(github.createdPRs).toHaveLength(1);
+  });
+
+  // --- Cherry-pick ---
+
+  it("pull_request_head cherry-picking: uses PR commits, not merge commit", async () => {
+    const github = new FakeGithub({
+      sourcePr: {
+        commitShas: ["sha1", "sha2"],
+        mergeCommitSha: "squash-sha",
+      },
+      mergeStrategyResult: "SQUASHED",
+    });
+    const git = createMockGit();
+    const config = makeConfig({
+      commits: { cherry_picking: "pull_request_head", merge_commits: "fail" },
+    });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.createdPRs).toHaveLength(1);
+    expect(git.cherryPick).toHaveBeenCalledWith(
+      ["sha1", "sha2"],
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it("cherry-pick fails: posts failure comment with manual instructions", async () => {
@@ -175,6 +266,8 @@ describe("Backport.run() orchestration", () => {
       }),
     );
   });
+
+  // --- Push ---
 
   it("push fails, branch exists: recovers and creates PR", async () => {
     const github = new FakeGithub();
@@ -214,6 +307,8 @@ describe("Backport.run() orchestration", () => {
     );
   });
 
+  // --- PR creation ---
+
   it("PR already exists (422): skips silently", async () => {
     const github = new FakeGithub({
       existingPRBranches: ["backport-42-to-main"],
@@ -229,40 +324,19 @@ describe("Backport.run() orchestration", () => {
     expect(failureComment).toBeUndefined();
   });
 
-  it("pull_request_head cherry-picking: uses PR commits, not merge commit", async () => {
-    const github = new FakeGithub({
-      sourcePr: {
-        commitShas: ["sha1", "sha2"],
-        mergeCommitSha: "squash-sha",
-      },
-      mergeStrategyResult: "SQUASHED",
-    });
+  it("custom PR title template: replaces placeholders", async () => {
+    const github = new FakeGithub();
     const git = createMockGit();
-    const config = makeConfig({
-      commits: { cherry_picking: "pull_request_head", merge_commits: "fail" },
-    });
+    const config = makeConfig();
     const backport = new Backport(github, config, git);
     await backport.run();
 
-    expect(github.createdPRs).toHaveLength(1);
-    expect(git.cherryPick).toHaveBeenCalledWith(
-      ["sha1", "sha2"],
-      expect.anything(),
-      expect.anything(),
+    expect(github.createdPRs[0]).toEqual(
+      expect.objectContaining({ title: "[Backport main] Test PR" }),
     );
   });
 
-  it("copy milestone: sets milestone on backport PR", async () => {
-    const github = new FakeGithub({
-      sourcePr: { milestone: { number: 5, id: 123, title: "v1.0" } },
-    });
-    const git = createMockGit();
-    const config = makeConfig({ copy_milestone: true });
-    const backport = new Backport(github, config, git);
-    await backport.run();
-
-    expect(github.milestonesByPR.get(100)).toBe(5);
-  });
+  // --- Assignees ---
 
   it("copy assignees: assigns same users to backport PR", async () => {
     const github = new FakeGithub({
@@ -275,6 +349,18 @@ describe("Backport.run() orchestration", () => {
 
     expect(github.assigneesByPR.get(100)).toEqual(["user1"]);
   });
+
+  it("add author as assignee: assigns PR author to backport PR", async () => {
+    const github = new FakeGithub();
+    const git = createMockGit();
+    const config = makeConfig({ add_author_as_assignee: true });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.assigneesByPR.get(100)).toEqual(["author"]);
+  });
+
+  // --- Reviewers ---
 
   it("copy requested reviewers: requests same reviewers on backport PR", async () => {
     const github = new FakeGithub({
@@ -344,14 +430,14 @@ describe("Backport.run() orchestration", () => {
     expect(github.reviewersByPR.get(100)).toEqual(["reviewer1", "reviewer1"]);
   });
 
-  it("add author as assignee: assigns PR author to backport PR", async () => {
+  it("add author as reviewer: requests PR author as reviewer on backport PR", async () => {
     const github = new FakeGithub();
     const git = createMockGit();
-    const config = makeConfig({ add_author_as_assignee: true });
+    const config = makeConfig({ add_author_as_reviewer: true });
     const backport = new Backport(github, config, git);
     await backport.run();
 
-    expect(github.assigneesByPR.get(100)).toEqual(["author"]);
+    expect(github.reviewersByPR.get(100)).toEqual(["author"]);
   });
 
   it("add reviewers: requests configured reviewers on backport PR", async () => {
@@ -422,15 +508,7 @@ describe("Backport.run() orchestration", () => {
     expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
   });
 
-  it("add author as reviewer: requests PR author as reviewer on backport PR", async () => {
-    const github = new FakeGithub();
-    const git = createMockGit();
-    const config = makeConfig({ add_author_as_reviewer: true });
-    const backport = new Backport(github, config, git);
-    await backport.run();
-
-    expect(github.reviewersByPR.get(100)).toEqual(["author"]);
-  });
+  // --- Labels ---
 
   it("copy labels: copies matching labels excluding backport labels", async () => {
     const github = new FakeGithub({
@@ -463,6 +541,22 @@ describe("Backport.run() orchestration", () => {
     expect(github.labelsByPR.get(100)).toEqual(["bug"]);
   });
 
+  // --- Milestone ---
+
+  it("copy milestone: sets milestone on backport PR", async () => {
+    const github = new FakeGithub({
+      sourcePr: { milestone: { number: 5, id: 123, title: "v1.0" } },
+    });
+    const git = createMockGit();
+    const config = makeConfig({ copy_milestone: true });
+    const backport = new Backport(github, config, git);
+    await backport.run();
+
+    expect(github.milestonesByPR.get(100)).toBe(5);
+  });
+
+  // --- Auto-merge ---
+
   it("auto-merge enabled: enables auto-merge on backport PR", async () => {
     const github = new FakeGithub();
     const git = createMockGit();
@@ -473,79 +567,7 @@ describe("Backport.run() orchestration", () => {
     expect(github.autoMergeByPR.get(100)).toBe("merge");
   });
 
-  it("RequestError in post-creation step: continues with remaining steps", async () => {
-    const github = new FakeGithub({
-      sourcePr: {
-        milestone: { number: 1, id: 1, title: "v1" },
-        assignees: [{ login: "user1", id: 1 }],
-      },
-    });
-    github.failOn("setMilestone", requestError(403));
-    const git = createMockGit();
-    const config = makeConfig({ copy_milestone: true, copy_assignees: true });
-    const backport = new Backport(github, config, git);
-    await backport.run();
-
-    expect(github.createdPRs).toHaveLength(1);
-    expect(github.milestonesByPR.size).toBe(0);
-    expect(github.assigneesByPR.get(100)).toEqual(["user1"]);
-    expect(github.comments).toContainEqual(
-      expect.objectContaining({
-        body: expect.stringContaining("Successfully created backport PR"),
-      }),
-    );
-    expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
-  });
-
-  it("non-RequestError in post-creation step: target marked as failed", async () => {
-    const github = new FakeGithub({
-      sourcePr: { milestone: { number: 1, id: 1, title: "v1" } },
-    });
-    github.failOn("setMilestone", new Error("unexpected"));
-    const git = createMockGit();
-    const config = makeConfig({ copy_milestone: true });
-    const backport = new Backport(github, config, git);
-    await backport.run();
-
-    expect(github.createdPRs).toHaveLength(1);
-    expect(github.milestonesByPR.size).toBe(0);
-    // todo: this might be a small bug, we probably should still mark it as successful as the PR was created successfully
-    expect(core.setOutput).toHaveBeenCalledWith("was_successful", false);
-  });
-
-  it("custom PR title template: replaces placeholders", async () => {
-    const github = new FakeGithub();
-    const git = createMockGit();
-    const config = makeConfig();
-    const backport = new Backport(github, config, git);
-    await backport.run();
-
-    expect(github.createdPRs[0]).toEqual(
-      expect.objectContaining({ title: "[Backport main] Test PR" }),
-    );
-  });
-
-  it("partial failure: one PR created, one failure, was_successful = false", async () => {
-    let cherryPickCallCount = 0;
-    const github = new FakeGithub({
-      sourcePr: {
-        labels: [{ name: "backport main" }, { name: "backport release" }],
-      },
-    });
-    const git = createMockGit({
-      cherryPick: vi.fn().mockImplementation(async () => {
-        cherryPickCallCount++;
-        if (cherryPickCallCount === 1) return null;
-        throw new Error("cherry-pick failed");
-      }),
-    });
-    const config = makeConfig();
-    const backport = new Backport(github, config, git);
-    await backport.run();
-
-    expect(github.createdPRs).toHaveLength(1);
-    expect(core.setOutput).toHaveBeenCalledWith("was_successful", false);
-  });
+  // --- Outputs ---
 
   it("outputs: sets was_successful, was_successful_by_target, created_pull_numbers", async () => {
     const github = new FakeGithub();
@@ -561,6 +583,8 @@ describe("Backport.run() orchestration", () => {
     );
     expect(core.setOutput).toHaveBeenCalledWith("created_pull_numbers", "100");
   });
+
+  // --- Downstream ---
 
   it("downstream repo: calls remoteAdd, uses 'downstream' remote", async () => {
     const github = new FakeGithub();
