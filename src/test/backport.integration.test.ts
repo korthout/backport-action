@@ -33,6 +33,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Backport } from "../backport.js";
 import { GitRefNotFoundError } from "../git.js";
+import { MergeStrategy } from "../github.js";
 import { FakeGithub, requestError } from "./helpers/fake-github.js";
 import { createMockGit } from "./helpers/mock-git.js";
 import { makeConfig } from "./helpers/config.js";
@@ -216,7 +217,7 @@ describe("Backport.run() orchestration", () => {
           commitShas: ["sha1", "sha2"],
           mergeCommitSha: "squash-sha",
         },
-        mergeStrategyResult: "SQUASHED",
+        mergeStrategyResult: MergeStrategy.SQUASHED,
       });
       const git = createMockGit();
       const config = makeConfig({
