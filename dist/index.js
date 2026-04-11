@@ -88,7 +88,6 @@ ${s}`)}return t}import{readFileSync as eG,existsSync as tG}from"fs";import{EOL a
         cd .worktree/${r}
         git reset --hard HEAD^
         git cherry-pick -x ${A.join(" ")}
-        git push --force-with-lease
         \`\`\``:"":Ie`\`\`\`bash
       git fetch origin ${e}
       git worktree add -d .worktree/${r} origin/${e}
