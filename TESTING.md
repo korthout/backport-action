@@ -38,7 +38,7 @@ The tests in this repo are written like this:
 
 That means that most tests will either be unit tests or fast running integration tests.
 
-The codebase has two external boundaries: `GithubApi` and `GitApi`. The integration tests mock/fake one or more of these boundaries. For example, `git.integration.test.ts` mocks GitHubAPI so it can test against a real Git repo. This gives fast orchestration tests AND realistic git tests without needing a real GitHub API.
+The codebase has two external boundaries: `GithubApi` and `GitApi`. The integration tests mock/fake one or more of these boundaries. For example, `git.integration.test.ts` uses `FakeGithub` (a fake `GithubApi`) so it can test against a real Git repo. This gives fast orchestration tests AND realistic git tests without needing a real GitHub API.
 
 E2E tests in [korthout/backport-action-test](https://github.com/korthout/backport-action-test) complete the strategy by exercising the action on real GitHub PRs against the real GitHub API and workflow triggers.
 
