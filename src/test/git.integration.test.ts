@@ -35,6 +35,7 @@ import {
   afterAll,
   afterEach,
 } from "vitest";
+import { devNull } from "os";
 import type { TestRepo } from "./helpers/test-repo.js";
 import { Backport } from "../backport.js";
 import { Git } from "../git.js";
@@ -72,7 +73,7 @@ describe("Backport.run() with real git", () => {
   beforeAll(async () => {
     savedEnv.GIT_CONFIG_GLOBAL = process.env.GIT_CONFIG_GLOBAL;
     savedEnv.GIT_CONFIG_NOSYSTEM = process.env.GIT_CONFIG_NOSYSTEM;
-    process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+    process.env.GIT_CONFIG_GLOBAL = devNull;
     process.env.GIT_CONFIG_NOSYSTEM = "1";
     template = await createRepoTemplate();
   });
