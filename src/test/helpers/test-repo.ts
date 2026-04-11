@@ -1,7 +1,10 @@
 import { mkdtemp, rm, writeFile, cp } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import { execSync } from "child_process";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 export type TestRepo = {
   workDir: string;
@@ -22,16 +25,12 @@ function gitEnv() {
   };
 }
 
-export function gitCmd(args: string, cwd: string): string {
-  return execSync(
+export async function gitCmd(args: string, cwd: string): Promise<string> {
+  const { stdout } = await execAsync(
     `git -c commit.gpgsign=false -c init.defaultBranch=main ${args}`,
-    {
-      cwd,
-      encoding: "utf-8",
-      stdio: process.env.GIT_SILENT === "1" ? "pipe" : undefined,
-      env: gitEnv(),
-    },
-  ).trim();
+    { cwd, env: gitEnv() },
+  );
+  return stdout.trim();
 }
 
 export async function createTestRepo(): Promise<TestRepo> {
@@ -40,18 +39,18 @@ export async function createTestRepo(): Promise<TestRepo> {
   const workDir = join(baseDir, "work");
 
   // Create bare remote
-  gitCmd(`init --bare ${bareDir}`, baseDir);
+  await gitCmd(`init --bare ${bareDir}`, baseDir);
 
   // Clone it
-  gitCmd(`clone ${bareDir} ${workDir}`, baseDir);
+  await gitCmd(`clone ${bareDir} ${workDir}`, baseDir);
 
   // Create initial commit on main
   await writeFile(join(workDir, "README.md"), "initial");
-  gitCmd("add README.md", workDir);
-  gitCmd('commit -m "initial commit"', workDir);
-  gitCmd("push origin HEAD", workDir);
+  await gitCmd("add README.md", workDir);
+  await gitCmd('commit -m "initial commit"', workDir);
+  await gitCmd("push origin HEAD", workDir);
 
-  const initialCommitSha = gitCmd("rev-parse HEAD", workDir);
+  const initialCommitSha = await gitCmd("rev-parse HEAD", workDir);
 
   return {
     workDir,
@@ -78,14 +77,14 @@ export async function createRepoTemplate(): Promise<RepoTemplate> {
   const bareDir = join(baseDir, "bare.git");
   const workDir = join(baseDir, "work");
 
-  gitCmd(`init --bare ${bareDir}`, baseDir);
-  gitCmd(`clone ${bareDir} ${workDir}`, baseDir);
+  await gitCmd(`init --bare ${bareDir}`, baseDir);
+  await gitCmd(`clone ${bareDir} ${workDir}`, baseDir);
   await writeFile(join(workDir, "README.md"), "initial");
-  gitCmd("add README.md", workDir);
-  gitCmd('commit -m "initial commit"', workDir);
-  gitCmd("push origin HEAD", workDir);
+  await gitCmd("add README.md", workDir);
+  await gitCmd('commit -m "initial commit"', workDir);
+  await gitCmd("push origin HEAD", workDir);
 
-  const initialCommitSha = gitCmd("rev-parse HEAD", workDir);
+  const initialCommitSha = await gitCmd("rev-parse HEAD", workDir);
 
   return {
     async createTestRepo(): Promise<TestRepo> {
@@ -98,7 +97,7 @@ export async function createRepoTemplate(): Promise<RepoTemplate> {
       // Fix remote URL: the copied work dir's origin still points to the
       // template's bare dir. Update it to point to the copied bare dir so
       // each test has its own isolated remote.
-      gitCmd(`remote set-url origin ${copyBareDir}`, copyWorkDir);
+      await gitCmd(`remote set-url origin ${copyBareDir}`, copyWorkDir);
 
       return {
         workDir: copyWorkDir,
@@ -122,18 +121,18 @@ export async function addCommit(
   message: string,
 ): Promise<string> {
   await writeFile(join(dir, file), content);
-  gitCmd(`add ${file}`, dir);
-  gitCmd(`commit -m "${message}"`, dir);
+  await gitCmd(`add ${file}`, dir);
+  await gitCmd(`commit -m "${message}"`, dir);
   return gitCmd("rev-parse HEAD", dir);
 }
 
-export function createBranch(dir: string, branch: string, from: string): void {
-  gitCmd(`branch ${branch} ${from}`, dir);
-  gitCmd(`push origin ${branch}`, dir);
+export async function createBranch(dir: string, branch: string, from: string): Promise<void> {
+  await gitCmd(`branch ${branch} ${from}`, dir);
+  await gitCmd(`push origin ${branch}`, dir);
 }
 
-export function pushBranch(dir: string): void {
-  gitCmd("push origin HEAD", dir);
+export async function pushBranch(dir: string): Promise<void> {
+  await gitCmd("push origin HEAD", dir);
 }
 
 /**
@@ -153,17 +152,17 @@ export async function addConflictingCommits(
     "conflicting content from main",
     `Change ${file} on main`,
   );
-  pushBranch(dir);
+  await pushBranch(dir);
 
-  gitCmd(`checkout ${targetBranch}`, dir);
+  await gitCmd(`checkout ${targetBranch}`, dir);
   await addCommit(
     dir,
     file,
     "different content",
     `Change ${file} on ${targetBranch}`,
   );
-  gitCmd(`push origin ${targetBranch}`, dir);
-  gitCmd("checkout main", dir);
+  await gitCmd(`push origin ${targetBranch}`, dir);
+  await gitCmd("checkout main", dir);
 
   return featureSha;
 }
@@ -172,23 +171,23 @@ export async function addConflictingCommits(
  * Creates a pull request ref in the bare remote, simulating what GitHub does.
  * This allows `git fetch origin refs/pull/<number>/head` to succeed.
  */
-export function createPullRequestRef(
+export async function createPullRequestRef(
   dir: string,
   pullNumber: number,
   sha: string,
-): void {
-  gitCmd(`push origin ${sha}:refs/pull/${pullNumber}/head`, dir);
+): Promise<void> {
+  await gitCmd(`push origin ${sha}:refs/pull/${pullNumber}/head`, dir);
 }
 
 /**
  * Simulates GitHub's "Squash and merge" by squash-merging a feature branch
  * into main. Returns the SHA of the squash commit on main.
  */
-export function squashMerge(dir: string, featureBranch: string): string {
-  gitCmd("checkout main", dir);
-  gitCmd(`merge --squash ${featureBranch}`, dir);
-  gitCmd(`commit -m "Squash merge ${featureBranch}"`, dir);
-  gitCmd("push origin main", dir);
+export async function squashMerge(dir: string, featureBranch: string): Promise<string> {
+  await gitCmd("checkout main", dir);
+  await gitCmd(`merge --squash ${featureBranch}`, dir);
+  await gitCmd(`commit -m "Squash merge ${featureBranch}"`, dir);
+  await gitCmd("push origin main", dir);
   return gitCmd("rev-parse HEAD", dir);
 }
 
@@ -196,15 +195,15 @@ export function squashMerge(dir: string, featureBranch: string): string {
  * Simulates GitHub's "Rebase and merge" by rebasing a feature branch onto
  * main and fast-forwarding main. Returns the rebased commit SHAs in order.
  */
-export function rebaseMerge(dir: string, featureBranch: string): string[] {
-  gitCmd("checkout main", dir);
-  const oldMainSha = gitCmd("rev-parse HEAD", dir);
-  gitCmd(`checkout ${featureBranch}`, dir);
-  gitCmd("rebase main", dir);
-  gitCmd("checkout main", dir);
-  gitCmd(`merge --ff-only ${featureBranch}`, dir);
-  gitCmd("push origin main", dir);
-  return gitCmd(`log ${oldMainSha}..main --format=%H --reverse`, dir)
+export async function rebaseMerge(dir: string, featureBranch: string): Promise<string[]> {
+  await gitCmd("checkout main", dir);
+  const oldMainSha = await gitCmd("rev-parse HEAD", dir);
+  await gitCmd(`checkout ${featureBranch}`, dir);
+  await gitCmd("rebase main", dir);
+  await gitCmd("checkout main", dir);
+  await gitCmd(`merge --ff-only ${featureBranch}`, dir);
+  await gitCmd("push origin main", dir);
+  return (await gitCmd(`log ${oldMainSha}..main --format=%H --reverse`, dir))
     .split("\n")
     .filter(Boolean);
 }
