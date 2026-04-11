@@ -23,12 +23,10 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set release version in package.json
-        uses: jacobtomlinson/gha-find-replace@f1069b438f125e5395d84d1c6fd3b559a7880cb5 # 3.0.5
-        with:
-          find: '"version": "[0-9\.]+(-SNAPSHOT)?"'
-          replace: '"version": "${{ inputs.releaseVersion }}"'
-          include: package.json
-          regex: true
+        env:
+          RELEASE_VERSION: ${{ inputs.releaseVersion }}
+        run: |
+          sed -i "s/\"version\": \"[0-9.]*\(-SNAPSHOT\)\{0,1\}\"/\"version\": \"$RELEASE_VERSION\"/" package.json
 
       - name: Commit new release version
         id: commit-new-release
@@ -45,12 +43,11 @@ jobs:
         run: git show ${{ steps.commit-new-release.outputs.commit_sha }} | cat
 
       - name: Set development version in package.json
-        uses: jacobtomlinson/gha-find-replace@f1069b438f125e5395d84d1c6fd3b559a7880cb5 # 3.0.5
-        with:
-          find: '"version": "${{ inputs.releaseVersion }}"'
-          replace: '"version": "${{ inputs.nextDevelopmentVersion }}"'
-          include: "package.json"
-          regex: false
+        env:
+          RELEASE_VERSION: ${{ inputs.releaseVersion }}
+          NEXT_VERSION: ${{ inputs.nextDevelopmentVersion }}
+        run: |
+          sed -i "s/\"version\": \"$RELEASE_VERSION\"/\"version\": \"$NEXT_VERSION\"/" package.json
 
       - name: Extract semver release version components
         uses: madhead/semver-utils@36d1e0ed361bd7b4b77665de8093092eaeabe6ba # v4.3.0
