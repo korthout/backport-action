@@ -420,6 +420,21 @@ describe("Backport.run() orchestration", () => {
       expect(github.reviewersByPR.get(100)).toEqual(["submitted-reviewer"]);
     });
 
+    it("copy all reviewers: listReviews failure falls back to requested reviewers only", async () => {
+      const github = new FakeGithub({
+        sourcePr: { requested_reviewers: [{ login: "reviewer1" }] },
+        reviews: [{ user: { login: "reviewer2" } }],
+      });
+      github.failOn("listReviews", requestError(403));
+      const git = createMockGit();
+      const config = makeConfig({ copy_all_reviewers: true });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.reviewersByPR.get(100)).toEqual(["reviewer1"]);
+      expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+    });
+
     it("copy all reviewers and copy requested reviewers: both request reviewers independently", async () => {
       const github = new FakeGithub({
         sourcePr: { requested_reviewers: [{ login: "reviewer1" }] },
