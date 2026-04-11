@@ -188,13 +188,13 @@ describe("Backport.run() with real git", () => {
         }),
       );
 
-      await git
-        .findCommitsInRange("release..backport-42-to-release", repo.workDir)
-        .then((commits) => {
-          ctx.expect(commits).toHaveLength(1);
-          const content = gitCmd(`show ${commits[0]}`, repo.workDir);
-          ctx.expect(content).toContain("BACKPORT-CONFLICT");
-        });
+      const commits = await git.findCommitsInRange(
+        "release..backport-42-to-release",
+        repo.workDir,
+      );
+      ctx.expect(commits).toHaveLength(1);
+      const content = gitCmd(`show ${commits[0]}`, repo.workDir);
+      ctx.expect(content).toContain("BACKPORT-CONFLICT");
     },
   );
 
