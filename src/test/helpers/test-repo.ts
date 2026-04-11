@@ -126,7 +126,11 @@ export async function addCommit(
   return gitCmd("rev-parse HEAD", dir);
 }
 
-export async function createBranch(dir: string, branch: string, from: string): Promise<void> {
+export async function createBranch(
+  dir: string,
+  branch: string,
+  from: string,
+): Promise<void> {
   await gitCmd(`branch ${branch} ${from}`, dir);
   await gitCmd(`push origin ${branch}`, dir);
 }
@@ -183,7 +187,10 @@ export async function createPullRequestRef(
  * Simulates GitHub's "Squash and merge" by squash-merging a feature branch
  * into main. Returns the SHA of the squash commit on main.
  */
-export async function squashMerge(dir: string, featureBranch: string): Promise<string> {
+export async function squashMerge(
+  dir: string,
+  featureBranch: string,
+): Promise<string> {
   await gitCmd("checkout main", dir);
   await gitCmd(`merge --squash ${featureBranch}`, dir);
   await gitCmd(`commit -m "Squash merge ${featureBranch}"`, dir);
@@ -195,7 +202,10 @@ export async function squashMerge(dir: string, featureBranch: string): Promise<s
  * Simulates GitHub's "Rebase and merge" by rebasing a feature branch onto
  * main and fast-forwarding main. Returns the rebased commit SHAs in order.
  */
-export async function rebaseMerge(dir: string, featureBranch: string): Promise<string[]> {
+export async function rebaseMerge(
+  dir: string,
+  featureBranch: string,
+): Promise<string[]> {
   await gitCmd("checkout main", dir);
   const oldMainSha = await gitCmd("rev-parse HEAD", dir);
   await gitCmd(`checkout ${featureBranch}`, dir);

@@ -319,7 +319,10 @@ describe("Backport.run() with real git", () => {
 
       // "Update branch": merge main into feature branch (creates the merge commit)
       await gitCmd("checkout my-feature", repo.workDir);
-      await gitCmd("merge --no-ff main -m 'Update branch from main'", repo.workDir);
+      await gitCmd(
+        "merge --no-ff main -m 'Update branch from main'",
+        repo.workDir,
+      );
       const updateMergeSha = await gitCmd("rev-parse HEAD", repo.workDir);
 
       // Another feature commit after the update
@@ -394,7 +397,10 @@ describe("Backport.run() with real git", () => {
 
       // "Update branch": merge main into feature branch (creates the merge commit)
       await gitCmd("checkout my-feature", repo.workDir);
-      await gitCmd("merge --no-ff main -m 'Update branch from main'", repo.workDir);
+      await gitCmd(
+        "merge --no-ff main -m 'Update branch from main'",
+        repo.workDir,
+      );
       const updateMergeSha = await gitCmd("rev-parse HEAD", repo.workDir);
 
       // Another feature commit after the update
