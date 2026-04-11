@@ -8,7 +8,7 @@ import {
   RequestError,
 } from "./github.js";
 import { GithubApi } from "./github.js";
-import { Git, GitRefNotFoundError } from "./git.js";
+import { GitApi, GitRefNotFoundError } from "./git.js";
 import * as utils from "./utils.js";
 
 type PRContent = {
@@ -76,7 +76,7 @@ export class Backport {
   private downstreamRepo;
   private downstreamOwner;
 
-  constructor(github: GithubApi, config: Config, git: Git) {
+  constructor(github: GithubApi, config: Config, git: GitApi) {
     this.github = github;
     this.config = config;
     this.git = git;
