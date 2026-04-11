@@ -103,13 +103,13 @@ describe("Backport.run() with real git", () => {
   ): Promise<void> {
     const commits = await git.findCommitsInRange(range, workDir);
     ctx.expect(commits).toHaveLength(expected.length);
-    expected.forEach(({ message, cherryPickedFrom }, index) => {
+    for (const [index, { message, cherryPickedFrom }] of expected.entries()) {
       const content = gitCmd(`show ${commits[index]}`, workDir);
       ctx.expect(content).toContain(message);
       ctx
         .expect(content)
         .toContain(`(cherry picked from commit ${cherryPickedFrom})`);
-    });
+    }
   }
 
   it.concurrent(
