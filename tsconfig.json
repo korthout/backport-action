@@ -9,6 +9,7 @@
     "strict": true,
     "noImplicitAny": true,
     "esModuleInterop": true,
+    "types": ["node"],
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals":true
