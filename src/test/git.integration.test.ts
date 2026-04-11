@@ -103,13 +103,13 @@ describe("Backport.run() with real git", () => {
   ): Promise<void> {
     const commits = await git.findCommitsInRange(range, workDir);
     ctx.expect(commits).toHaveLength(expected.length);
-    expected.forEach(({ message, cherryPickedFrom }, index) => {
-      const content = gitCmd(`show ${commits[index]}`, workDir);
+    for (const [index, { message, cherryPickedFrom }] of expected.entries()) {
+      const content = await gitCmd(`show ${commits[index]}`, workDir);
       ctx.expect(content).toContain(message);
       ctx
         .expect(content)
         .toContain(`(cherry picked from commit ${cherryPickedFrom})`);
-    });
+    }
   }
 
   it.concurrent(
@@ -118,14 +118,14 @@ describe("Backport.run() with real git", () => {
       const repo = (ctx.repo = await template.createTestRepo());
       const git = setupGit();
 
-      createBranch(repo.workDir, "release", repo.initialCommitSha);
+      await createBranch(repo.workDir, "release", repo.initialCommitSha);
 
       const featureSha = await addConflictingCommits(
         repo.workDir,
         "release",
         "README.md",
       );
-      createPullRequestRef(repo.workDir, 42, featureSha);
+      await createPullRequestRef(repo.workDir, 42, featureSha);
 
       const github = new FakeGithub({
         sourcePr: {
@@ -154,14 +154,14 @@ describe("Backport.run() with real git", () => {
       const repo = (ctx.repo = await template.createTestRepo());
       const git = setupGit();
 
-      createBranch(repo.workDir, "release", repo.initialCommitSha);
+      await createBranch(repo.workDir, "release", repo.initialCommitSha);
 
       const featureSha = await addConflictingCommits(
         repo.workDir,
         "release",
         "README.md",
       );
-      createPullRequestRef(repo.workDir, 42, featureSha);
+      await createPullRequestRef(repo.workDir, 42, featureSha);
 
       const github = new FakeGithub({
         sourcePr: {
@@ -188,13 +188,13 @@ describe("Backport.run() with real git", () => {
         }),
       );
 
-      await git
-        .findCommitsInRange("release..backport-42-to-release", repo.workDir)
-        .then((commits) => {
-          ctx.expect(commits).toHaveLength(1);
-          const content = gitCmd(`show ${commits[0]}`, repo.workDir);
-          ctx.expect(content).toContain("BACKPORT-CONFLICT");
-        });
+      const commits = await git.findCommitsInRange(
+        "release..backport-42-to-release",
+        repo.workDir,
+      );
+      ctx.expect(commits).toHaveLength(1);
+      const content = await gitCmd(`show ${commits[0]}`, repo.workDir);
+      ctx.expect(content).toContain("BACKPORT-CONFLICT");
     },
   );
 
@@ -202,7 +202,7 @@ describe("Backport.run() with real git", () => {
     const repo = (ctx.repo = await template.createTestRepo());
     const git = setupGit();
 
-    createBranch(repo.workDir, "release", repo.initialCommitSha);
+    await createBranch(repo.workDir, "release", repo.initialCommitSha);
 
     const sha1 = await addCommit(
       repo.workDir,
@@ -222,8 +222,8 @@ describe("Backport.run() with real git", () => {
       "content3",
       "Third commit",
     );
-    pushBranch(repo.workDir);
-    createPullRequestRef(repo.workDir, 42, sha3);
+    await pushBranch(repo.workDir);
+    await createPullRequestRef(repo.workDir, 42, sha3);
 
     const github = new FakeGithub({
       sourcePr: {
@@ -266,8 +266,8 @@ describe("Backport.run() with real git", () => {
         "content",
         "Add feature",
       );
-      pushBranch(repo.workDir);
-      createPullRequestRef(repo.workDir, 42, featureSha);
+      await pushBranch(repo.workDir);
+      await createPullRequestRef(repo.workDir, 42, featureSha);
 
       const github = new FakeGithub({
         sourcePr: {
@@ -297,10 +297,10 @@ describe("Backport.run() with real git", () => {
       const git = setupGit();
 
       // Create backport target branch
-      createBranch(repo.workDir, "release", repo.initialCommitSha);
+      await createBranch(repo.workDir, "release", repo.initialCommitSha);
 
       // Start feature branch from initial commit
-      gitCmd("checkout -b my-feature", repo.workDir);
+      await gitCmd("checkout -b my-feature", repo.workDir);
       const feature1Sha = await addCommit(
         repo.workDir,
         "feature1.txt",
@@ -309,7 +309,7 @@ describe("Backport.run() with real git", () => {
       );
 
       // Add a commit on main (simulates base branch moving forward)
-      gitCmd("checkout main", repo.workDir);
+      await gitCmd("checkout main", repo.workDir);
       await addCommit(
         repo.workDir,
         "base-change.txt",
@@ -318,9 +318,12 @@ describe("Backport.run() with real git", () => {
       );
 
       // "Update branch": merge main into feature branch (creates the merge commit)
-      gitCmd("checkout my-feature", repo.workDir);
-      gitCmd("merge --no-ff main -m 'Update branch from main'", repo.workDir);
-      const updateMergeSha = gitCmd("rev-parse HEAD", repo.workDir);
+      await gitCmd("checkout my-feature", repo.workDir);
+      await gitCmd(
+        "merge --no-ff main -m 'Update branch from main'",
+        repo.workDir,
+      );
+      const updateMergeSha = await gitCmd("rev-parse HEAD", repo.workDir);
 
       // Another feature commit after the update
       const feature2Sha = await addCommit(
@@ -332,16 +335,16 @@ describe("Backport.run() with real git", () => {
 
       // Push both branches so all objects are available on the remote.
       // The PR ref points to the feature branch tip (like real GitHub).
-      pushBranch(repo.workDir);
-      gitCmd("push origin main", repo.workDir);
+      await pushBranch(repo.workDir);
+      await gitCmd("push origin main", repo.workDir);
 
       // Simulate GitHub merging the PR into main
-      gitCmd("checkout main", repo.workDir);
-      gitCmd("merge --no-ff my-feature -m 'Merge PR #42'", repo.workDir);
-      const mergeOnMainSha = gitCmd("rev-parse HEAD", repo.workDir);
-      gitCmd("push origin main", repo.workDir);
+      await gitCmd("checkout main", repo.workDir);
+      await gitCmd("merge --no-ff my-feature -m 'Merge PR #42'", repo.workDir);
+      const mergeOnMainSha = await gitCmd("rev-parse HEAD", repo.workDir);
+      await gitCmd("push origin main", repo.workDir);
 
-      createPullRequestRef(repo.workDir, 42, feature2Sha);
+      await createPullRequestRef(repo.workDir, 42, feature2Sha);
 
       const github = new FakeGithub({
         sourcePr: {
@@ -372,10 +375,10 @@ describe("Backport.run() with real git", () => {
       const git = setupGit();
 
       // Create backport target branch
-      createBranch(repo.workDir, "release", repo.initialCommitSha);
+      await createBranch(repo.workDir, "release", repo.initialCommitSha);
 
       // Start feature branch from initial commit
-      gitCmd("checkout -b my-feature", repo.workDir);
+      await gitCmd("checkout -b my-feature", repo.workDir);
       const feature1Sha = await addCommit(
         repo.workDir,
         "feature1.txt",
@@ -384,7 +387,7 @@ describe("Backport.run() with real git", () => {
       );
 
       // Add a commit on main (simulates base branch moving forward)
-      gitCmd("checkout main", repo.workDir);
+      await gitCmd("checkout main", repo.workDir);
       await addCommit(
         repo.workDir,
         "base-change.txt",
@@ -393,9 +396,12 @@ describe("Backport.run() with real git", () => {
       );
 
       // "Update branch": merge main into feature branch (creates the merge commit)
-      gitCmd("checkout my-feature", repo.workDir);
-      gitCmd("merge --no-ff main -m 'Update branch from main'", repo.workDir);
-      const updateMergeSha = gitCmd("rev-parse HEAD", repo.workDir);
+      await gitCmd("checkout my-feature", repo.workDir);
+      await gitCmd(
+        "merge --no-ff main -m 'Update branch from main'",
+        repo.workDir,
+      );
+      const updateMergeSha = await gitCmd("rev-parse HEAD", repo.workDir);
 
       // Another feature commit after the update
       const feature2Sha = await addCommit(
@@ -407,16 +413,16 @@ describe("Backport.run() with real git", () => {
 
       // Push both branches so all objects are available on the remote.
       // The PR ref points to the feature branch tip (like real GitHub).
-      pushBranch(repo.workDir);
-      gitCmd("push origin main", repo.workDir);
+      await pushBranch(repo.workDir);
+      await gitCmd("push origin main", repo.workDir);
 
       // Simulate GitHub merging the PR into main
-      gitCmd("checkout main", repo.workDir);
-      gitCmd("merge --no-ff my-feature -m 'Merge PR #42'", repo.workDir);
-      const mergeOnMainSha = gitCmd("rev-parse HEAD", repo.workDir);
-      gitCmd("push origin main", repo.workDir);
+      await gitCmd("checkout main", repo.workDir);
+      await gitCmd("merge --no-ff my-feature -m 'Merge PR #42'", repo.workDir);
+      const mergeOnMainSha = await gitCmd("rev-parse HEAD", repo.workDir);
+      await gitCmd("push origin main", repo.workDir);
 
-      createPullRequestRef(repo.workDir, 42, feature2Sha);
+      await createPullRequestRef(repo.workDir, 42, feature2Sha);
 
       const github = new FakeGithub({
         sourcePr: {
@@ -459,10 +465,10 @@ describe("Backport.run() with real git", () => {
     const git = setupGit();
 
     // Create backport target branch
-    createBranch(repo.workDir, "release", repo.initialCommitSha);
+    await createBranch(repo.workDir, "release", repo.initialCommitSha);
 
     // Start feature branch with two commits
-    gitCmd("checkout -b my-feature", repo.workDir);
+    await gitCmd("checkout -b my-feature", repo.workDir);
     const feature1Sha = await addCommit(
       repo.workDir,
       "feature1.txt",
@@ -475,12 +481,12 @@ describe("Backport.run() with real git", () => {
       "second feature",
       "Second feature commit",
     );
-    pushBranch(repo.workDir);
+    await pushBranch(repo.workDir);
 
     // Simulate GitHub squash-merging the PR into main
-    const squashSha = squashMerge(repo.workDir, "my-feature");
+    const squashSha = await squashMerge(repo.workDir, "my-feature");
 
-    createPullRequestRef(repo.workDir, 42, feature2Sha);
+    await createPullRequestRef(repo.workDir, 42, feature2Sha);
 
     const github = new FakeGithub({
       sourcePr: {
@@ -524,10 +530,10 @@ describe("Backport.run() with real git", () => {
       const git = setupGit();
 
       // Create backport target branch
-      createBranch(repo.workDir, "release", repo.initialCommitSha);
+      await createBranch(repo.workDir, "release", repo.initialCommitSha);
 
       // Start feature branch with two commits
-      gitCmd("checkout -b my-feature", repo.workDir);
+      await gitCmd("checkout -b my-feature", repo.workDir);
       const feature1Sha = await addCommit(
         repo.workDir,
         "feature1.txt",
@@ -540,12 +546,12 @@ describe("Backport.run() with real git", () => {
         "second feature",
         "Second feature commit",
       );
-      pushBranch(repo.workDir);
+      await pushBranch(repo.workDir);
 
       // Simulate GitHub rebase-merging the PR into main
-      const rebasedShas = rebaseMerge(repo.workDir, "my-feature");
+      const rebasedShas = await rebaseMerge(repo.workDir, "my-feature");
 
-      createPullRequestRef(repo.workDir, 42, feature2Sha);
+      await createPullRequestRef(repo.workDir, 42, feature2Sha);
 
       const github = new FakeGithub({
         sourcePr: {
