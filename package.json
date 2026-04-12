@@ -30,7 +30,7 @@
   "dependencies": {
     "@actions/core": "3.0.0",
     "@actions/exec": "3.0.0",
-    "@actions/github": "9.0.0",
+    "@actions/github": "9.1.0",
     "dedent": "1.7.2"
   },
   "devDependencies": {
