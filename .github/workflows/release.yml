@@ -27,6 +27,7 @@ jobs:
           RELEASE_VERSION: ${{ inputs.releaseVersion }}
         run: |
           sed -i "s/\"version\": \"[0-9.]*\(-SNAPSHOT\)\{0,1\}\"/\"version\": \"$RELEASE_VERSION\"/" package.json
+          grep -Fq "\"version\": \"$RELEASE_VERSION\"" package.json
 
       - name: Commit new release version
         id: commit-new-release
@@ -48,6 +49,7 @@ jobs:
           NEXT_VERSION: ${{ inputs.nextDevelopmentVersion }}
         run: |
           sed -i "s/\"version\": \"$RELEASE_VERSION\"/\"version\": \"$NEXT_VERSION\"/" package.json
+          grep -Fq "\"version\": \"$NEXT_VERSION\"" package.json
 
       - name: Extract semver release version components
         uses: madhead/semver-utils@36d1e0ed361bd7b4b77665de8093092eaeabe6ba # v4.3.0
