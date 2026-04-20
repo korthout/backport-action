@@ -6,6 +6,10 @@ on:
       - main
       - 'release-*'
 
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   publish:
     runs-on: ubuntu-latest
