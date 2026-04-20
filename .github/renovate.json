@@ -4,5 +4,11 @@
     "config:best-practices",
     "helpers:pinGitHubActionDigestsToSemver",
     ":semanticCommitsDisabled"
+  ],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "automerge": true
+    }
   ]
 }
