@@ -65,6 +65,18 @@ This action can also be tested end-to-end using [korthout/backport-action-test](
 
 For details on why `dist/` is not committed in PRs and how the CI workflows interact, see [CI.md](CI.md).
 
+### Merging
+
+This repository uses [Mergify](https://mergify.com) to manage a merge queue.
+PRs are merged through the queue to ensure they are tested against the latest `main` branch before merging.
+
+To add a PR to the merge queue, comment `@mergifyio queue` on the PR.
+Renovate patch updates are automatically queued when CI passes.
+
+PRs should not include changes to `dist/` — it is rebuilt automatically after merge by the Publish workflow.
+It's fine to temporarily commit `dist/` for testing purposes, but those changes should be removed before merging.
+See [CI.md](CI.md) for details.
+
 ### Releases
 
 The distribution is hosted in this repository under `dist`.
