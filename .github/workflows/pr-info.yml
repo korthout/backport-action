@@ -1,0 +1,29 @@
+name: PR Info
+
+on:
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post merge instructions
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const labels = context.payload.pull_request.labels.map(l => l.name);
+            const author = context.payload.pull_request.user.login;
+            const isAutoMerge = labels.includes('automerge') && author === 'renovate[bot]';
+            const message = isAutoMerge
+              ? 'This PR will be merged automatically once the build check passes.'
+              : 'This PR can be added to the merge queue by commenting `@mergifyio queue`.';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: message
+            });

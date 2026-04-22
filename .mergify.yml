@@ -1,3 +1,21 @@
+merge_queue:
+  reset_on_external_merge: never
+
 queue_rules:
-  - name: queue
+  - name: default
     merge_method: merge
+    queue_conditions:
+      - check-success = build
+    merge_conditions:
+      - check-success = build
+
+pull_request_rules:
+  - name: automatic merge for Renovate patch updates
+    conditions:
+      - author = renovate[bot]
+      - check-success = build
+      - label = automerge
+      - label != do-not-merge
+    actions:
+      queue:
+        name: default
