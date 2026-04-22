@@ -1,0 +1,3 @@
+queue_rules:
+  - name: queue
+    merge_method: merge
