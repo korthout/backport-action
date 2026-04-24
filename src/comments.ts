@@ -1,6 +1,5 @@
 import { GitRefNotFoundError } from "./git.js";
 import {
-  BackportError,
   CheckoutError,
   CherryPickError,
   CreatePRError,
