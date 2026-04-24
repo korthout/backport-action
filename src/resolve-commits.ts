@@ -85,20 +85,14 @@ export async function resolveCommitsToCherryPick(
     config.pwd,
   );
   console.log(`Encountered ${mergeCommitShas.length ?? "no"} merge commits`);
-  if (
-    mergeCommitShas.length > 0 &&
-    config.commits.merge_commits == "fail"
-  ) {
+  if (mergeCommitShas.length > 0 && config.commits.merge_commits == "fail") {
     throw new Error(
       dedent`Backport failed because this pull request contains merge commits. \
         You can either backport this pull request manually, or configure the action to skip merge commits.`,
     );
   }
 
-  if (
-    mergeCommitShas.length > 0 &&
-    config.commits.merge_commits == "skip"
-  ) {
+  if (mergeCommitShas.length > 0 && config.commits.merge_commits == "skip") {
     console.log("Skipping merge commits: " + mergeCommitShas);
     const nonMergeCommitShas = commitShasToCherryPick.filter(
       (sha) => !mergeCommitShas.includes(sha),

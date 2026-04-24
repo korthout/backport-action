@@ -176,9 +176,7 @@ export async function postCreatePR(
         targetRepo,
         config.auto_merge_method,
       );
-      console.info(
-        "Successfully enabled auto-merge for PR #" + newPrNumber,
-      );
+      console.info("Successfully enabled auto-merge for PR #" + newPrNumber);
     } catch (error) {
       if (!(error instanceof RequestError)) throw error;
 

@@ -1,7 +1,11 @@
 import * as core from "@actions/core";
 import dedent from "dedent";
 
-import { CreatePullRequestResponse, PullRequest, RequestError } from "./github.js";
+import {
+  CreatePullRequestResponse,
+  PullRequest,
+  RequestError,
+} from "./github.js";
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
 import { BackportError, GitPushError } from "./errors.js";
@@ -177,8 +181,7 @@ export class Backport {
           pull_number,
         );
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : String(error);
+        const message = error instanceof Error ? error.message : String(error);
         console.error(message);
         this.github.createComment({
           owner: workflowOwner,
@@ -329,8 +332,12 @@ export class Backport {
 
       const createdPullRequestNumbers = results
         .filter(
-          (r): r is Extract<TargetResult, { status: "success" | "success_with_conflicts" }> =>
-            r.status === "success" || r.status === "success_with_conflicts",
+          (
+            r,
+          ): r is Extract<
+            TargetResult,
+            { status: "success" | "success_with_conflicts" }
+          > => r.status === "success" || r.status === "success_with_conflicts",
         )
         .map((r) => r.newPrNumber);
 
@@ -685,7 +692,6 @@ export class Backport {
     const createdPullNumbersOutput = createdPullRequestNumbers.join(" ");
     core.setOutput(Output.created_pull_numbers, createdPullNumbersOutput);
   }
-
 }
 
 export function findTargetBranches(
