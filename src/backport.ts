@@ -4,7 +4,7 @@ import dedent from "dedent";
 import { CreatePullRequestResponse, PullRequest, RequestError } from "./github.js";
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
-import { GitPushError } from "./errors.js";
+import { BackportError, GitPushError } from "./errors.js";
 import { postCreatePR } from "./pr-post-create.js";
 import { resolveCommitsToCherryPick } from "./resolve-commits.js";
 import * as utils from "./utils.js";
@@ -84,6 +84,17 @@ type BackportContext = {
   labelsToCopy: string[];
   mainpr: PullRequest;
 };
+
+type TargetResult =
+  | { status: "success"; targetBranch: string; newPrNumber: number }
+  | {
+      status: "success_with_conflicts";
+      targetBranch: string;
+      newPrNumber: number;
+      uncommittedShas: string[];
+    }
+  | { status: "skipped"; targetBranch: string; reason: string }
+  | { status: "failed"; targetBranch: string; error: BackportError | Error };
 
 export class Backport {
   private github;
@@ -220,15 +231,108 @@ export class Backport {
       };
 
       const successByTarget = new Map<string, boolean>();
-      const createdPullRequestNumbers = new Array<number>();
+      const results: TargetResult[] = [];
       for (const targetBranch of target_branches) {
-        await this.backportToTarget(
-          targetBranch,
-          context,
-          successByTarget,
-          createdPullRequestNumbers,
-        );
+        const result = await this.backportToTarget(targetBranch, context);
+        results.push(result);
+
+        // Post per-target comment (legacy style)
+        switch (result.status) {
+          case "success": {
+            const message = this.composeMessageForSuccess(
+              result.newPrNumber,
+              result.targetBranch,
+              this.shouldUseDownstreamRepo()
+                ? `${context.targetOwner}/${context.targetRepo}`
+                : "",
+            );
+            successByTarget.set(targetBranch, true);
+            await this.github.createComment({
+              owner: workflowOwner,
+              repo: workflowRepo,
+              issue_number: pull_number,
+              body: message,
+            });
+            break;
+          }
+          case "success_with_conflicts": {
+            const branchname = utils.replacePlaceholders(
+              this.config.pull.branch_name,
+              mainpr,
+              result.targetBranch,
+            );
+            const message = this.composeMessageForSuccessWithConflicts(
+              result.newPrNumber,
+              result.targetBranch,
+              this.shouldUseDownstreamRepo()
+                ? `${context.targetOwner}/${context.targetRepo}`
+                : "",
+              branchname,
+              result.uncommittedShas,
+              this.config.experimental.conflict_resolution,
+            );
+            successByTarget.set(targetBranch, true);
+            await this.github.createComment({
+              owner: workflowOwner,
+              repo: workflowRepo,
+              issue_number: pull_number,
+              body: message,
+            });
+            // post message to new pr to resolve conflict
+            const resolveMessage =
+              this.composeMessageToResolveCommittedConflicts(
+                result.targetBranch,
+                branchname,
+                result.uncommittedShas,
+                this.config.experimental.conflict_resolution,
+              );
+            await this.github.createComment({
+              owner: context.targetOwner,
+              repo: context.targetRepo,
+              issue_number: result.newPrNumber,
+              body: resolveMessage,
+            });
+            break;
+          }
+          case "skipped":
+            // No comment posted for skipped targets (matches current behavior)
+            break;
+          case "failed": {
+            successByTarget.set(targetBranch, false);
+            const error = result.error;
+            let message: string;
+            if (error instanceof GitRefNotFoundError) {
+              message = this.composeMessageForFetchTargetFailure(error.ref);
+            } else if (error instanceof GitPushError) {
+              message = this.composeMessageForGitPushFailure(
+                result.targetBranch,
+                error.exitCode,
+              );
+            } else if (error instanceof RequestError) {
+              message = this.composeMessageForCreatePRFailed(error);
+            } else {
+              // For checkout/cherry-pick failures and unknown errors,
+              // use the error message directly
+              message = error.message;
+            }
+            console.error(message);
+            await this.github.createComment({
+              owner: workflowOwner,
+              repo: workflowRepo,
+              issue_number: pull_number,
+              body: message,
+            });
+            break;
+          }
+        }
       }
+
+      const createdPullRequestNumbers = results
+        .filter(
+          (r): r is Extract<TargetResult, { status: "success" | "success_with_conflicts" }> =>
+            r.status === "success" || r.status === "success_with_conflicts",
+        )
+        .map((r) => r.newPrNumber);
 
       this.createOutput(successByTarget, createdPullRequestNumbers);
     } catch (error) {
@@ -247,15 +351,12 @@ export class Backport {
   private async backportToTarget(
     targetBranch: string,
     context: BackportContext,
-    successByTarget: Map<string, boolean>,
-    createdPullRequestNumbers: Array<number>,
-  ): Promise<void> {
+  ): Promise<TargetResult> {
     const {
-      workflowOwner,
-      workflowRepo,
       targetOwner,
       targetRepo,
-      pullNumber,
+      workflowOwner,
+      workflowRepo,
       remote,
       commitShasToCherryPick,
       labelsToCopy,
@@ -268,16 +369,7 @@ export class Backport {
       await this.git.fetch(targetBranch, this.config.pwd, 1, remote);
     } catch (error) {
       if (error instanceof GitRefNotFoundError) {
-        const message = this.composeMessageForFetchTargetFailure(error.ref);
-        console.error(message);
-        successByTarget.set(targetBranch, false);
-        await this.github.createComment({
-          owner: workflowOwner,
-          repo: workflowRepo,
-          issue_number: pullNumber,
-          body: message,
-        });
-        return;
+        return { status: "failed", targetBranch, error };
       } else {
         throw error;
       }
@@ -298,45 +390,39 @@ export class Backport {
           this.config.pwd,
         );
       } catch (error) {
-        const message = this.composeMessageForCheckoutFailure(
+        return {
+          status: "failed",
           targetBranch,
-          branchname,
-          commitShasToCherryPick,
-        );
-        console.error(message);
-        successByTarget.set(targetBranch, false);
-        await this.github.createComment({
-          owner: workflowOwner,
-          repo: workflowRepo,
-          issue_number: pullNumber,
-          body: message,
-        });
-        return;
+          error: new Error(
+            this.composeMessageForCheckoutFailure(
+              targetBranch,
+              branchname,
+              commitShasToCherryPick,
+            ),
+          ),
+        };
       }
 
-      let uncommitedShas: string[] | null;
+      let uncommittedShas: string[] | null;
 
       try {
-        uncommitedShas = await this.git.cherryPick(
+        uncommittedShas = await this.git.cherryPick(
           commitShasToCherryPick,
           this.config.experimental.conflict_resolution,
           this.config.pwd,
         );
       } catch (error) {
-        const message = this.composeMessageForCherryPickFailure(
+        return {
+          status: "failed",
           targetBranch,
-          branchname,
-          commitShasToCherryPick,
-        );
-        console.error(message);
-        successByTarget.set(targetBranch, false);
-        await this.github.createComment({
-          owner: workflowOwner,
-          repo: workflowRepo,
-          issue_number: pullNumber,
-          body: message,
-        });
-        return;
+          error: new Error(
+            this.composeMessageForCherryPickFailure(
+              targetBranch,
+              branchname,
+              commitShasToCherryPick,
+            ),
+          ),
+        };
       }
 
       console.info(`Push branch to ${remote}`);
@@ -356,19 +442,7 @@ export class Backport {
           // note that the recovered branch is not guaranteed to be up-to-date
         } catch {
           // Fetching the branch failed as well, so report the original push error.
-          const message = this.composeMessageForGitPushFailure(
-            targetBranch,
-            pushError.exitCode,
-          );
-          console.error(message);
-          successByTarget.set(targetBranch, false);
-          await this.github.createComment({
-            owner: workflowOwner,
-            repo: workflowRepo,
-            issue_number: pullNumber,
-            body: message,
-          });
-          return;
+          return { status: "failed", targetBranch, error: pushError };
         }
       }
 
@@ -384,7 +458,7 @@ export class Backport {
           head: branchname,
           base: targetBranch,
           maintainer_can_modify: true,
-          draft: uncommitedShas !== null,
+          draft: uncommittedShas !== null,
         });
       } catch (error) {
         if (!(error instanceof RequestError)) throw error;
@@ -396,19 +470,15 @@ export class Backport {
           )
         ) {
           console.info(`PR for ${branchname} already exists, skipping.`);
-          return;
+          return {
+            status: "skipped",
+            targetBranch,
+            reason: "PR already exists",
+          };
         }
 
         console.error(JSON.stringify(error.response?.data));
-        successByTarget.set(targetBranch, false);
-        const message = this.composeMessageForCreatePRFailed(error);
-        await this.github.createComment({
-          owner: workflowOwner,
-          repo: workflowRepo,
-          issue_number: pullNumber,
-          body: message,
-        });
-        return;
+        return { status: "failed", targetBranch, error };
       }
       const new_pr = new_pr_response.data;
 
@@ -422,64 +492,20 @@ export class Backport {
         { owner: workflowOwner, repo: workflowRepo },
       );
 
-      // post success message to original pr
-      {
-        const message =
-          uncommitedShas !== null
-            ? this.composeMessageForSuccessWithConflicts(
-                new_pr.number,
-                targetBranch,
-                this.shouldUseDownstreamRepo()
-                  ? `${targetOwner}/${targetRepo}`
-                  : "",
-                branchname,
-                uncommitedShas,
-                this.config.experimental.conflict_resolution,
-              )
-            : this.composeMessageForSuccess(
-                new_pr.number,
-                targetBranch,
-                this.shouldUseDownstreamRepo()
-                  ? `${targetOwner}/${targetRepo}`
-                  : "",
-              );
-
-        successByTarget.set(targetBranch, true);
-        createdPullRequestNumbers.push(new_pr.number);
-        await this.github.createComment({
-          owner: workflowOwner,
-          repo: workflowRepo,
-          issue_number: pullNumber,
-          body: message,
-        });
+      if (uncommittedShas !== null) {
+        return {
+          status: "success_with_conflicts",
+          targetBranch,
+          newPrNumber: new_pr.number,
+          uncommittedShas,
+        };
       }
-      // post message to new pr to resolve conflict
-      if (uncommitedShas !== null) {
-        const message: string =
-          this.composeMessageToResolveCommittedConflicts(
-            targetBranch,
-            branchname,
-            uncommitedShas,
-            this.config.experimental.conflict_resolution,
-          );
 
-        await this.github.createComment({
-          owner: targetOwner,
-          repo: targetRepo,
-          issue_number: new_pr.number,
-          body: message,
-        });
-      }
+      return { status: "success", targetBranch, newPrNumber: new_pr.number };
     } catch (error) {
       if (error instanceof Error) {
         console.error(error.message);
-        successByTarget.set(targetBranch, false);
-        await this.github.createComment({
-          owner: workflowOwner,
-          repo: workflowRepo,
-          issue_number: pullNumber,
-          body: error.message,
-        });
+        return { status: "failed", targetBranch, error };
       } else {
         throw error;
       }
