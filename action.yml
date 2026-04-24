@@ -61,6 +61,13 @@ inputs:
 
       By default, the action cherry-picks the commits based on the method used to merge the pull request.
     default: auto
+  comment_style:
+    description: >
+      Controls the style of comments posted by the action.
+      When set to `legacy`, the action posts individual comments per target branch.
+      When set to `summary`, the action posts a single summary comment per workflow
+      run with actionable details.
+    default: legacy
   copy_all_reviewers:
     description: >
       Controls whether to copy all reviewers from the original pull request to the backport pull request.

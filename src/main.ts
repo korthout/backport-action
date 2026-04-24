@@ -27,6 +27,7 @@ async function run(): Promise<void> {
   const copy_labels_pattern = core.getInput("copy_labels_pattern");
   const target_branches = core.getInput("target_branches");
   const cherry_picking = core.getInput("cherry_picking");
+  const comment_style = core.getInput("comment_style");
   const merge_commits = core.getInput("merge_commits");
   const copy_assignees = core.getInput("copy_assignees");
   const copy_milestone = core.getInput("copy_milestone");
@@ -43,6 +44,13 @@ async function run(): Promise<void> {
 
   if (cherry_picking !== "auto" && cherry_picking !== "pull_request_head") {
     const message = `Expected input 'cherry_picking' to be either 'auto' or 'pull_request_head', but was '${cherry_picking}'`;
+    console.error(message);
+    core.setFailed(message);
+    return;
+  }
+
+  if (comment_style !== "legacy" && comment_style !== "summary") {
+    const message = `Expected input 'comment_style' to be either 'legacy' or 'summary', but was '${comment_style}'`;
     console.error(message);
     core.setFailed(message);
     return;
@@ -112,6 +120,7 @@ async function run(): Promise<void> {
       copy_labels_pattern === "" ? undefined : new RegExp(copy_labels_pattern),
     add_labels: add_labels === "" ? [] : add_labels.split(/[,]/),
     target_branches: target_branches === "" ? undefined : target_branches,
+    comment_style,
     commits: { cherry_picking, merge_commits },
     copy_assignees: copy_assignees === "true",
     copy_milestone: copy_milestone === "true",

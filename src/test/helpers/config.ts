@@ -3,6 +3,7 @@ import type { Config } from "../../backport.js";
 export function makeConfig(overrides?: Partial<Config>): Config {
   return {
     pwd: "/tmp",
+    comment_style: "legacy",
     source_labels_pattern: new RegExp("^backport ([^ ]+)$"),
     pull: {
       description: "Backport of #${pull_number}",

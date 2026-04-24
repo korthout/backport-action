@@ -36,6 +36,7 @@ type PRContent = {
 
 export type Config = {
   pwd: string;
+  comment_style: "legacy" | "summary";
   source_labels_pattern?: RegExp;
   source_pr_number?: number;
   pull: {
