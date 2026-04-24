@@ -1,6 +1,7 @@
 import { ExecOptions, getExecOutput } from "@actions/exec";
+import { BackportError, GitPushError } from "./errors.js";
 
-export class GitRefNotFoundError extends Error {
+export class GitRefNotFoundError extends BackportError {
   ref: string;
   constructor(message: string, ref: string) {
     super(message);
@@ -23,7 +24,7 @@ export interface GitApi {
   ): Promise<void>;
   findCommitsInRange(range: string, pwd: string): Promise<string[]>;
   findMergeCommits(commitShas: string[], pwd: string): Promise<string[]>;
-  push(branchname: string, remote: string, pwd: string): Promise<number>;
+  push(branchname: string, remote: string, pwd: string): Promise<void>;
   checkout(branch: string, start: string, pwd: string): Promise<void>;
   cherryPick(
     commitShas: string[],
@@ -160,7 +161,14 @@ export class Git implements GitApi {
       ["--set-upstream", remote, branchname],
       pwd,
     );
-    return exitCode;
+    if (exitCode !== 0) {
+      throw new GitPushError(
+        `'git push --set-upstream ${remote} ${branchname}' failed with exit code ${exitCode}`,
+        branchname,
+        remote,
+        exitCode,
+      );
+    }
   }
 
   public async checkout(branch: string, start: string, pwd: string) {

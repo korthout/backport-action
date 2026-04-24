@@ -7,7 +7,7 @@ export function createMockGit(overrides?: Partial<GitApi>): GitApi {
     remoteAdd: vi.fn().mockResolvedValue(undefined),
     findCommitsInRange: vi.fn().mockResolvedValue([]),
     findMergeCommits: vi.fn().mockResolvedValue([]),
-    push: vi.fn().mockResolvedValue(0),
+    push: vi.fn().mockResolvedValue(undefined),
     checkout: vi.fn().mockResolvedValue(undefined),
     cherryPick: vi.fn().mockResolvedValue(null),
     ...overrides,
