@@ -1,5 +1,10 @@
 import { ExecOptions, getExecOutput } from "@actions/exec";
-import { BackportError, GitPushError } from "./errors.js";
+import {
+  BackportError,
+  CheckoutError,
+  CherryPickError,
+  GitPushError,
+} from "./errors.js";
 
 export class GitRefNotFoundError extends BackportError {
   ref: string;
@@ -174,8 +179,9 @@ export class Git implements GitApi {
   public async checkout(branch: string, start: string, pwd: string) {
     const { exitCode } = await this.git("switch", ["-c", branch, start], pwd);
     if (exitCode !== 0) {
-      throw new Error(
+      throw new CheckoutError(
         `'git switch -c ${branch} ${start}' failed with exit code ${exitCode}`,
+        branch,
       );
     }
   }
@@ -190,8 +196,9 @@ export class Git implements GitApi {
       exitCode: number,
     ) => {
       await this.git("cherry-pick", ["--abort"], pwd);
-      throw new Error(
+      throw new CherryPickError(
         `'git cherry-pick -x ${commitShas}' failed with exit code ${exitCode}`,
+        commitShas,
       );
     };
 

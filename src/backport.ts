@@ -8,7 +8,13 @@ import {
 } from "./github.js";
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
-import { BackportError, GitPushError } from "./errors.js";
+import {
+  BackportError,
+  CheckoutError,
+  CherryPickError,
+  CreatePRError,
+  GitPushError,
+} from "./errors.js";
 import { postCreatePR } from "./pr-post-create.js";
 import { resolveCommitsToCherryPick } from "./resolve-commits.js";
 import * as utils from "./utils.js";
@@ -303,19 +309,34 @@ export class Backport {
           case "failed": {
             successByTarget.set(targetBranch, false);
             const error = result.error;
+            const branchname = utils.replacePlaceholders(
+              this.config.pull.branch_name,
+              mainpr,
+              result.targetBranch,
+            );
             let message: string;
             if (error instanceof GitRefNotFoundError) {
               message = this.composeMessageForFetchTargetFailure(error.ref);
+            } else if (error instanceof CheckoutError) {
+              message = this.composeMessageForCheckoutFailure(
+                result.targetBranch,
+                branchname,
+                commitShasToCherryPick,
+              );
+            } else if (error instanceof CherryPickError) {
+              message = this.composeMessageForCherryPickFailure(
+                result.targetBranch,
+                branchname,
+                error.commits,
+              );
             } else if (error instanceof GitPushError) {
               message = this.composeMessageForGitPushFailure(
                 result.targetBranch,
                 error.exitCode,
               );
-            } else if (error instanceof RequestError) {
+            } else if (error instanceof CreatePRError) {
               message = this.composeMessageForCreatePRFailed(error);
             } else {
-              // For checkout/cherry-pick failures and unknown errors,
-              // use the error message directly
               message = error.message;
             }
             console.error(message);
@@ -397,17 +418,10 @@ export class Backport {
           this.config.pwd,
         );
       } catch (error) {
-        return {
-          status: "failed",
-          targetBranch,
-          error: new Error(
-            this.composeMessageForCheckoutFailure(
-              targetBranch,
-              branchname,
-              commitShasToCherryPick,
-            ),
-          ),
-        };
+        if (error instanceof CheckoutError) {
+          return { status: "failed", targetBranch, error };
+        }
+        throw error;
       }
 
       let uncommittedShas: string[] | null;
@@ -419,17 +433,10 @@ export class Backport {
           this.config.pwd,
         );
       } catch (error) {
-        return {
-          status: "failed",
-          targetBranch,
-          error: new Error(
-            this.composeMessageForCherryPickFailure(
-              targetBranch,
-              branchname,
-              commitShasToCherryPick,
-            ),
-          ),
-        };
+        if (error instanceof CherryPickError) {
+          return { status: "failed", targetBranch, error };
+        }
+        throw error;
       }
 
       console.info(`Push branch to ${remote}`);
@@ -485,7 +492,15 @@ export class Backport {
         }
 
         console.error(JSON.stringify(error.response?.data));
-        return { status: "failed", targetBranch, error };
+        return {
+          status: "failed",
+          targetBranch,
+          error: new CreatePRError(
+            `Request to create PR rejected with status ${error.status}`,
+            error.status,
+            JSON.stringify(error.response?.data),
+          ),
+        };
       }
       const new_pr = new_pr_response.data;
 
@@ -638,7 +653,7 @@ export class Backport {
     return dedent`Git push to origin failed for ${target} with exitcode ${exitcode}`;
   }
 
-  private composeMessageForCreatePRFailed(error: RequestError): string {
+  private composeMessageForCreatePRFailed(error: CreatePRError): string {
     return dedent`Backport branch created but failed to create PR.
                 Request to create PR rejected with status ${error.status}.
 

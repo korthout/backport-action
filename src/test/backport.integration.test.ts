@@ -32,7 +32,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Backport } from "../backport.js";
-import { GitPushError } from "../errors.js";
+import { CherryPickError, GitPushError } from "../errors.js";
 import { GitRefNotFoundError } from "../git.js";
 import { MergeStrategy } from "../github.js";
 import { FakeGithub, requestError } from "./helpers/fake-github.js";
@@ -129,7 +129,7 @@ describe("Backport.run() orchestration", () => {
         cherryPick: vi.fn().mockImplementation(async () => {
           cherryPickCallCount++;
           if (cherryPickCallCount === 1) return null;
-          throw new Error("cherry-pick failed");
+          throw new CherryPickError("cherry-pick failed", ["abc123"]);
         }),
       });
       const config = makeConfig();
@@ -241,7 +241,11 @@ describe("Backport.run() orchestration", () => {
     it("cherry-pick fails: posts failure comment with manual instructions", async () => {
       const github = new FakeGithub();
       const git = createMockGit({
-        cherryPick: vi.fn().mockRejectedValue(new Error("cherry-pick failed")),
+        cherryPick: vi
+          .fn()
+          .mockRejectedValue(
+            new CherryPickError("cherry-pick failed", ["abc123"]),
+          ),
       });
       const config = makeConfig();
       const backport = new Backport(github, config, git);

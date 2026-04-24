@@ -7,22 +7,18 @@ export class BackportError extends Error {
 
 export class CheckoutError extends BackportError {
   branch: string;
-  commits: string[];
 
-  constructor(message: string, branch: string, commits: string[]) {
+  constructor(message: string, branch: string) {
     super(message);
     this.branch = branch;
-    this.commits = commits;
   }
 }
 
 export class CherryPickError extends BackportError {
-  branch: string;
   commits: string[];
 
-  constructor(message: string, branch: string, commits: string[]) {
+  constructor(message: string, commits: string[]) {
     super(message);
-    this.branch = branch;
     this.commits = commits;
   }
 }
