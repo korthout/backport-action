@@ -1,14 +1,10 @@
 import * as core from "@actions/core";
 import dedent from "dedent";
 
-import {
-  CreatePullRequestResponse,
-  PullRequest,
-  MergeStrategy,
-  RequestError,
-} from "./github.js";
+import { CreatePullRequestResponse, PullRequest, RequestError } from "./github.js";
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
+import { resolveCommitsToCherryPick } from "./resolve-commits.js";
 import * as utils from "./utils.js";
 
 type PRContent = {
@@ -139,88 +135,18 @@ export class Backport {
         return; // nothing left to do here
       }
 
-      console.log(
-        `Fetching all the commits from the pull request: ${mainpr.commits + 1}`,
-      );
-      await this.git.fetch(
-        `refs/pull/${pull_number}/head`,
-        this.config.pwd,
-        mainpr.commits + 1, // +1 in case this concerns a shallowly cloned repo
-      );
-
-      const commitShas = await this.github.getCommits(mainpr);
-
-      let commitShasToCherryPick;
-
-      if (this.config.commits.cherry_picking === "auto") {
-        const merge_commit_sha = await this.github.getMergeCommitSha(mainpr);
-
-        // switch case to check if it is a squash, rebase, or merge commit
-        switch (await this.github.mergeStrategy(mainpr, merge_commit_sha)) {
-          case MergeStrategy.SQUASHED:
-            // If merged via a squash merge_commit_sha represents the SHA of the squashed commit on
-            // the base branch. We must fetch it and its parent in case of a shallowly cloned repo
-            // To store the fetched commits indefinitely we save them to a remote ref using the sha
-            await this.git.fetch(
-              `+${merge_commit_sha}:refs/remotes/origin/${merge_commit_sha}`,
-              this.config.pwd,
-              2, // +1 in case this concerns a shallowly cloned repo
-            );
-            commitShasToCherryPick = [merge_commit_sha!];
-            break;
-          case MergeStrategy.REBASED:
-            // If rebased merge_commit_sha represents the commit that the base branch was updated to
-            // We must fetch it, its parents, and one extra parent in case of a shallowly cloned repo
-            // To store the fetched commits indefinitely we save them to a remote ref using the sha
-            await this.git.fetch(
-              `+${merge_commit_sha}:refs/remotes/origin/${merge_commit_sha}`,
-              this.config.pwd,
-              mainpr.commits + 1, // +1 in case this concerns a shallowly cloned repo
-            );
-            const range = `${merge_commit_sha}~${mainpr.commits}..${merge_commit_sha}`;
-            commitShasToCherryPick = await this.git.findCommitsInRange(
-              range,
-              this.config.pwd,
-            );
-            break;
-          case MergeStrategy.MERGECOMMIT:
-            commitShasToCherryPick = commitShas;
-            break;
-          case MergeStrategy.UNKNOWN:
-            console.log(
-              "Could not detect merge strategy. Using commits from the Pull Request.",
-            );
-            commitShasToCherryPick = commitShas;
-            break;
-          default:
-            console.log(
-              "Could not detect merge strategy. Using commits from the Pull Request.",
-            );
-            commitShasToCherryPick = commitShas;
-            break;
-        }
-      } else {
-        console.log(
-          "Not detecting merge strategy. Using commits from the Pull Request.",
+      let commitShasToCherryPick: string[];
+      try {
+        commitShasToCherryPick = await resolveCommitsToCherryPick(
+          this.git,
+          this.github,
+          this.config,
+          mainpr,
+          pull_number,
         );
-        commitShasToCherryPick = commitShas;
-      }
-      console.log(`Found commits to backport: ${commitShasToCherryPick}`);
-
-      console.log("Checking the merged pull request for merge commits");
-      const mergeCommitShas = await this.git.findMergeCommits(
-        commitShasToCherryPick,
-        this.config.pwd,
-      );
-      console.log(
-        `Encountered ${mergeCommitShas.length ?? "no"} merge commits`,
-      );
-      if (
-        mergeCommitShas.length > 0 &&
-        this.config.commits.merge_commits == "fail"
-      ) {
-        const message = dedent`Backport failed because this pull request contains merge commits. \
-          You can either backport this pull request manually, or configure the action to skip merge commits.`;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : String(error);
         console.error(message);
         this.github.createComment({
           owner: workflowOwner,
@@ -230,20 +156,6 @@ export class Backport {
         });
         return;
       }
-
-      if (
-        mergeCommitShas.length > 0 &&
-        this.config.commits.merge_commits == "skip"
-      ) {
-        console.log("Skipping merge commits: " + mergeCommitShas);
-        const nonMergeCommitShas = commitShasToCherryPick.filter(
-          (sha) => !mergeCommitShas.includes(sha),
-        );
-        commitShasToCherryPick = nonMergeCommitShas;
-      }
-      console.log(
-        "Will cherry-pick the following commits: " + commitShasToCherryPick,
-      );
 
       let labelsToCopy: string[] = [];
       if (typeof this.config.copy_labels_pattern !== "undefined") {
