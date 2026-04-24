@@ -14,7 +14,8 @@ export interface GithubApi {
   getRepo(): Repo;
   getPayload(): Payload;
   getPullNumber(): number;
-  createComment(comment: Comment): Promise<{}>;
+  createComment(comment: Comment): Promise<number>;
+  updateComment(comment_id: number, body: string): Promise<{}>;
   getPullRequest(pull_number: number): Promise<PullRequest>;
   isMerged(pull: PullRequest): Promise<boolean>;
   getCommits(pull: PullRequest): Promise<string[]>;
@@ -76,9 +77,20 @@ export class Github implements GithubApi {
     return this.#context.issue.number;
   }
 
-  public async createComment(comment: Comment) {
+  public async createComment(comment: Comment): Promise<number> {
     console.log(`Create comment: ${comment.body}`);
-    return this.#octokit.rest.issues.createComment(comment);
+    const response = await this.#octokit.rest.issues.createComment(comment);
+    return response.data.id;
+  }
+
+  public async updateComment(comment_id: number, body: string) {
+    const { owner, repo } = this.getRepo();
+    return this.#octokit.rest.issues.updateComment({
+      owner,
+      repo,
+      comment_id,
+      body,
+    });
   }
 
   public async getPullRequest(pull_number: number) {
