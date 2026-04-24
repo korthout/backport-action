@@ -16,9 +16,9 @@ const context: CommentContext = {
 
 describe("formatRunComment", () => {
   describe("introduction text", () => {
-    it("shows 'is backporting' when no results and no pending targets", () => {
+    it("shows 'backported' when no results and no pending targets (done state)", () => {
       const result = formatRunComment([], [], context);
-      expect(result).toContain("is backporting this pull request");
+      expect(result).toContain(") backported this pull request");
     });
 
     it("shows 'is backporting' when targets are pending", () => {
@@ -60,7 +60,7 @@ describe("formatRunComment", () => {
   });
 
   describe("table rendering", () => {
-    it("renders no table when no results and no pending targets", () => {
+    it("renders no table when no results and no pending targets (done state)", () => {
       const result = formatRunComment([], [], context);
       expect(result).not.toContain("| Target |");
     });

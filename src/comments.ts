@@ -134,10 +134,9 @@ export function formatRunComment(
     intro = `${ACTION_LINK} failed to backport this pull request in ${runLink}.`;
   } else if (pendingTargets.length > 0) {
     intro = `${ACTION_LINK} is backporting this pull request in ${runLink}.`;
-  } else if (results.length > 0) {
-    intro = `${ACTION_LINK} backported this pull request in ${runLink}.`;
   } else {
-    intro = `${ACTION_LINK} is backporting this pull request in ${runLink}.`;
+    // All targets resolved (or no targets at all) — done
+    intro = `${ACTION_LINK} backported this pull request in ${runLink}.`;
   }
 
   const parts: string[] = [intro];

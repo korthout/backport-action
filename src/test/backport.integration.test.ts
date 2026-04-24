@@ -652,4 +652,196 @@ describe("Backport.run() orchestration", () => {
       );
     });
   });
+
+  describe("comment_style: summary", () => {
+    it("creates initial comment and updates progressively", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      // Initial comment created
+      expect(github.comments).toHaveLength(1);
+      expect(github.comments[0].body).toContain("is backporting");
+
+      // Updated with pending targets, then with resolved target
+      expect(github.updatedComments.length).toBeGreaterThanOrEqual(2);
+
+      // Final update shows "backported" and PR number
+      const lastUpdate =
+        github.updatedComments[github.updatedComments.length - 1];
+      expect(lastUpdate.body).toContain(") backported this pull request");
+      expect(lastUpdate.body).toContain("#100");
+    });
+
+    it("multiple targets: progressive updates show pending then resolved", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport main" }, { name: "backport release" }],
+        },
+      });
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      // Updates: all-pending, first-resolved+second-pending, all-resolved
+      expect(github.updatedComments.length).toBeGreaterThanOrEqual(3);
+
+      // First update shows all pending
+      const firstUpdate = github.updatedComments[0];
+      expect(firstUpdate.body).toContain(":hourglass: Pending");
+
+      // After first target, one resolved + one pending
+      const afterFirst = github.updatedComments[1];
+      expect(afterFirst.body).toContain(":white_check_mark: Created");
+      expect(afterFirst.body).toContain(":hourglass: Pending");
+
+      // Final: all resolved
+      const lastUpdate =
+        github.updatedComments[github.updatedComments.length - 1];
+      expect(lastUpdate.body).not.toContain(":hourglass: Pending");
+      expect(lastUpdate.body).toContain(") backported this pull request");
+    });
+
+    it("failing target: final comment has details section", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit({
+        cherryPick: vi
+          .fn()
+          .mockRejectedValue(
+            new CherryPickError("cherry-pick failed", ["abc123"]),
+          ),
+      });
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      const lastUpdate =
+        github.updatedComments[github.updatedComments.length - 1];
+      expect(lastUpdate.body).toContain("<details>");
+      expect(lastUpdate.body).toContain("unable to cherry-pick");
+    });
+
+    it("skipped target (PR already exists): shows skipped in summary", async () => {
+      const github = new FakeGithub({
+        existingPRBranches: ["backport-42-to-main"],
+      });
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      const lastUpdate =
+        github.updatedComments[github.updatedComments.length - 1];
+      expect(lastUpdate.body).toContain(":heavy_minus_sign: Skipped");
+    });
+
+    it("no targets: updates to backported with no table", async () => {
+      const github = new FakeGithub({
+        sourcePr: { labels: [{ name: "bug" }] },
+      });
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      // Initial comment created, then updated for no targets
+      expect(github.comments).toHaveLength(1);
+      const lastUpdate =
+        github.updatedComments[github.updatedComments.length - 1];
+      expect(lastUpdate.body).toContain(") backported this pull request");
+      expect(lastUpdate.body).not.toContain("| Target |");
+    });
+
+    it("unmerged PR: updates comment with failure message", async () => {
+      const github = new FakeGithub({ merged: false });
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.comments).toHaveLength(1);
+      const lastUpdate =
+        github.updatedComments[github.updatedComments.length - 1];
+      expect(lastUpdate.body).toContain("failed to backport");
+      expect(lastUpdate.body).toContain(
+        "Only merged pull requests can be backported.",
+      );
+    });
+
+    it("comment creation failure: backport still succeeds", async () => {
+      const github = new FakeGithub();
+      github.failOn("createComment", new Error("permission denied"));
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      // PR was still created
+      expect(github.createdPRs).toHaveLength(1);
+      expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+      expect(core.setOutput).toHaveBeenCalledWith(
+        "created_pull_numbers",
+        "100",
+      );
+    });
+
+    it("comment update failure: backport still succeeds", async () => {
+      const github = new FakeGithub();
+      github.failOn("updateComment", new Error("API unavailable"));
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      // PR was still created
+      expect(github.createdPRs).toHaveLength(1);
+      expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+    });
+
+    it("outputs are correct for summary style", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+      expect(core.setOutput).toHaveBeenCalledWith(
+        "was_successful_by_target",
+        expect.stringContaining("main=true"),
+      );
+      expect(core.setOutput).toHaveBeenCalledWith(
+        "created_pull_numbers",
+        "100",
+      );
+    });
+
+    it("success_with_conflicts: posts resolve comment on backport PR", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit({
+        cherryPick: vi.fn().mockResolvedValue(["abc123"]),
+      });
+      const config = makeConfig({
+        comment_style: "summary",
+        experimental: { conflict_resolution: "draft_commit_conflicts" },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      // Summary comment on source PR + resolve comment on backport PR
+      expect(github.comments).toHaveLength(2);
+      const resolveComment = github.comments.find(
+        (c) => c.issue_number === 100,
+      );
+      expect(resolveComment?.body).toContain("cherry-pick");
+
+      // Summary shows drafted with conflicts
+      const lastUpdate =
+        github.updatedComments[github.updatedComments.length - 1];
+      expect(lastUpdate.body).toContain(":warning: Drafted with conflicts");
+    });
+  });
 });
