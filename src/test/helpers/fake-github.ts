@@ -234,4 +234,8 @@ export class FakeGithub implements GithubApi {
     this.autoMergeByPR.set(pr, mergeMethod);
     return { status: 200 as const };
   }
+
+  getRunUrl(): string {
+    return "https://github.com/test-owner/test-repo/actions/runs/12345";
+  }
 }

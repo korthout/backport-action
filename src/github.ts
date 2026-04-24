@@ -46,6 +46,7 @@ export interface GithubApi {
     merge_commit_sha: string | null,
   ): Promise<string | null>;
   getMergeCommitSha(pull: PullRequest): Promise<string | null>;
+  getRunUrl(): string;
 }
 
 export class Github implements GithubApi {
@@ -261,6 +262,13 @@ export class Github implements GithubApi {
    */
   public async getMergeCommitSha(pull: PullRequest) {
     return pull.merge_commit_sha;
+  }
+
+  public getRunUrl(): string {
+    const serverUrl = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+    const repository = process.env.GITHUB_REPOSITORY ?? "";
+    const runId = process.env.GITHUB_RUN_ID ?? "";
+    return `${serverUrl}/${repository}/actions/runs/${runId}`;
   }
 
   /**

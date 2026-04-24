@@ -66,6 +66,25 @@ enum Output {
   created_pull_numbers = "created_pull_numbers",
 }
 
+/**
+ * Repo where the workflow runs — used for commenting on the source PR.
+ * Repo where backport branches and PRs are created — same as workflow repo
+ * unless using the downstream_repo experimental config.
+ */
+type BackportContext = {
+  workflowOwner: string;
+  workflowRepo: string;
+  targetOwner: string;
+  targetRepo: string;
+  pullNumber: number;
+  runId: string;
+  runUrl: string;
+  remote: "origin" | "downstream";
+  commitShasToCherryPick: string[];
+  labelsToCopy: string[];
+  mainpr: PullRequest;
+};
+
 export class Backport {
   private github;
   private config;
@@ -184,245 +203,31 @@ export class Backport {
         );
       }
 
+      const runUrl = this.github.getRunUrl();
+      const runId = process.env.GITHUB_RUN_ID ?? "";
+      const context: BackportContext = {
+        workflowOwner,
+        workflowRepo,
+        targetOwner,
+        targetRepo,
+        pullNumber: pull_number,
+        runId,
+        runUrl,
+        remote: this.getRemote(),
+        commitShasToCherryPick,
+        labelsToCopy,
+        mainpr,
+      };
+
       const successByTarget = new Map<string, boolean>();
       const createdPullRequestNumbers = new Array<number>();
       for (const targetBranch of target_branches) {
-        console.log(`Backporting to target branch '${targetBranch}...'`);
-
-        try {
-          await this.git.fetch(
-            targetBranch,
-            this.config.pwd,
-            1,
-            this.getRemote(),
-          );
-        } catch (error) {
-          if (error instanceof GitRefNotFoundError) {
-            const message = this.composeMessageForFetchTargetFailure(error.ref);
-            console.error(message);
-            successByTarget.set(targetBranch, false);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: message,
-            });
-            continue;
-          } else {
-            throw error;
-          }
-        }
-
-        try {
-          const branchname = utils.replacePlaceholders(
-            this.config.pull.branch_name,
-            mainpr,
-            targetBranch,
-          );
-
-          console.log(`Start backport to ${branchname}`);
-          try {
-            await this.git.checkout(
-              branchname,
-              `${this.getRemote()}/${targetBranch}`,
-              this.config.pwd,
-            );
-          } catch (error) {
-            const message = this.composeMessageForCheckoutFailure(
-              targetBranch,
-              branchname,
-              commitShasToCherryPick,
-            );
-            console.error(message);
-            successByTarget.set(targetBranch, false);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: message,
-            });
-            continue;
-          }
-
-          let uncommitedShas: string[] | null;
-
-          try {
-            uncommitedShas = await this.git.cherryPick(
-              commitShasToCherryPick,
-              this.config.experimental.conflict_resolution,
-              this.config.pwd,
-            );
-          } catch (error) {
-            const message = this.composeMessageForCherryPickFailure(
-              targetBranch,
-              branchname,
-              commitShasToCherryPick,
-            );
-            console.error(message);
-            successByTarget.set(targetBranch, false);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: message,
-            });
-            continue;
-          }
-
-          console.info(`Push branch to ${this.getRemote()}`);
-          try {
-            await this.git.push(
-              branchname,
-              this.getRemote(),
-              this.config.pwd,
-            );
-          } catch (pushError) {
-            if (!(pushError instanceof GitPushError)) throw pushError;
-            try {
-              // If the branch already exists, ignore the error and keep going.
-              console.info(
-                `Branch ${branchname} may already exist, fetching it instead to recover previous run`,
-              );
-              await this.git.fetch(
-                branchname,
-                this.config.pwd,
-                1,
-                this.getRemote(),
-              );
-              console.info(
-                `Previous branch successfully recovered, retrying PR creation`,
-              );
-              // note that the recovered branch is not guaranteed to be up-to-date
-            } catch {
-              // Fetching the branch failed as well, so report the original push error.
-              const message = this.composeMessageForGitPushFailure(
-                targetBranch,
-                pushError.exitCode,
-              );
-              console.error(message);
-              successByTarget.set(targetBranch, false);
-              await this.github.createComment({
-                owner: workflowOwner,
-                repo: workflowRepo,
-                issue_number: pull_number,
-                body: message,
-              });
-              continue;
-            }
-          }
-
-          console.info(`Create PR for ${branchname}`);
-          const { title, body } = this.composePRContent(targetBranch, mainpr);
-          let new_pr_response: CreatePullRequestResponse;
-          try {
-            new_pr_response = await this.github.createPR({
-              owner: targetOwner,
-              repo: targetRepo,
-              title,
-              body,
-              head: branchname,
-              base: targetBranch,
-              maintainer_can_modify: true,
-              draft: uncommitedShas !== null,
-            });
-          } catch (error) {
-            if (!(error instanceof RequestError)) throw error;
-
-            if (
-              error.status == 422 &&
-              (error.response?.data as any).errors.some((err: any) =>
-                err.message.startsWith("A pull request already exists for "),
-              )
-            ) {
-              console.info(`PR for ${branchname} already exists, skipping.`);
-              continue;
-            }
-
-            console.error(JSON.stringify(error.response?.data));
-            successByTarget.set(targetBranch, false);
-            const message = this.composeMessageForCreatePRFailed(error);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: message,
-            });
-            continue;
-          }
-          const new_pr = new_pr_response.data;
-
-          await postCreatePR(
-            this.github,
-            this.config,
-            new_pr.number,
-            mainpr,
-            labelsToCopy,
-            { owner: targetOwner, repo: targetRepo },
-            { owner: workflowOwner, repo: workflowRepo },
-          );
-
-          // post success message to original pr
-          {
-            const message =
-              uncommitedShas !== null
-                ? this.composeMessageForSuccessWithConflicts(
-                    new_pr.number,
-                    targetBranch,
-                    this.shouldUseDownstreamRepo()
-                      ? `${targetOwner}/${targetRepo}`
-                      : "",
-                    branchname,
-                    uncommitedShas,
-                    this.config.experimental.conflict_resolution,
-                  )
-                : this.composeMessageForSuccess(
-                    new_pr.number,
-                    targetBranch,
-                    this.shouldUseDownstreamRepo()
-                      ? `${targetOwner}/${targetRepo}`
-                      : "",
-                  );
-
-            successByTarget.set(targetBranch, true);
-            createdPullRequestNumbers.push(new_pr.number);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: message,
-            });
-          }
-          // post message to new pr to resolve conflict
-          if (uncommitedShas !== null) {
-            const message: string =
-              this.composeMessageToResolveCommittedConflicts(
-                targetBranch,
-                branchname,
-                uncommitedShas,
-                this.config.experimental.conflict_resolution,
-              );
-
-            await this.github.createComment({
-              owner: targetOwner,
-              repo: targetRepo,
-              issue_number: new_pr.number,
-              body: message,
-            });
-          }
-        } catch (error) {
-          if (error instanceof Error) {
-            console.error(error.message);
-            successByTarget.set(targetBranch, false);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: error.message,
-            });
-          } else {
-            throw error;
-          }
-        }
+        await this.backportToTarget(
+          targetBranch,
+          context,
+          successByTarget,
+          createdPullRequestNumbers,
+        );
       }
 
       this.createOutput(successByTarget, createdPullRequestNumbers);
@@ -435,6 +240,248 @@ export class Backport {
         core.setFailed(
           "An unexpected error occured. Please check the logs for details",
         );
+      }
+    }
+  }
+
+  private async backportToTarget(
+    targetBranch: string,
+    context: BackportContext,
+    successByTarget: Map<string, boolean>,
+    createdPullRequestNumbers: Array<number>,
+  ): Promise<void> {
+    const {
+      workflowOwner,
+      workflowRepo,
+      targetOwner,
+      targetRepo,
+      pullNumber,
+      remote,
+      commitShasToCherryPick,
+      labelsToCopy,
+      mainpr,
+    } = context;
+
+    console.log(`Backporting to target branch '${targetBranch}...'`);
+
+    try {
+      await this.git.fetch(targetBranch, this.config.pwd, 1, remote);
+    } catch (error) {
+      if (error instanceof GitRefNotFoundError) {
+        const message = this.composeMessageForFetchTargetFailure(error.ref);
+        console.error(message);
+        successByTarget.set(targetBranch, false);
+        await this.github.createComment({
+          owner: workflowOwner,
+          repo: workflowRepo,
+          issue_number: pullNumber,
+          body: message,
+        });
+        return;
+      } else {
+        throw error;
+      }
+    }
+
+    try {
+      const branchname = utils.replacePlaceholders(
+        this.config.pull.branch_name,
+        mainpr,
+        targetBranch,
+      );
+
+      console.log(`Start backport to ${branchname}`);
+      try {
+        await this.git.checkout(
+          branchname,
+          `${remote}/${targetBranch}`,
+          this.config.pwd,
+        );
+      } catch (error) {
+        const message = this.composeMessageForCheckoutFailure(
+          targetBranch,
+          branchname,
+          commitShasToCherryPick,
+        );
+        console.error(message);
+        successByTarget.set(targetBranch, false);
+        await this.github.createComment({
+          owner: workflowOwner,
+          repo: workflowRepo,
+          issue_number: pullNumber,
+          body: message,
+        });
+        return;
+      }
+
+      let uncommitedShas: string[] | null;
+
+      try {
+        uncommitedShas = await this.git.cherryPick(
+          commitShasToCherryPick,
+          this.config.experimental.conflict_resolution,
+          this.config.pwd,
+        );
+      } catch (error) {
+        const message = this.composeMessageForCherryPickFailure(
+          targetBranch,
+          branchname,
+          commitShasToCherryPick,
+        );
+        console.error(message);
+        successByTarget.set(targetBranch, false);
+        await this.github.createComment({
+          owner: workflowOwner,
+          repo: workflowRepo,
+          issue_number: pullNumber,
+          body: message,
+        });
+        return;
+      }
+
+      console.info(`Push branch to ${remote}`);
+      try {
+        await this.git.push(branchname, remote, this.config.pwd);
+      } catch (pushError) {
+        if (!(pushError instanceof GitPushError)) throw pushError;
+        try {
+          // If the branch already exists, ignore the error and keep going.
+          console.info(
+            `Branch ${branchname} may already exist, fetching it instead to recover previous run`,
+          );
+          await this.git.fetch(branchname, this.config.pwd, 1, remote);
+          console.info(
+            `Previous branch successfully recovered, retrying PR creation`,
+          );
+          // note that the recovered branch is not guaranteed to be up-to-date
+        } catch {
+          // Fetching the branch failed as well, so report the original push error.
+          const message = this.composeMessageForGitPushFailure(
+            targetBranch,
+            pushError.exitCode,
+          );
+          console.error(message);
+          successByTarget.set(targetBranch, false);
+          await this.github.createComment({
+            owner: workflowOwner,
+            repo: workflowRepo,
+            issue_number: pullNumber,
+            body: message,
+          });
+          return;
+        }
+      }
+
+      console.info(`Create PR for ${branchname}`);
+      const { title, body } = this.composePRContent(targetBranch, mainpr);
+      let new_pr_response: CreatePullRequestResponse;
+      try {
+        new_pr_response = await this.github.createPR({
+          owner: targetOwner,
+          repo: targetRepo,
+          title,
+          body,
+          head: branchname,
+          base: targetBranch,
+          maintainer_can_modify: true,
+          draft: uncommitedShas !== null,
+        });
+      } catch (error) {
+        if (!(error instanceof RequestError)) throw error;
+
+        if (
+          error.status == 422 &&
+          (error.response?.data as any).errors.some((err: any) =>
+            err.message.startsWith("A pull request already exists for "),
+          )
+        ) {
+          console.info(`PR for ${branchname} already exists, skipping.`);
+          return;
+        }
+
+        console.error(JSON.stringify(error.response?.data));
+        successByTarget.set(targetBranch, false);
+        const message = this.composeMessageForCreatePRFailed(error);
+        await this.github.createComment({
+          owner: workflowOwner,
+          repo: workflowRepo,
+          issue_number: pullNumber,
+          body: message,
+        });
+        return;
+      }
+      const new_pr = new_pr_response.data;
+
+      await postCreatePR(
+        this.github,
+        this.config,
+        new_pr.number,
+        mainpr,
+        labelsToCopy,
+        { owner: targetOwner, repo: targetRepo },
+        { owner: workflowOwner, repo: workflowRepo },
+      );
+
+      // post success message to original pr
+      {
+        const message =
+          uncommitedShas !== null
+            ? this.composeMessageForSuccessWithConflicts(
+                new_pr.number,
+                targetBranch,
+                this.shouldUseDownstreamRepo()
+                  ? `${targetOwner}/${targetRepo}`
+                  : "",
+                branchname,
+                uncommitedShas,
+                this.config.experimental.conflict_resolution,
+              )
+            : this.composeMessageForSuccess(
+                new_pr.number,
+                targetBranch,
+                this.shouldUseDownstreamRepo()
+                  ? `${targetOwner}/${targetRepo}`
+                  : "",
+              );
+
+        successByTarget.set(targetBranch, true);
+        createdPullRequestNumbers.push(new_pr.number);
+        await this.github.createComment({
+          owner: workflowOwner,
+          repo: workflowRepo,
+          issue_number: pullNumber,
+          body: message,
+        });
+      }
+      // post message to new pr to resolve conflict
+      if (uncommitedShas !== null) {
+        const message: string =
+          this.composeMessageToResolveCommittedConflicts(
+            targetBranch,
+            branchname,
+            uncommitedShas,
+            this.config.experimental.conflict_resolution,
+          );
+
+        await this.github.createComment({
+          owner: targetOwner,
+          repo: targetRepo,
+          issue_number: new_pr.number,
+          body: message,
+        });
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error(error.message);
+        successByTarget.set(targetBranch, false);
+        await this.github.createComment({
+          owner: workflowOwner,
+          repo: workflowRepo,
+          issue_number: pullNumber,
+          body: error.message,
+        });
+      } else {
+        throw error;
       }
     }
   }
