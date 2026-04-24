@@ -146,9 +146,7 @@ describe("formatRunComment", () => {
       expect(result).toContain(
         "<details><summary>:x: stable/8.0 — unable to create branch</summary>",
       );
-      expect(result).toContain(
-        "backport branch `backport-42-to-stable`",
-      );
+      expect(result).toContain("backport branch `backport-42-to-stable`");
     });
 
     it("renders details for CherryPickError", () => {
@@ -192,7 +190,11 @@ describe("formatRunComment", () => {
         {
           status: "failed",
           targetBranch: "stable/8.0",
-          error: new CreatePRError("PR creation failed", 422, "Validation Failed"),
+          error: new CreatePRError(
+            "PR creation failed",
+            422,
+            "Validation Failed",
+          ),
         },
       ];
       const result = formatRunComment(results, [], context);
@@ -302,11 +304,7 @@ describe("formatRunComment", () => {
           error: new CherryPickError("failed", ["abc"]),
         },
       ];
-      const result = formatRunComment(
-        results,
-        ["stable/7.8"],
-        context,
-      );
+      const result = formatRunComment(results, ["stable/7.8"], context);
       expect(result).toContain("is backporting");
       expect(result).toContain(":white_check_mark: Created #123");
       expect(result).toContain("| `stable/8.0` | :x: Failed |");
@@ -343,9 +341,7 @@ describe("formatRunComment", () => {
         "Only merged pull requests can be backported.",
       );
       expect(result).toContain("failed to backport");
-      expect(result).toContain(
-        "Only merged pull requests can be backported.",
-      );
+      expect(result).toContain("Only merged pull requests can be backported.");
       expect(result).not.toContain("| Target |");
     });
 
