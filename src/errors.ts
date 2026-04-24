@@ -41,6 +41,17 @@ export class GitPushError extends BackportError {
   }
 }
 
+export type TargetResult =
+  | { status: "success"; targetBranch: string; newPrNumber: number }
+  | {
+      status: "success_with_conflicts";
+      targetBranch: string;
+      newPrNumber: number;
+      uncommittedShas: string[];
+    }
+  | { status: "skipped"; targetBranch: string; reason: string }
+  | { status: "failed"; targetBranch: string; error: BackportError | Error };
+
 export class CreatePRError extends BackportError {
   status: number;
   responseMessage?: string;

@@ -9,11 +9,11 @@ import {
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
 import {
-  BackportError,
   CheckoutError,
   CherryPickError,
   CreatePRError,
   GitPushError,
+  type TargetResult,
 } from "./errors.js";
 import {
   composeMessageForCheckoutFailure,
@@ -105,17 +105,6 @@ type BackportContext = {
   labelsToCopy: string[];
   mainpr: PullRequest;
 };
-
-type TargetResult =
-  | { status: "success"; targetBranch: string; newPrNumber: number }
-  | {
-      status: "success_with_conflicts";
-      targetBranch: string;
-      newPrNumber: number;
-      uncommittedShas: string[];
-    }
-  | { status: "skipped"; targetBranch: string; reason: string }
-  | { status: "failed"; targetBranch: string; error: BackportError | Error };
 
 export class Backport {
   private github;
