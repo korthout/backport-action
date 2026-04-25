@@ -6,6 +6,7 @@ on:
 
 jobs:
   comment:
+    if: github.event.pull_request.user.login != 'mergify[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Post merge instructions
