@@ -1,9 +1,5 @@
 import type { Config } from "./backport.js";
-import {
-  GithubApi,
-  PullRequest,
-  RequestError,
-} from "./github.js";
+import { GithubApi, PullRequest, RequestError } from "./github.js";
 
 /**
  * Performs the post-PR-creation side-effects: copying milestones, assignees,

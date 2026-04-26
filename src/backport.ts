@@ -345,11 +345,7 @@ export class Backport {
           status: "failed",
           targetBranch,
           branchname,
-          error: new CheckoutError(
-            message,
-            branchname,
-            commitShasToCherryPick,
-          ),
+          error: new CheckoutError(message, branchname, commitShasToCherryPick),
         };
       }
 

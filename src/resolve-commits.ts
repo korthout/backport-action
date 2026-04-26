@@ -75,7 +75,10 @@ export async function resolveCommitsToCherryPick(
           mainpr.commits + 1, // +1 in case this concerns a shallowly cloned repo
         );
         const range = `${merge_commit_sha}~${mainpr.commits}..${merge_commit_sha}`;
-        commitShasToCherryPick = await git.findCommitsInRange(range, config.pwd);
+        commitShasToCherryPick = await git.findCommitsInRange(
+          range,
+          config.pwd,
+        );
         break;
       case MergeStrategy.MERGECOMMIT:
         commitShasToCherryPick = commitShas;
@@ -103,17 +106,11 @@ export async function resolveCommitsToCherryPick(
   );
   console.log(`Encountered ${mergeCommitShas.length ?? "no"} merge commits`);
 
-  if (
-    mergeCommitShas.length > 0 &&
-    config.commits.merge_commits === "fail"
-  ) {
+  if (mergeCommitShas.length > 0 && config.commits.merge_commits === "fail") {
     throw new MergeCommitsNotAllowedError();
   }
 
-  if (
-    mergeCommitShas.length > 0 &&
-    config.commits.merge_commits === "skip"
-  ) {
+  if (mergeCommitShas.length > 0 && config.commits.merge_commits === "skip") {
     console.log("Skipping merge commits: " + mergeCommitShas);
     commitShasToCherryPick = commitShasToCherryPick.filter(
       (sha) => !mergeCommitShas.includes(sha),
