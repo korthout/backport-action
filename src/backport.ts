@@ -9,11 +9,11 @@ import {
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
 import {
-  BackportError,
   CheckoutError,
   CherryPickError,
   CreatePRError,
   GitPushError,
+  TargetResult,
 } from "./errors.js";
 import { postCreatePR } from "./pr-post-create.js";
 import {
@@ -49,37 +49,6 @@ type BackportContext = {
   mainpr: PullRequest;
 };
 
-/**
- * Outcome of a single per-target backport attempt.
- *
- * `backportToTarget` returns one of these so that comment posting and
- * bookkeeping can be done in `run()`, where they can also be replaced by
- * the progressive summary comment in Phase 8c.
- *
- * Phase 8a moves this type to `errors.ts` so `comments.ts` can import it
- * without depending on `backport.ts`.
- */
-export type TargetResult =
-  | {
-      status: "success";
-      targetBranch: string;
-      newPrNumber: number;
-      branchname: string;
-    }
-  | {
-      status: "success_with_conflicts";
-      targetBranch: string;
-      newPrNumber: number;
-      branchname: string;
-      uncommittedShas: string[];
-    }
-  | { status: "skipped"; targetBranch: string; reason: string }
-  | {
-      status: "failed";
-      targetBranch: string;
-      error: BackportError | Error;
-      branchname?: string;
-    };
 
 export type Config = {
   pwd: string;
