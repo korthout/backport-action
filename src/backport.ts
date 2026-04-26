@@ -8,6 +8,7 @@ import {
 } from "./github.js";
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
+import { GitPushError } from "./errors.js";
 import { postCreatePR } from "./pr-post-create.js";
 import {
   MergeCommitsNotAllowedError,
@@ -278,12 +279,14 @@ export class Backport {
           }
 
           console.info(`Push branch to ${this.getRemote()}`);
-          const pushExitCode = await this.git.push(
-            branchname,
-            this.getRemote(),
-            this.config.pwd,
-          );
-          if (pushExitCode != 0) {
+          try {
+            await this.git.push(
+              branchname,
+              this.getRemote(),
+              this.config.pwd,
+            );
+          } catch (pushError) {
+            if (!(pushError instanceof GitPushError)) throw pushError;
             try {
               // If the branch already exists, ignore the error and keep going.
               console.info(
@@ -303,7 +306,7 @@ export class Backport {
               // Fetching the branch failed as well, so report the original push error.
               const message = this.composeMessageForGitPushFailure(
                 targetBranch,
-                pushExitCode,
+                pushError.exitCode,
               );
               console.error(message);
               successByTarget.set(targetBranch, false);
