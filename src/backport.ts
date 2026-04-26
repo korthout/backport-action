@@ -9,12 +9,23 @@ import {
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
 import {
-  BackportError,
+  CommentContext,
+  formatInitialComment,
+  formatRunComment,
+} from "./comments.js";
+import {
   CheckoutError,
   CherryPickError,
   CreatePRError,
   GitPushError,
+  TargetResult,
 } from "./errors.js";
+import {
+  composeFailureMessage,
+  composeMessageForSuccess,
+  composeMessageForSuccessWithConflicts,
+  composeMessageToResolveCommittedConflicts,
+} from "./legacy-comments.js";
 import { postCreatePR } from "./pr-post-create.js";
 import {
   MergeCommitsNotAllowedError,
@@ -49,38 +60,6 @@ type BackportContext = {
   mainpr: PullRequest;
 };
 
-/**
- * Outcome of a single per-target backport attempt.
- *
- * `backportToTarget` returns one of these so that comment posting and
- * bookkeeping can be done in `run()`, where they can also be replaced by
- * the progressive summary comment in Phase 8c.
- *
- * Phase 8a moves this type to `errors.ts` so `comments.ts` can import it
- * without depending on `backport.ts`.
- */
-export type TargetResult =
-  | {
-      status: "success";
-      targetBranch: string;
-      newPrNumber: number;
-      branchname: string;
-    }
-  | {
-      status: "success_with_conflicts";
-      targetBranch: string;
-      newPrNumber: number;
-      branchname: string;
-      uncommittedShas: string[];
-    }
-  | { status: "skipped"; targetBranch: string; reason: string }
-  | {
-      status: "failed";
-      targetBranch: string;
-      error: BackportError | Error;
-      branchname?: string;
-    };
-
 export type Config = {
   pwd: string;
   source_labels_pattern?: RegExp;
@@ -107,6 +86,7 @@ export type Config = {
   add_team_reviewers: string[];
   auto_merge_enabled: boolean;
   auto_merge_method: "merge" | "squash" | "rebase";
+  comment_style: "legacy" | "summary";
   experimental: Experimental;
 };
 
@@ -186,14 +166,51 @@ export class Backport {
           : this.config.source_pr_number;
       const mainpr = await this.github.getPullRequest(pull_number);
 
+      const isSummary = this.config.comment_style === "summary";
+      const commentCtx: CommentContext = {
+        runId: this.github.getRunId(),
+        runUrl: this.github.getRunUrl(),
+      };
+
+      // For the summary style, create the placeholder comment as early as
+      // possible (before validating the PR) so we can update it with errors
+      // even if validation fails. Comment creation is best-effort: on
+      // failure we log and continue without commenting.
+      let summaryCommentId: number | undefined;
+      if (isSummary) {
+        try {
+          summaryCommentId = await this.github.createComment({
+            owner: workflowOwner,
+            repo: workflowRepo,
+            issue_number: pull_number,
+            body: formatInitialComment(commentCtx),
+          });
+        } catch (error) {
+          console.error("Failed to create summary comment:", error);
+        }
+      }
+
+      const updateSummary = async (body: string) => {
+        if (summaryCommentId === undefined) return;
+        try {
+          await this.github.updateComment(summaryCommentId, body);
+        } catch (error) {
+          console.error("Failed to update summary comment:", error);
+        }
+      };
+
       if (!(await this.github.isMerged(mainpr))) {
         const message = "Only merged pull requests can be backported.";
-        this.github.createComment({
-          owner: workflowOwner,
-          repo: workflowRepo,
-          issue_number: pull_number,
-          body: message,
-        });
+        if (isSummary) {
+          await updateSummary(formatRunComment([], [], commentCtx, message));
+        } else {
+          this.github.createComment({
+            owner: workflowOwner,
+            repo: workflowRepo,
+            issue_number: pull_number,
+            body: message,
+          });
+        }
         return;
       }
 
@@ -202,7 +219,17 @@ export class Backport {
         console.log(
           `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.source_labels_pattern?.source}'`,
         );
+        if (isSummary) {
+          // No targets to backport — update to the "backported" wording
+          // with no table. This is not a failure.
+          await updateSummary(formatRunComment([], [], commentCtx));
+        }
         return; // nothing left to do here
+      }
+
+      if (isSummary) {
+        // Targets known but not yet processed — show all-pending table
+        await updateSummary(formatRunComment([], target_branches, commentCtx));
       }
 
       let commitShasToCherryPick: string[];
@@ -217,13 +244,24 @@ export class Backport {
       } catch (error) {
         if (error instanceof MergeCommitsNotAllowedError) {
           console.error(error.message);
-          this.github.createComment({
-            owner: workflowOwner,
-            repo: workflowRepo,
-            issue_number: pull_number,
-            body: error.message,
-          });
+          if (isSummary) {
+            await updateSummary(
+              formatRunComment([], target_branches, commentCtx, error.message),
+            );
+          } else {
+            this.github.createComment({
+              owner: workflowOwner,
+              repo: workflowRepo,
+              issue_number: pull_number,
+              body: error.message,
+            });
+          }
           return;
+        }
+        if (isSummary && error instanceof Error) {
+          await updateSummary(
+            formatRunComment([], target_branches, commentCtx, error.message),
+          );
         }
         throw error;
       }
@@ -259,8 +297,8 @@ export class Backport {
         targetOwner,
         targetRepo,
         pullNumber: pull_number,
-        runId: this.github.getRunId(),
-        runUrl: this.github.getRunUrl(),
+        runId: commentCtx.runId,
+        runUrl: commentCtx.runUrl,
         remote: this.getRemote(),
         commitShasToCherryPick,
         labelsToCopy,
@@ -269,9 +307,20 @@ export class Backport {
 
       const successByTarget = new Map<string, boolean>();
       const createdPullRequestNumbers = new Array<number>();
-      for (const targetBranch of target_branches) {
+      const results: TargetResult[] = [];
+      for (let i = 0; i < target_branches.length; i++) {
+        const targetBranch = target_branches[i];
         const result = await this.backportToTarget(targetBranch, context);
-        await this.handleTargetResultLegacy(result, context);
+        results.push(result);
+
+        if (isSummary) {
+          const remainingTargets = target_branches.slice(i + 1);
+          await updateSummary(
+            formatRunComment(results, remainingTargets, commentCtx),
+          );
+        } else {
+          await this.handleTargetResultLegacy(result, context);
+        }
 
         if (result.status === "skipped") continue;
 
@@ -501,7 +550,7 @@ export class Backport {
     if (result.status === "skipped") return;
 
     if (result.status === "failed") {
-      const message = this.composeFailureMessage(result, context);
+      const message = composeFailureMessage(result);
       console.error(message);
       await this.github.createComment({
         owner: workflowOwner,
@@ -519,7 +568,7 @@ export class Backport {
 
     const successMessage =
       result.status === "success_with_conflicts"
-        ? this.composeMessageForSuccessWithConflicts(
+        ? composeMessageForSuccessWithConflicts(
             newPrNumber,
             targetBranch,
             downstream,
@@ -527,7 +576,7 @@ export class Backport {
             result.uncommittedShas,
             this.config.experimental.conflict_resolution,
           )
-        : this.composeMessageForSuccess(newPrNumber, targetBranch, downstream);
+        : composeMessageForSuccess(newPrNumber, targetBranch, downstream);
 
     await this.github.createComment({
       owner: workflowOwner,
@@ -537,7 +586,7 @@ export class Backport {
     });
 
     if (result.status === "success_with_conflicts") {
-      const conflictMessage = this.composeMessageToResolveCommittedConflicts(
+      const conflictMessage = composeMessageToResolveCommittedConflicts(
         targetBranch,
         branchname,
         result.uncommittedShas,
@@ -552,40 +601,6 @@ export class Backport {
     }
   }
 
-  private composeFailureMessage(
-    result: Extract<TargetResult, { status: "failed" }>,
-    context: BackportContext,
-  ): string {
-    const { targetBranch, error } = result;
-    if (error instanceof GitRefNotFoundError) {
-      return this.composeMessageForFetchTargetFailure(error.ref);
-    }
-    if (error instanceof CheckoutError) {
-      return this.composeMessageForCheckoutFailure(
-        targetBranch,
-        error.branch,
-        error.commits,
-      );
-    }
-    if (error instanceof CherryPickError) {
-      return this.composeMessageForCherryPickFailure(
-        targetBranch,
-        error.branch,
-        error.commits,
-      );
-    }
-    if (error instanceof GitPushError) {
-      return this.composeMessageForGitPushFailure(targetBranch, error.exitCode);
-    }
-    if (error instanceof CreatePRError) {
-      return dedent`Backport branch created but failed to create PR.
-                    Request to create PR rejected with status ${error.status}.
-
-                    (see action log for full response)`;
-    }
-    return error.message;
-  }
-
   private composePRContent(target: string, main: PullRequest): PRContent {
     const title = utils.replacePlaceholders(
       this.config.pull.title,
@@ -598,135 +613,6 @@ export class Backport {
       target,
     );
     return { title, body };
-  }
-
-  private composeMessageForFetchTargetFailure(target: string) {
-    return dedent`Backport failed for \`${target}\`: couldn't find remote ref \`${target}\`.
-                  Please ensure that this Github repo has a branch named \`${target}\`.`;
-  }
-
-  private composeMessageForCheckoutFailure(
-    target: string,
-    branchname: string,
-    commitShasToCherryPick: string[],
-  ): string {
-    const reason = "because it was unable to create a new branch";
-    const suggestion = this.composeSuggestion(
-      target,
-      branchname,
-      commitShasToCherryPick,
-      false,
-    );
-    return dedent`Backport failed for \`${target}\`, ${reason}.
-
-                  Please cherry-pick the changes locally.
-                  ${suggestion}`;
-  }
-
-  private composeMessageForCherryPickFailure(
-    target: string,
-    branchname: string,
-    commitShasToCherryPick: string[],
-  ): string {
-    const reason = "because it was unable to cherry-pick the commit(s)";
-
-    const suggestion = this.composeSuggestion(
-      target,
-      branchname,
-      commitShasToCherryPick,
-      false,
-      "fail",
-    );
-
-    return dedent`Backport failed for \`${target}\`, ${reason}.
-
-                  Please cherry-pick the changes locally and resolve any conflicts.
-                  ${suggestion}`;
-  }
-
-  private composeMessageToResolveCommittedConflicts(
-    target: string,
-    branchname: string,
-    commitShasToCherryPick: string[],
-    confictResolution: string,
-  ): string {
-    const suggestion = this.composeSuggestion(
-      target,
-      branchname,
-      commitShasToCherryPick,
-      true,
-      confictResolution,
-    );
-
-    return dedent`Please cherry-pick the changes locally and resolve any conflicts.
-                  ${suggestion}`;
-  }
-
-  private composeSuggestion(
-    target: string,
-    branchname: string,
-    commitShasToCherryPick: string[],
-    branchExist: boolean,
-    confictResolution: string = "fail",
-  ) {
-    if (branchExist) {
-      if (confictResolution === "draft_commit_conflicts") {
-        return dedent`\`\`\`bash
-        git fetch origin ${branchname}
-        git worktree add --checkout .worktree/${branchname} ${branchname}
-        cd .worktree/${branchname}
-        git reset --hard HEAD^
-        git cherry-pick -x ${commitShasToCherryPick.join(" ")}
-        \`\`\``;
-      } else {
-        return "";
-      }
-    } else {
-      return dedent`\`\`\`bash
-      git fetch origin ${target}
-      git worktree add -d .worktree/${branchname} origin/${target}
-      cd .worktree/${branchname}
-      git switch --create ${branchname}
-      git cherry-pick -x ${commitShasToCherryPick.join(" ")}
-      \`\`\``;
-    }
-  }
-
-  private composeMessageForGitPushFailure(
-    target: string,
-    exitcode: number,
-  ): string {
-    //TODO better error messages depending on exit code
-    return dedent`Git push to origin failed for ${target} with exitcode ${exitcode}`;
-  }
-
-  private composeMessageForSuccess(
-    pr_number: number,
-    target: string,
-    downstream: string,
-  ) {
-    return dedent`Successfully created backport PR for \`${target}\`:
-                  - ${downstream}#${pr_number}`;
-  }
-
-  private composeMessageForSuccessWithConflicts(
-    pr_number: number,
-    target: string,
-    downstream: string,
-    branchname: string,
-    commitShasToCherryPick: string[],
-    conflictResolution: string,
-  ): string {
-    const suggestionToResolve = this.composeMessageToResolveCommittedConflicts(
-      target,
-      branchname,
-      commitShasToCherryPick,
-      conflictResolution,
-    );
-    return dedent`Created backport PR for \`${target}\`:
-                  - ${downstream}#${pr_number} with remaining conflicts!
-
-                  ${suggestionToResolve}`;
   }
 
   private createOutput(

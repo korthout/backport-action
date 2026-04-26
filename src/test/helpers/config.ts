@@ -21,6 +21,7 @@ export function makeConfig(overrides?: Partial<Config>): Config {
     add_author_as_reviewer: false,
     auto_merge_enabled: false,
     auto_merge_method: "merge",
+    comment_style: "legacy",
     experimental: { conflict_resolution: "fail" },
     ...overrides,
   };

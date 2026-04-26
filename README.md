@@ -248,6 +248,14 @@ Specifically, those reachable from the pull request's head and not reachable fro
 
 By default, the action cherry-picks the commits based on the method used to merge the pull request.
 
+### `comment_style`
+
+Default: `legacy`
+
+Controls the style of comments posted by the action.
+When set to `legacy`, the action posts individual comments per target branch.
+When set to `summary`, the action posts a single summary comment per workflow run with actionable details.
+
 ### `copy_all_reviewers`
 
 Default: `false` (disabled)
