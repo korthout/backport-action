@@ -8,6 +8,7 @@ import {
 } from "./github.js";
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
+import { postCreatePR } from "./pr-post-create.js";
 import {
   MergeCommitsNotAllowedError,
   resolveCommitsToCherryPick,
@@ -356,219 +357,15 @@ export class Backport {
           }
           const new_pr = new_pr_response.data;
 
-          if (this.config.copy_milestone == true) {
-            const milestone = mainpr.milestone?.number;
-            if (milestone) {
-              console.info("Setting milestone to " + milestone);
-              try {
-                await this.github.setMilestone(new_pr.number, milestone);
-              } catch (error) {
-                if (!(error instanceof RequestError)) throw error;
-                console.error(JSON.stringify(error.response));
-              }
-            }
-          }
-
-          if (this.config.copy_assignees == true) {
-            const assignees =
-              mainpr.assignees?.map((label) => label.login) ?? [];
-            if (assignees.length > 0) {
-              console.info("Setting assignees " + assignees);
-              try {
-                await this.github.addAssignees(new_pr.number, assignees, {
-                  owner: targetOwner,
-                  repo: targetRepo,
-                });
-              } catch (error) {
-                if (!(error instanceof RequestError)) throw error;
-                console.error(JSON.stringify(error.response));
-              }
-            }
-          }
-
-          if (this.config.copy_all_reviewers == true) {
-            const requestedReviewers =
-              mainpr.requested_reviewers?.map((reviewer) => reviewer.login) ??
-              [];
-
-            let submittedReviewers: string[] = [];
-            try {
-              const { data: reviews } = await this.github.listReviews(
-                workflowOwner,
-                workflowRepo,
-                mainpr.number,
-              );
-
-              submittedReviewers = [
-                ...new Set(
-                  reviews
-                    .map((review) => review.user?.login)
-                    .filter((login): login is string => Boolean(login)),
-                ),
-              ];
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-            }
-
-            const reviewers = [
-              ...new Set([...requestedReviewers, ...submittedReviewers]),
-            ];
-
-            if (reviewers.length > 0) {
-              console.info("Setting reviewers " + reviewers);
-              const reviewRequest = {
-                owner: targetOwner,
-                repo: targetRepo,
-                pull_number: new_pr.number,
-                reviewers: reviewers,
-              };
-              try {
-                await this.github.requestReviewers(reviewRequest);
-              } catch (error) {
-                if (!(error instanceof RequestError)) throw error;
-                console.error(JSON.stringify(error.response));
-              }
-            }
-          }
-
-          if (this.config.copy_requested_reviewers == true) {
-            const reviewers =
-              mainpr.requested_reviewers?.map((reviewer) => reviewer.login) ??
-              [];
-            if (reviewers.length > 0) {
-              console.info("Setting reviewers " + reviewers);
-              const reviewRequest = {
-                owner: targetOwner,
-                repo: targetRepo,
-                pull_number: new_pr.number,
-                reviewers: reviewers,
-              };
-              try {
-                await this.github.requestReviewers(reviewRequest);
-              } catch (error) {
-                if (!(error instanceof RequestError)) throw error;
-                console.error(JSON.stringify(error.response));
-              }
-            }
-          }
-
-          // Combine the labels to be copied with the static labels and deduplicate them using a Set
-          const labels = [
-            ...new Set([...labelsToCopy, ...this.config.add_labels]),
-          ];
-          if (labels.length > 0) {
-            try {
-              await this.github.labelPR(new_pr.number, labels, {
-                owner: targetOwner,
-                repo: targetRepo,
-              });
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-              // The PR was still created so let's still comment on the original.
-            }
-          }
-
-          if (this.config.add_author_as_assignee == true) {
-            const author = mainpr.user.login;
-            console.info("Setting " + author + " as assignee");
-            try {
-              await this.github.addAssignees(new_pr.number, [author], {
-                owner: targetOwner,
-                repo: targetRepo,
-              });
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-            }
-          }
-
-          if (this.config.add_author_as_reviewer == true) {
-            const author = mainpr.user.login;
-            console.info("Requesting review from " + author);
-            try {
-              await this.github.requestReviewers({
-                owner: targetOwner,
-                repo: targetRepo,
-                pull_number: new_pr.number,
-                reviewers: [author],
-              });
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-            }
-          }
-
-          const addedReviewers = [...new Set(this.config.add_reviewers)];
-          if (addedReviewers.length > 0) {
-            console.info("Adding reviewers: " + addedReviewers);
-            try {
-              await this.github.requestReviewers({
-                owner: targetOwner,
-                repo: targetRepo,
-                pull_number: new_pr.number,
-                reviewers: addedReviewers,
-              });
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-            }
-          }
-
-          const addedTeamReviewers = [
-            ...new Set(this.config.add_team_reviewers),
-          ];
-          if (addedTeamReviewers.length > 0) {
-            console.info("Adding team reviewers: " + addedTeamReviewers);
-            try {
-              await this.github.requestReviewers({
-                owner: targetOwner,
-                repo: targetRepo,
-                pull_number: new_pr.number,
-                reviewers: [],
-                team_reviewers: addedTeamReviewers,
-              } as any);
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-            }
-          }
-
-          if (this.config.auto_merge_enabled === true) {
-            console.info(
-              "Attempting to enable auto-merge for PR #" + new_pr.number,
-            );
-            try {
-              await this.github.enableAutoMerge(
-                new_pr.number,
-                {
-                  owner: targetOwner,
-                  repo: targetRepo,
-                },
-                this.config.auto_merge_method,
-              );
-              console.info(
-                "Successfully enabled auto-merge for PR #" + new_pr.number,
-              );
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-
-              // Handle auto-merge failures gracefully
-              const errorMessage = this.getAutoMergeErrorMessage(
-                error,
-                this.config.auto_merge_method,
-              );
-              console.warn(
-                `Failed to enable auto-merge for PR #${new_pr.number}: ${errorMessage}`,
-              );
-              console.warn(
-                "The backport PR was created successfully, but auto-merge could not be enabled.",
-              );
-
-              // The PR was still created so let's still comment on the original.
-            }
-          }
+          await postCreatePR(
+            this.github,
+            this.config,
+            new_pr.number,
+            mainpr,
+            labelsToCopy,
+            { owner: targetOwner, repo: targetRepo },
+            { owner: workflowOwner, repo: workflowRepo },
+          );
 
           // post success message to original pr
           {
@@ -820,54 +617,6 @@ export class Backport {
 
     const createdPullNumbersOutput = createdPullRequestNumbers.join(" ");
     core.setOutput(Output.created_pull_numbers, createdPullNumbersOutput);
-  }
-
-  private getAutoMergeErrorMessage(
-    error: RequestError,
-    mergeMethod: string,
-  ): string {
-    const errorStr = JSON.stringify(error.response?.data) || error.message;
-
-    // Check for common auto-merge error scenarios
-    if (errorStr.includes("auto-merge") && errorStr.includes("not allowed")) {
-      return `Repository does not have "Allow auto-merge" enabled. Please enable it in repository Settings > General > Pull Requests.`;
-    }
-
-    if (
-      errorStr.includes("merge commits are not allowed") ||
-      errorStr.includes("Merge method merge commits are not allowed")
-    ) {
-      return `Repository does not allow merge commits. Try using 'auto_merge_method: squash' or 'auto_merge_method: rebase' instead.`;
-    }
-
-    if (errorStr.includes("squash") && errorStr.includes("not allowed")) {
-      return `Repository does not allow squash merging. Try using 'auto_merge_method: merge' or 'auto_merge_method: rebase' instead.`;
-    }
-
-    if (errorStr.includes("rebase") && errorStr.includes("not allowed")) {
-      return `Repository does not allow rebase merging. Try using 'auto_merge_method: merge' or 'auto_merge_method: squash' instead.`;
-    }
-
-    if (
-      errorStr.includes("not authorized") ||
-      errorStr.includes("insufficient permissions")
-    ) {
-      return `Insufficient permissions to enable auto-merge. Ensure the GitHub token has 'contents: write' and 'pull-requests: write' permissions.`;
-    }
-
-    if (errorStr.includes("protected branch")) {
-      return `Branch protection rules prevent auto-merge. Check if the bot/user has merge permissions on protected branches.`;
-    }
-
-    if (
-      errorStr.includes("Pull request is in clean status") ||
-      errorStr.includes("clean status")
-    ) {
-      return `PR can be merged immediately, so auto-merge is not needed. Auto-merge only works when there are pending requirements (like required status checks or reviews).`;
-    }
-
-    // Generic fallback with some context
-    return `Auto-merge method '${mergeMethod}' failed. Check repository merge settings and permissions. Error: ${error.message}`;
   }
 }
 
