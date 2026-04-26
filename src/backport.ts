@@ -107,6 +107,7 @@ export type Config = {
   add_team_reviewers: string[];
   auto_merge_enabled: boolean;
   auto_merge_method: "merge" | "squash" | "rebase";
+  comment_style: "legacy" | "summary";
   experimental: Experimental;
 };
 
