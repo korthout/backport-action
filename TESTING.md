@@ -1,5 +1,7 @@
 # Testing
 
+This repo uses [Vitest](https://vitest.dev), not Jest.
+
 ## Running tests
 
 ```

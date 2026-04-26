@@ -4,17 +4,82 @@ import dedent from "dedent";
 import {
   CreatePullRequestResponse,
   PullRequest,
-  MergeStrategy,
   RequestError,
 } from "./github.js";
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
+import {
+  BackportError,
+  CheckoutError,
+  CherryPickError,
+  CreatePRError,
+  GitPushError,
+} from "./errors.js";
+import { postCreatePR } from "./pr-post-create.js";
+import {
+  MergeCommitsNotAllowedError,
+  resolveCommitsToCherryPick,
+} from "./resolve-commits.js";
 import * as utils from "./utils.js";
 
 type PRContent = {
   title: string;
   body: string;
 };
+
+/**
+ * Per-run context shared by every per-target backport.
+ *
+ * `workflow*` fields point at the repo where the action runs (and where the
+ * source PR lives — comments go here). `target*` fields point at the repo
+ * where backport branches and PRs are created — same as the workflow repo
+ * unless using the `downstream_repo` experimental config.
+ */
+type BackportContext = {
+  workflowOwner: string;
+  workflowRepo: string;
+  targetOwner: string;
+  targetRepo: string;
+  pullNumber: number;
+  runId: string;
+  runUrl: string;
+  remote: "origin" | "downstream";
+  commitShasToCherryPick: string[];
+  labelsToCopy: string[];
+  mainpr: PullRequest;
+};
+
+/**
+ * Outcome of a single per-target backport attempt.
+ *
+ * `backportToTarget` returns one of these so that comment posting and
+ * bookkeeping can be done in `run()`, where they can also be replaced by
+ * the progressive summary comment in Phase 8c.
+ *
+ * Phase 8a moves this type to `errors.ts` so `comments.ts` can import it
+ * without depending on `backport.ts`.
+ */
+export type TargetResult =
+  | {
+      status: "success";
+      targetBranch: string;
+      newPrNumber: number;
+      branchname: string;
+    }
+  | {
+      status: "success_with_conflicts";
+      targetBranch: string;
+      newPrNumber: number;
+      branchname: string;
+      uncommittedShas: string[];
+    }
+  | { status: "skipped"; targetBranch: string; reason: string }
+  | {
+      status: "failed";
+      targetBranch: string;
+      error: BackportError | Error;
+      branchname?: string;
+    };
 
 export type Config = {
   pwd: string;
@@ -98,19 +163,22 @@ export class Backport {
     try {
       const payload = this.github.getPayload();
 
+      // Repo where the workflow runs — used for commenting on the source PR.
       const workflowOwner = this.github.getRepo().owner;
-      const owner =
+      const workflowRepo =
+        payload.repository?.name ?? this.github.getRepo().repo;
+
+      // Repo where backport branches and PRs are created — same as workflow
+      // repo unless using the downstream_repo experimental config.
+      const targetOwner =
         this.shouldUseDownstreamRepo() && this.downstreamOwner // if undefined, use owner of workflow
           ? this.downstreamOwner
           : workflowOwner;
-
-      const workflowRepo =
-        payload.repository?.name ?? this.github.getRepo().repo;
-      const repo = this.shouldUseDownstreamRepo()
+      const targetRepo = this.shouldUseDownstreamRepo()
         ? this.downstreamRepo
         : workflowRepo;
 
-      if (repo === undefined) throw new Error("No repository defined!");
+      if (targetRepo === undefined) throw new Error("No repository defined!");
 
       const pull_number =
         this.config.source_pr_number === undefined
@@ -137,111 +205,28 @@ export class Backport {
         return; // nothing left to do here
       }
 
-      console.log(
-        `Fetching all the commits from the pull request: ${mainpr.commits + 1}`,
-      );
-      await this.git.fetch(
-        `refs/pull/${pull_number}/head`,
-        this.config.pwd,
-        mainpr.commits + 1, // +1 in case this concerns a shallowly cloned repo
-      );
-
-      const commitShas = await this.github.getCommits(mainpr);
-
-      let commitShasToCherryPick;
-
-      if (this.config.commits.cherry_picking === "auto") {
-        const merge_commit_sha = await this.github.getMergeCommitSha(mainpr);
-
-        // switch case to check if it is a squash, rebase, or merge commit
-        switch (await this.github.mergeStrategy(mainpr, merge_commit_sha)) {
-          case MergeStrategy.SQUASHED:
-            // If merged via a squash merge_commit_sha represents the SHA of the squashed commit on
-            // the base branch. We must fetch it and its parent in case of a shallowly cloned repo
-            // To store the fetched commits indefinitely we save them to a remote ref using the sha
-            await this.git.fetch(
-              `+${merge_commit_sha}:refs/remotes/origin/${merge_commit_sha}`,
-              this.config.pwd,
-              2, // +1 in case this concerns a shallowly cloned repo
-            );
-            commitShasToCherryPick = [merge_commit_sha!];
-            break;
-          case MergeStrategy.REBASED:
-            // If rebased merge_commit_sha represents the commit that the base branch was updated to
-            // We must fetch it, its parents, and one extra parent in case of a shallowly cloned repo
-            // To store the fetched commits indefinitely we save them to a remote ref using the sha
-            await this.git.fetch(
-              `+${merge_commit_sha}:refs/remotes/origin/${merge_commit_sha}`,
-              this.config.pwd,
-              mainpr.commits + 1, // +1 in case this concerns a shallowly cloned repo
-            );
-            const range = `${merge_commit_sha}~${mainpr.commits}..${merge_commit_sha}`;
-            commitShasToCherryPick = await this.git.findCommitsInRange(
-              range,
-              this.config.pwd,
-            );
-            break;
-          case MergeStrategy.MERGECOMMIT:
-            commitShasToCherryPick = commitShas;
-            break;
-          case MergeStrategy.UNKNOWN:
-            console.log(
-              "Could not detect merge strategy. Using commits from the Pull Request.",
-            );
-            commitShasToCherryPick = commitShas;
-            break;
-          default:
-            console.log(
-              "Could not detect merge strategy. Using commits from the Pull Request.",
-            );
-            commitShasToCherryPick = commitShas;
-            break;
+      let commitShasToCherryPick: string[];
+      try {
+        commitShasToCherryPick = await resolveCommitsToCherryPick(
+          this.git,
+          this.github,
+          this.config,
+          mainpr,
+          pull_number,
+        );
+      } catch (error) {
+        if (error instanceof MergeCommitsNotAllowedError) {
+          console.error(error.message);
+          this.github.createComment({
+            owner: workflowOwner,
+            repo: workflowRepo,
+            issue_number: pull_number,
+            body: error.message,
+          });
+          return;
         }
-      } else {
-        console.log(
-          "Not detecting merge strategy. Using commits from the Pull Request.",
-        );
-        commitShasToCherryPick = commitShas;
+        throw error;
       }
-      console.log(`Found commits to backport: ${commitShasToCherryPick}`);
-
-      console.log("Checking the merged pull request for merge commits");
-      const mergeCommitShas = await this.git.findMergeCommits(
-        commitShasToCherryPick,
-        this.config.pwd,
-      );
-      console.log(
-        `Encountered ${mergeCommitShas.length ?? "no"} merge commits`,
-      );
-      if (
-        mergeCommitShas.length > 0 &&
-        this.config.commits.merge_commits == "fail"
-      ) {
-        const message = dedent`Backport failed because this pull request contains merge commits. \
-          You can either backport this pull request manually, or configure the action to skip merge commits.`;
-        console.error(message);
-        this.github.createComment({
-          owner: workflowOwner,
-          repo: workflowRepo,
-          issue_number: pull_number,
-          body: message,
-        });
-        return;
-      }
-
-      if (
-        mergeCommitShas.length > 0 &&
-        this.config.commits.merge_commits == "skip"
-      ) {
-        console.log("Skipping merge commits: " + mergeCommitShas);
-        const nonMergeCommitShas = commitShasToCherryPick.filter(
-          (sha) => !mergeCommitShas.includes(sha),
-        );
-        commitShasToCherryPick = nonMergeCommitShas;
-      }
-      console.log(
-        "Will cherry-pick the following commits: " + commitShasToCherryPick,
-      );
 
       let labelsToCopy: string[] = [];
       if (typeof this.config.copy_labels_pattern !== "undefined") {
@@ -260,440 +245,43 @@ export class Backport {
       );
 
       if (this.shouldUseDownstreamRepo()) {
-        await this.git.remoteAdd(this.config.pwd, "downstream", owner, repo);
+        await this.git.remoteAdd(
+          this.config.pwd,
+          "downstream",
+          targetOwner,
+          targetRepo,
+        );
       }
+
+      const context: BackportContext = {
+        workflowOwner,
+        workflowRepo,
+        targetOwner,
+        targetRepo,
+        pullNumber: pull_number,
+        runId: this.github.getRunId(),
+        runUrl: this.github.getRunUrl(),
+        remote: this.getRemote(),
+        commitShasToCherryPick,
+        labelsToCopy,
+        mainpr,
+      };
 
       const successByTarget = new Map<string, boolean>();
       const createdPullRequestNumbers = new Array<number>();
-      for (const target of target_branches) {
-        console.log(`Backporting to target branch '${target}...'`);
+      for (const targetBranch of target_branches) {
+        const result = await this.backportToTarget(targetBranch, context);
+        await this.handleTargetResultLegacy(result, context);
 
-        try {
-          await this.git.fetch(target, this.config.pwd, 1, this.getRemote());
-        } catch (error) {
-          if (error instanceof GitRefNotFoundError) {
-            const message = this.composeMessageForFetchTargetFailure(error.ref);
-            console.error(message);
-            successByTarget.set(target, false);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: message,
-            });
-            continue;
-          } else {
-            throw error;
-          }
-        }
+        if (result.status === "skipped") continue;
 
-        try {
-          const branchname = utils.replacePlaceholders(
-            this.config.pull.branch_name,
-            mainpr,
-            target,
-          );
+        successByTarget.set(targetBranch, result.status !== "failed");
 
-          console.log(`Start backport to ${branchname}`);
-          try {
-            await this.git.checkout(
-              branchname,
-              `${this.getRemote()}/${target}`,
-              this.config.pwd,
-            );
-          } catch (error) {
-            const message = this.composeMessageForCheckoutFailure(
-              target,
-              branchname,
-              commitShasToCherryPick,
-            );
-            console.error(message);
-            successByTarget.set(target, false);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: message,
-            });
-            continue;
-          }
-
-          let uncommitedShas: string[] | null;
-
-          try {
-            uncommitedShas = await this.git.cherryPick(
-              commitShasToCherryPick,
-              this.config.experimental.conflict_resolution,
-              this.config.pwd,
-            );
-          } catch (error) {
-            const message = this.composeMessageForCherryPickFailure(
-              target,
-              branchname,
-              commitShasToCherryPick,
-            );
-            console.error(message);
-            successByTarget.set(target, false);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: message,
-            });
-            continue;
-          }
-
-          console.info(`Push branch to ${this.getRemote()}`);
-          const pushExitCode = await this.git.push(
-            branchname,
-            this.getRemote(),
-            this.config.pwd,
-          );
-          if (pushExitCode != 0) {
-            try {
-              // If the branch already exists, ignore the error and keep going.
-              console.info(
-                `Branch ${branchname} may already exist, fetching it instead to recover previous run`,
-              );
-              await this.git.fetch(
-                branchname,
-                this.config.pwd,
-                1,
-                this.getRemote(),
-              );
-              console.info(
-                `Previous branch successfully recovered, retrying PR creation`,
-              );
-              // note that the recovered branch is not guaranteed to be up-to-date
-            } catch {
-              // Fetching the branch failed as well, so report the original push error.
-              const message = this.composeMessageForGitPushFailure(
-                target,
-                pushExitCode,
-              );
-              console.error(message);
-              successByTarget.set(target, false);
-              await this.github.createComment({
-                owner: workflowOwner,
-                repo: workflowRepo,
-                issue_number: pull_number,
-                body: message,
-              });
-              continue;
-            }
-          }
-
-          console.info(`Create PR for ${branchname}`);
-          const { title, body } = this.composePRContent(target, mainpr);
-          let new_pr_response: CreatePullRequestResponse;
-          try {
-            new_pr_response = await this.github.createPR({
-              owner,
-              repo,
-              title,
-              body,
-              head: branchname,
-              base: target,
-              maintainer_can_modify: true,
-              draft: uncommitedShas !== null,
-            });
-          } catch (error) {
-            if (!(error instanceof RequestError)) throw error;
-
-            if (
-              error.status == 422 &&
-              (error.response?.data as any).errors.some((err: any) =>
-                err.message.startsWith("A pull request already exists for "),
-              )
-            ) {
-              console.info(`PR for ${branchname} already exists, skipping.`);
-              continue;
-            }
-
-            console.error(JSON.stringify(error.response?.data));
-            successByTarget.set(target, false);
-            const message = this.composeMessageForCreatePRFailed(error);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: message,
-            });
-            continue;
-          }
-          const new_pr = new_pr_response.data;
-
-          if (this.config.copy_milestone == true) {
-            const milestone = mainpr.milestone?.number;
-            if (milestone) {
-              console.info("Setting milestone to " + milestone);
-              try {
-                await this.github.setMilestone(new_pr.number, milestone);
-              } catch (error) {
-                if (!(error instanceof RequestError)) throw error;
-                console.error(JSON.stringify(error.response));
-              }
-            }
-          }
-
-          if (this.config.copy_assignees == true) {
-            const assignees =
-              mainpr.assignees?.map((label) => label.login) ?? [];
-            if (assignees.length > 0) {
-              console.info("Setting assignees " + assignees);
-              try {
-                await this.github.addAssignees(new_pr.number, assignees, {
-                  owner,
-                  repo,
-                });
-              } catch (error) {
-                if (!(error instanceof RequestError)) throw error;
-                console.error(JSON.stringify(error.response));
-              }
-            }
-          }
-
-          if (this.config.copy_all_reviewers == true) {
-            const requestedReviewers =
-              mainpr.requested_reviewers?.map((reviewer) => reviewer.login) ??
-              [];
-
-            let submittedReviewers: string[] = [];
-            try {
-              const { data: reviews } = await this.github.listReviews(
-                workflowOwner,
-                workflowRepo,
-                mainpr.number,
-              );
-
-              submittedReviewers = [
-                ...new Set(
-                  reviews
-                    .map((review) => review.user?.login)
-                    .filter((login): login is string => Boolean(login)),
-                ),
-              ];
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-            }
-
-            const reviewers = [
-              ...new Set([...requestedReviewers, ...submittedReviewers]),
-            ];
-
-            if (reviewers.length > 0) {
-              console.info("Setting reviewers " + reviewers);
-              const reviewRequest = {
-                owner,
-                repo,
-                pull_number: new_pr.number,
-                reviewers: reviewers,
-              };
-              try {
-                await this.github.requestReviewers(reviewRequest);
-              } catch (error) {
-                if (!(error instanceof RequestError)) throw error;
-                console.error(JSON.stringify(error.response));
-              }
-            }
-          }
-
-          if (this.config.copy_requested_reviewers == true) {
-            const reviewers =
-              mainpr.requested_reviewers?.map((reviewer) => reviewer.login) ??
-              [];
-            if (reviewers.length > 0) {
-              console.info("Setting reviewers " + reviewers);
-              const reviewRequest = {
-                owner,
-                repo,
-                pull_number: new_pr.number,
-                reviewers: reviewers,
-              };
-              try {
-                await this.github.requestReviewers(reviewRequest);
-              } catch (error) {
-                if (!(error instanceof RequestError)) throw error;
-                console.error(JSON.stringify(error.response));
-              }
-            }
-          }
-
-          // Combine the labels to be copied with the static labels and deduplicate them using a Set
-          const labels = [
-            ...new Set([...labelsToCopy, ...this.config.add_labels]),
-          ];
-          if (labels.length > 0) {
-            try {
-              await this.github.labelPR(new_pr.number, labels, {
-                owner,
-                repo,
-              });
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-              // The PR was still created so let's still comment on the original.
-            }
-          }
-
-          if (this.config.add_author_as_assignee == true) {
-            const author = mainpr.user.login;
-            console.info("Setting " + author + " as assignee");
-            try {
-              await this.github.addAssignees(new_pr.number, [author], {
-                owner,
-                repo,
-              });
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-            }
-          }
-
-          if (this.config.add_author_as_reviewer == true) {
-            const author = mainpr.user.login;
-            console.info("Requesting review from " + author);
-            try {
-              await this.github.requestReviewers({
-                owner,
-                repo,
-                pull_number: new_pr.number,
-                reviewers: [author],
-              });
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-            }
-          }
-
-          const addedReviewers = [...new Set(this.config.add_reviewers)];
-          if (addedReviewers.length > 0) {
-            console.info("Adding reviewers: " + addedReviewers);
-            try {
-              await this.github.requestReviewers({
-                owner,
-                repo,
-                pull_number: new_pr.number,
-                reviewers: addedReviewers,
-              });
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-            }
-          }
-
-          const addedTeamReviewers = [
-            ...new Set(this.config.add_team_reviewers),
-          ];
-          if (addedTeamReviewers.length > 0) {
-            console.info("Adding team reviewers: " + addedTeamReviewers);
-            try {
-              await this.github.requestReviewers({
-                owner,
-                repo,
-                pull_number: new_pr.number,
-                reviewers: [],
-                team_reviewers: addedTeamReviewers,
-              } as any);
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-              console.error(JSON.stringify(error.response));
-            }
-          }
-
-          if (this.config.auto_merge_enabled === true) {
-            console.info(
-              "Attempting to enable auto-merge for PR #" + new_pr.number,
-            );
-            try {
-              await this.github.enableAutoMerge(
-                new_pr.number,
-                {
-                  owner,
-                  repo,
-                },
-                this.config.auto_merge_method,
-              );
-              console.info(
-                "Successfully enabled auto-merge for PR #" + new_pr.number,
-              );
-            } catch (error) {
-              if (!(error instanceof RequestError)) throw error;
-
-              // Handle auto-merge failures gracefully
-              const errorMessage = this.getAutoMergeErrorMessage(
-                error,
-                this.config.auto_merge_method,
-              );
-              console.warn(
-                `Failed to enable auto-merge for PR #${new_pr.number}: ${errorMessage}`,
-              );
-              console.warn(
-                "The backport PR was created successfully, but auto-merge could not be enabled.",
-              );
-
-              // The PR was still created so let's still comment on the original.
-            }
-          }
-
-          // post success message to original pr
-          {
-            const message =
-              uncommitedShas !== null
-                ? this.composeMessageForSuccessWithConflicts(
-                    new_pr.number,
-                    target,
-                    this.shouldUseDownstreamRepo() ? `${owner}/${repo}` : "",
-                    branchname,
-                    uncommitedShas,
-                    this.config.experimental.conflict_resolution,
-                  )
-                : this.composeMessageForSuccess(
-                    new_pr.number,
-                    target,
-                    this.shouldUseDownstreamRepo() ? `${owner}/${repo}` : "",
-                  );
-
-            successByTarget.set(target, true);
-            createdPullRequestNumbers.push(new_pr.number);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: message,
-            });
-          }
-          // post message to new pr to resolve conflict
-          if (uncommitedShas !== null) {
-            const message: string =
-              this.composeMessageToResolveCommittedConflicts(
-                target,
-                branchname,
-                uncommitedShas,
-                this.config.experimental.conflict_resolution,
-              );
-
-            await this.github.createComment({
-              owner,
-              repo,
-              issue_number: new_pr.number,
-              body: message,
-            });
-          }
-        } catch (error) {
-          if (error instanceof Error) {
-            console.error(error.message);
-            successByTarget.set(target, false);
-            await this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: error.message,
-            });
-          } else {
-            throw error;
-          }
+        if (
+          result.status === "success" ||
+          result.status === "success_with_conflicts"
+        ) {
+          createdPullRequestNumbers.push(result.newPrNumber);
         }
       }
 
@@ -714,6 +302,288 @@ export class Backport {
   private findTargetBranches(mainpr: PullRequest, config: Config): string[] {
     const labels = mainpr.labels.map((label) => label.name);
     return findTargetBranches(config, labels, mainpr.head.ref);
+  }
+
+  private async backportToTarget(
+    targetBranch: string,
+    context: BackportContext,
+  ): Promise<TargetResult> {
+    const { targetOwner, targetRepo, remote, commitShasToCherryPick, mainpr } =
+      context;
+
+    console.log(`Backporting to target branch '${targetBranch}...'`);
+
+    try {
+      await this.git.fetch(targetBranch, this.config.pwd, 1, remote);
+    } catch (error) {
+      if (error instanceof GitRefNotFoundError) {
+        return { status: "failed", targetBranch, error };
+      }
+      throw error;
+    }
+
+    const branchname = utils.replacePlaceholders(
+      this.config.pull.branch_name,
+      mainpr,
+      targetBranch,
+    );
+
+    try {
+      console.log(`Start backport to ${branchname}`);
+      try {
+        await this.git.checkout(
+          branchname,
+          `${remote}/${targetBranch}`,
+          this.config.pwd,
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : `git checkout ${branchname} failed`;
+        return {
+          status: "failed",
+          targetBranch,
+          branchname,
+          error: new CheckoutError(message, branchname, commitShasToCherryPick),
+        };
+      }
+
+      let uncommittedShas: string[] | null;
+
+      try {
+        uncommittedShas = await this.git.cherryPick(
+          commitShasToCherryPick,
+          this.config.experimental.conflict_resolution,
+          this.config.pwd,
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : `cherry-pick failed for ${commitShasToCherryPick.join(", ")}`;
+        return {
+          status: "failed",
+          targetBranch,
+          branchname,
+          error: new CherryPickError(
+            message,
+            branchname,
+            commitShasToCherryPick,
+          ),
+        };
+      }
+
+      console.info(`Push branch to ${remote}`);
+      try {
+        await this.git.push(branchname, remote, this.config.pwd);
+      } catch (pushError) {
+        if (!(pushError instanceof GitPushError)) throw pushError;
+        try {
+          // If the branch already exists, ignore the error and keep going.
+          console.info(
+            `Branch ${branchname} may already exist, fetching it instead to recover previous run`,
+          );
+          await this.git.fetch(branchname, this.config.pwd, 1, remote);
+          console.info(
+            `Previous branch successfully recovered, retrying PR creation`,
+          );
+          // note that the recovered branch is not guaranteed to be up-to-date
+        } catch {
+          // Fetching the branch failed as well, so report the original push error.
+          return {
+            status: "failed",
+            targetBranch,
+            branchname,
+            error: pushError,
+          };
+        }
+      }
+
+      console.info(`Create PR for ${branchname}`);
+      const { title, body } = this.composePRContent(targetBranch, mainpr);
+      let new_pr_response: CreatePullRequestResponse;
+      try {
+        new_pr_response = await this.github.createPR({
+          owner: targetOwner,
+          repo: targetRepo,
+          title,
+          body,
+          head: branchname,
+          base: targetBranch,
+          maintainer_can_modify: true,
+          draft: uncommittedShas !== null,
+        });
+      } catch (error) {
+        if (!(error instanceof RequestError)) throw error;
+
+        if (
+          error.status == 422 &&
+          (error.response?.data as any).errors.some((err: any) =>
+            err.message.startsWith("A pull request already exists for "),
+          )
+        ) {
+          console.info(`PR for ${branchname} already exists, skipping.`);
+          return {
+            status: "skipped",
+            targetBranch,
+            reason: "PR already exists",
+          };
+        }
+
+        console.error(JSON.stringify(error.response?.data));
+        return {
+          status: "failed",
+          targetBranch,
+          branchname,
+          error: new CreatePRError(
+            error.message,
+            error.status,
+            JSON.stringify(error.response?.data),
+          ),
+        };
+      }
+      const new_pr = new_pr_response.data;
+
+      await postCreatePR(
+        this.github,
+        this.config,
+        new_pr.number,
+        mainpr,
+        context.labelsToCopy,
+        { owner: targetOwner, repo: targetRepo },
+        { owner: context.workflowOwner, repo: context.workflowRepo },
+      );
+
+      if (uncommittedShas !== null) {
+        return {
+          status: "success_with_conflicts",
+          targetBranch,
+          newPrNumber: new_pr.number,
+          branchname,
+          uncommittedShas,
+        };
+      }
+      return {
+        status: "success",
+        targetBranch,
+        newPrNumber: new_pr.number,
+        branchname,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error(error.message);
+        console.error(error.stack ?? "");
+        return { status: "failed", targetBranch, branchname, error };
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Posts the per-target comments matching the existing legacy behavior:
+   *   - failed: post the failure message on the source PR
+   *   - success / success_with_conflicts: post the success message on the
+   *     source PR; for conflicts, also post the recovery instructions on
+   *     the new backport PR
+   *   - skipped: no comment (matches the previous `continue` behavior)
+   *
+   * Phase 8c will replace this with the progressive summary comment flow
+   * when `comment_style: summary` is enabled.
+   */
+  private async handleTargetResultLegacy(
+    result: TargetResult,
+    context: BackportContext,
+  ): Promise<void> {
+    const { workflowOwner, workflowRepo, targetOwner, targetRepo, pullNumber } =
+      context;
+
+    if (result.status === "skipped") return;
+
+    if (result.status === "failed") {
+      const message = this.composeFailureMessage(result, context);
+      console.error(message);
+      await this.github.createComment({
+        owner: workflowOwner,
+        repo: workflowRepo,
+        issue_number: pullNumber,
+        body: message,
+      });
+      return;
+    }
+
+    const { targetBranch, newPrNumber, branchname } = result;
+    const downstream = this.shouldUseDownstreamRepo()
+      ? `${targetOwner}/${targetRepo}`
+      : "";
+
+    const successMessage =
+      result.status === "success_with_conflicts"
+        ? this.composeMessageForSuccessWithConflicts(
+            newPrNumber,
+            targetBranch,
+            downstream,
+            branchname,
+            result.uncommittedShas,
+            this.config.experimental.conflict_resolution,
+          )
+        : this.composeMessageForSuccess(newPrNumber, targetBranch, downstream);
+
+    await this.github.createComment({
+      owner: workflowOwner,
+      repo: workflowRepo,
+      issue_number: pullNumber,
+      body: successMessage,
+    });
+
+    if (result.status === "success_with_conflicts") {
+      const conflictMessage = this.composeMessageToResolveCommittedConflicts(
+        targetBranch,
+        branchname,
+        result.uncommittedShas,
+        this.config.experimental.conflict_resolution,
+      );
+      await this.github.createComment({
+        owner: targetOwner,
+        repo: targetRepo,
+        issue_number: newPrNumber,
+        body: conflictMessage,
+      });
+    }
+  }
+
+  private composeFailureMessage(
+    result: Extract<TargetResult, { status: "failed" }>,
+    context: BackportContext,
+  ): string {
+    const { targetBranch, error } = result;
+    if (error instanceof GitRefNotFoundError) {
+      return this.composeMessageForFetchTargetFailure(error.ref);
+    }
+    if (error instanceof CheckoutError) {
+      return this.composeMessageForCheckoutFailure(
+        targetBranch,
+        error.branch,
+        error.commits,
+      );
+    }
+    if (error instanceof CherryPickError) {
+      return this.composeMessageForCherryPickFailure(
+        targetBranch,
+        error.branch,
+        error.commits,
+      );
+    }
+    if (error instanceof GitPushError) {
+      return this.composeMessageForGitPushFailure(targetBranch, error.exitCode);
+    }
+    if (error instanceof CreatePRError) {
+      return dedent`Backport branch created but failed to create PR.
+                    Request to create PR rejected with status ${error.status}.
+
+                    (see action log for full response)`;
+    }
+    return error.message;
   }
 
   private composePRContent(target: string, main: PullRequest): PRContent {
@@ -830,13 +700,6 @@ export class Backport {
     return dedent`Git push to origin failed for ${target} with exitcode ${exitcode}`;
   }
 
-  private composeMessageForCreatePRFailed(error: RequestError): string {
-    return dedent`Backport branch created but failed to create PR.
-                Request to create PR rejected with status ${error.status}.
-
-                (see action log for full response)`;
-  }
-
   private composeMessageForSuccess(
     pr_number: number,
     target: string,
@@ -883,54 +746,6 @@ export class Backport {
 
     const createdPullNumbersOutput = createdPullRequestNumbers.join(" ");
     core.setOutput(Output.created_pull_numbers, createdPullNumbersOutput);
-  }
-
-  private getAutoMergeErrorMessage(
-    error: RequestError,
-    mergeMethod: string,
-  ): string {
-    const errorStr = JSON.stringify(error.response?.data) || error.message;
-
-    // Check for common auto-merge error scenarios
-    if (errorStr.includes("auto-merge") && errorStr.includes("not allowed")) {
-      return `Repository does not have "Allow auto-merge" enabled. Please enable it in repository Settings > General > Pull Requests.`;
-    }
-
-    if (
-      errorStr.includes("merge commits are not allowed") ||
-      errorStr.includes("Merge method merge commits are not allowed")
-    ) {
-      return `Repository does not allow merge commits. Try using 'auto_merge_method: squash' or 'auto_merge_method: rebase' instead.`;
-    }
-
-    if (errorStr.includes("squash") && errorStr.includes("not allowed")) {
-      return `Repository does not allow squash merging. Try using 'auto_merge_method: merge' or 'auto_merge_method: rebase' instead.`;
-    }
-
-    if (errorStr.includes("rebase") && errorStr.includes("not allowed")) {
-      return `Repository does not allow rebase merging. Try using 'auto_merge_method: merge' or 'auto_merge_method: squash' instead.`;
-    }
-
-    if (
-      errorStr.includes("not authorized") ||
-      errorStr.includes("insufficient permissions")
-    ) {
-      return `Insufficient permissions to enable auto-merge. Ensure the GitHub token has 'contents: write' and 'pull-requests: write' permissions.`;
-    }
-
-    if (errorStr.includes("protected branch")) {
-      return `Branch protection rules prevent auto-merge. Check if the bot/user has merge permissions on protected branches.`;
-    }
-
-    if (
-      errorStr.includes("Pull request is in clean status") ||
-      errorStr.includes("clean status")
-    ) {
-      return `PR can be merged immediately, so auto-merge is not needed. Auto-merge only works when there are pending requirements (like required status checks or reviews).`;
-    }
-
-    // Generic fallback with some context
-    return `Auto-merge method '${mergeMethod}' failed. Check repository merge settings and permissions. Error: ${error.message}`;
   }
 }
 

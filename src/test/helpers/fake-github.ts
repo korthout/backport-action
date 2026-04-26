@@ -124,6 +124,14 @@ export class FakeGithub implements GithubApi {
     return this._sourcePr.number;
   }
 
+  getRunId(): string {
+    return "12345";
+  }
+
+  getRunUrl(): string {
+    return "https://github.com/test-owner/test-repo/actions/runs/12345";
+  }
+
   async getPullRequest(_pull_number: number): Promise<PullRequest> {
     return this._sourcePr;
   }

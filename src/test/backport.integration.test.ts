@@ -32,6 +32,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Backport } from "../backport.js";
+import { GitPushError } from "../errors.js";
 import { GitRefNotFoundError } from "../git.js";
 import { MergeStrategy } from "../github.js";
 import { FakeGithub, requestError } from "./helpers/fake-github.js";
@@ -278,7 +279,11 @@ describe("Backport.run() orchestration", () => {
     it("push fails, branch exists: recovers and creates PR", async () => {
       const github = new FakeGithub();
       const git = createMockGit({
-        push: vi.fn().mockResolvedValue(1),
+        push: vi
+          .fn()
+          .mockRejectedValue(
+            new GitPushError("push failed", "branch", "origin", 1),
+          ),
       });
       const config = makeConfig();
       const backport = new Backport(github, config, git);
@@ -290,7 +295,11 @@ describe("Backport.run() orchestration", () => {
     it("push fails, branch doesn't exist: posts failure comment", async () => {
       const github = new FakeGithub();
       const git = createMockGit({
-        push: vi.fn().mockResolvedValue(1),
+        push: vi
+          .fn()
+          .mockRejectedValue(
+            new GitPushError("push failed", "branch", "origin", 1),
+          ),
         fetch: vi
           .fn()
           .mockResolvedValue(undefined)
