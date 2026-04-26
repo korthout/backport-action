@@ -20,6 +20,12 @@ import {
   GitPushError,
   TargetResult,
 } from "./errors.js";
+import {
+  composeFailureMessage,
+  composeMessageForSuccess,
+  composeMessageForSuccessWithConflicts,
+  composeMessageToResolveCommittedConflicts,
+} from "./legacy-comments.js";
 import { postCreatePR } from "./pr-post-create.js";
 import {
   MergeCommitsNotAllowedError,
@@ -544,7 +550,7 @@ export class Backport {
     if (result.status === "skipped") return;
 
     if (result.status === "failed") {
-      const message = this.composeFailureMessage(result, context);
+      const message = composeFailureMessage(result);
       console.error(message);
       await this.github.createComment({
         owner: workflowOwner,
@@ -562,7 +568,7 @@ export class Backport {
 
     const successMessage =
       result.status === "success_with_conflicts"
-        ? this.composeMessageForSuccessWithConflicts(
+        ? composeMessageForSuccessWithConflicts(
             newPrNumber,
             targetBranch,
             downstream,
@@ -570,7 +576,7 @@ export class Backport {
             result.uncommittedShas,
             this.config.experimental.conflict_resolution,
           )
-        : this.composeMessageForSuccess(newPrNumber, targetBranch, downstream);
+        : composeMessageForSuccess(newPrNumber, targetBranch, downstream);
 
     await this.github.createComment({
       owner: workflowOwner,
@@ -580,7 +586,7 @@ export class Backport {
     });
 
     if (result.status === "success_with_conflicts") {
-      const conflictMessage = this.composeMessageToResolveCommittedConflicts(
+      const conflictMessage = composeMessageToResolveCommittedConflicts(
         targetBranch,
         branchname,
         result.uncommittedShas,
@@ -595,40 +601,6 @@ export class Backport {
     }
   }
 
-  private composeFailureMessage(
-    result: Extract<TargetResult, { status: "failed" }>,
-    context: BackportContext,
-  ): string {
-    const { targetBranch, error } = result;
-    if (error instanceof GitRefNotFoundError) {
-      return this.composeMessageForFetchTargetFailure(error.ref);
-    }
-    if (error instanceof CheckoutError) {
-      return this.composeMessageForCheckoutFailure(
-        targetBranch,
-        error.branch,
-        error.commits,
-      );
-    }
-    if (error instanceof CherryPickError) {
-      return this.composeMessageForCherryPickFailure(
-        targetBranch,
-        error.branch,
-        error.commits,
-      );
-    }
-    if (error instanceof GitPushError) {
-      return this.composeMessageForGitPushFailure(targetBranch, error.exitCode);
-    }
-    if (error instanceof CreatePRError) {
-      return dedent`Backport branch created but failed to create PR.
-                    Request to create PR rejected with status ${error.status}.
-
-                    (see action log for full response)`;
-    }
-    return error.message;
-  }
-
   private composePRContent(target: string, main: PullRequest): PRContent {
     const title = utils.replacePlaceholders(
       this.config.pull.title,
@@ -641,135 +613,6 @@ export class Backport {
       target,
     );
     return { title, body };
-  }
-
-  private composeMessageForFetchTargetFailure(target: string) {
-    return dedent`Backport failed for \`${target}\`: couldn't find remote ref \`${target}\`.
-                  Please ensure that this Github repo has a branch named \`${target}\`.`;
-  }
-
-  private composeMessageForCheckoutFailure(
-    target: string,
-    branchname: string,
-    commitShasToCherryPick: string[],
-  ): string {
-    const reason = "because it was unable to create a new branch";
-    const suggestion = this.composeSuggestion(
-      target,
-      branchname,
-      commitShasToCherryPick,
-      false,
-    );
-    return dedent`Backport failed for \`${target}\`, ${reason}.
-
-                  Please cherry-pick the changes locally.
-                  ${suggestion}`;
-  }
-
-  private composeMessageForCherryPickFailure(
-    target: string,
-    branchname: string,
-    commitShasToCherryPick: string[],
-  ): string {
-    const reason = "because it was unable to cherry-pick the commit(s)";
-
-    const suggestion = this.composeSuggestion(
-      target,
-      branchname,
-      commitShasToCherryPick,
-      false,
-      "fail",
-    );
-
-    return dedent`Backport failed for \`${target}\`, ${reason}.
-
-                  Please cherry-pick the changes locally and resolve any conflicts.
-                  ${suggestion}`;
-  }
-
-  private composeMessageToResolveCommittedConflicts(
-    target: string,
-    branchname: string,
-    commitShasToCherryPick: string[],
-    confictResolution: string,
-  ): string {
-    const suggestion = this.composeSuggestion(
-      target,
-      branchname,
-      commitShasToCherryPick,
-      true,
-      confictResolution,
-    );
-
-    return dedent`Please cherry-pick the changes locally and resolve any conflicts.
-                  ${suggestion}`;
-  }
-
-  private composeSuggestion(
-    target: string,
-    branchname: string,
-    commitShasToCherryPick: string[],
-    branchExist: boolean,
-    confictResolution: string = "fail",
-  ) {
-    if (branchExist) {
-      if (confictResolution === "draft_commit_conflicts") {
-        return dedent`\`\`\`bash
-        git fetch origin ${branchname}
-        git worktree add --checkout .worktree/${branchname} ${branchname}
-        cd .worktree/${branchname}
-        git reset --hard HEAD^
-        git cherry-pick -x ${commitShasToCherryPick.join(" ")}
-        \`\`\``;
-      } else {
-        return "";
-      }
-    } else {
-      return dedent`\`\`\`bash
-      git fetch origin ${target}
-      git worktree add -d .worktree/${branchname} origin/${target}
-      cd .worktree/${branchname}
-      git switch --create ${branchname}
-      git cherry-pick -x ${commitShasToCherryPick.join(" ")}
-      \`\`\``;
-    }
-  }
-
-  private composeMessageForGitPushFailure(
-    target: string,
-    exitcode: number,
-  ): string {
-    //TODO better error messages depending on exit code
-    return dedent`Git push to origin failed for ${target} with exitcode ${exitcode}`;
-  }
-
-  private composeMessageForSuccess(
-    pr_number: number,
-    target: string,
-    downstream: string,
-  ) {
-    return dedent`Successfully created backport PR for \`${target}\`:
-                  - ${downstream}#${pr_number}`;
-  }
-
-  private composeMessageForSuccessWithConflicts(
-    pr_number: number,
-    target: string,
-    downstream: string,
-    branchname: string,
-    commitShasToCherryPick: string[],
-    conflictResolution: string,
-  ): string {
-    const suggestionToResolve = this.composeMessageToResolveCommittedConflicts(
-      target,
-      branchname,
-      commitShasToCherryPick,
-      conflictResolution,
-    );
-    return dedent`Created backport PR for \`${target}\`:
-                  - ${downstream}#${pr_number} with remaining conflicts!
-
-                  ${suggestionToResolve}`;
   }
 
   private createOutput(
