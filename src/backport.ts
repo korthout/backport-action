@@ -98,19 +98,22 @@ export class Backport {
     try {
       const payload = this.github.getPayload();
 
+      // Repo where the workflow runs — used for commenting on the source PR.
       const workflowOwner = this.github.getRepo().owner;
-      const owner =
+      const workflowRepo =
+        payload.repository?.name ?? this.github.getRepo().repo;
+
+      // Repo where backport branches and PRs are created — same as workflow
+      // repo unless using the downstream_repo experimental config.
+      const targetOwner =
         this.shouldUseDownstreamRepo() && this.downstreamOwner // if undefined, use owner of workflow
           ? this.downstreamOwner
           : workflowOwner;
-
-      const workflowRepo =
-        payload.repository?.name ?? this.github.getRepo().repo;
-      const repo = this.shouldUseDownstreamRepo()
+      const targetRepo = this.shouldUseDownstreamRepo()
         ? this.downstreamRepo
         : workflowRepo;
 
-      if (repo === undefined) throw new Error("No repository defined!");
+      if (targetRepo === undefined) throw new Error("No repository defined!");
 
       const pull_number =
         this.config.source_pr_number === undefined
@@ -260,21 +263,31 @@ export class Backport {
       );
 
       if (this.shouldUseDownstreamRepo()) {
-        await this.git.remoteAdd(this.config.pwd, "downstream", owner, repo);
+        await this.git.remoteAdd(
+          this.config.pwd,
+          "downstream",
+          targetOwner,
+          targetRepo,
+        );
       }
 
       const successByTarget = new Map<string, boolean>();
       const createdPullRequestNumbers = new Array<number>();
-      for (const target of target_branches) {
-        console.log(`Backporting to target branch '${target}...'`);
+      for (const targetBranch of target_branches) {
+        console.log(`Backporting to target branch '${targetBranch}...'`);
 
         try {
-          await this.git.fetch(target, this.config.pwd, 1, this.getRemote());
+          await this.git.fetch(
+            targetBranch,
+            this.config.pwd,
+            1,
+            this.getRemote(),
+          );
         } catch (error) {
           if (error instanceof GitRefNotFoundError) {
             const message = this.composeMessageForFetchTargetFailure(error.ref);
             console.error(message);
-            successByTarget.set(target, false);
+            successByTarget.set(targetBranch, false);
             await this.github.createComment({
               owner: workflowOwner,
               repo: workflowRepo,
@@ -291,24 +304,24 @@ export class Backport {
           const branchname = utils.replacePlaceholders(
             this.config.pull.branch_name,
             mainpr,
-            target,
+            targetBranch,
           );
 
           console.log(`Start backport to ${branchname}`);
           try {
             await this.git.checkout(
               branchname,
-              `${this.getRemote()}/${target}`,
+              `${this.getRemote()}/${targetBranch}`,
               this.config.pwd,
             );
           } catch (error) {
             const message = this.composeMessageForCheckoutFailure(
-              target,
+              targetBranch,
               branchname,
               commitShasToCherryPick,
             );
             console.error(message);
-            successByTarget.set(target, false);
+            successByTarget.set(targetBranch, false);
             await this.github.createComment({
               owner: workflowOwner,
               repo: workflowRepo,
@@ -328,12 +341,12 @@ export class Backport {
             );
           } catch (error) {
             const message = this.composeMessageForCherryPickFailure(
-              target,
+              targetBranch,
               branchname,
               commitShasToCherryPick,
             );
             console.error(message);
-            successByTarget.set(target, false);
+            successByTarget.set(targetBranch, false);
             await this.github.createComment({
               owner: workflowOwner,
               repo: workflowRepo,
@@ -368,11 +381,11 @@ export class Backport {
             } catch {
               // Fetching the branch failed as well, so report the original push error.
               const message = this.composeMessageForGitPushFailure(
-                target,
+                targetBranch,
                 pushExitCode,
               );
               console.error(message);
-              successByTarget.set(target, false);
+              successByTarget.set(targetBranch, false);
               await this.github.createComment({
                 owner: workflowOwner,
                 repo: workflowRepo,
@@ -384,16 +397,16 @@ export class Backport {
           }
 
           console.info(`Create PR for ${branchname}`);
-          const { title, body } = this.composePRContent(target, mainpr);
+          const { title, body } = this.composePRContent(targetBranch, mainpr);
           let new_pr_response: CreatePullRequestResponse;
           try {
             new_pr_response = await this.github.createPR({
-              owner,
-              repo,
+              owner: targetOwner,
+              repo: targetRepo,
               title,
               body,
               head: branchname,
-              base: target,
+              base: targetBranch,
               maintainer_can_modify: true,
               draft: uncommitedShas !== null,
             });
@@ -411,7 +424,7 @@ export class Backport {
             }
 
             console.error(JSON.stringify(error.response?.data));
-            successByTarget.set(target, false);
+            successByTarget.set(targetBranch, false);
             const message = this.composeMessageForCreatePRFailed(error);
             await this.github.createComment({
               owner: workflowOwner,
@@ -443,8 +456,8 @@ export class Backport {
               console.info("Setting assignees " + assignees);
               try {
                 await this.github.addAssignees(new_pr.number, assignees, {
-                  owner,
-                  repo,
+                  owner: targetOwner,
+                  repo: targetRepo,
                 });
               } catch (error) {
                 if (!(error instanceof RequestError)) throw error;
@@ -485,8 +498,8 @@ export class Backport {
             if (reviewers.length > 0) {
               console.info("Setting reviewers " + reviewers);
               const reviewRequest = {
-                owner,
-                repo,
+                owner: targetOwner,
+                repo: targetRepo,
                 pull_number: new_pr.number,
                 reviewers: reviewers,
               };
@@ -506,8 +519,8 @@ export class Backport {
             if (reviewers.length > 0) {
               console.info("Setting reviewers " + reviewers);
               const reviewRequest = {
-                owner,
-                repo,
+                owner: targetOwner,
+                repo: targetRepo,
                 pull_number: new_pr.number,
                 reviewers: reviewers,
               };
@@ -527,8 +540,8 @@ export class Backport {
           if (labels.length > 0) {
             try {
               await this.github.labelPR(new_pr.number, labels, {
-                owner,
-                repo,
+                owner: targetOwner,
+                repo: targetRepo,
               });
             } catch (error) {
               if (!(error instanceof RequestError)) throw error;
@@ -542,8 +555,8 @@ export class Backport {
             console.info("Setting " + author + " as assignee");
             try {
               await this.github.addAssignees(new_pr.number, [author], {
-                owner,
-                repo,
+                owner: targetOwner,
+                repo: targetRepo,
               });
             } catch (error) {
               if (!(error instanceof RequestError)) throw error;
@@ -556,8 +569,8 @@ export class Backport {
             console.info("Requesting review from " + author);
             try {
               await this.github.requestReviewers({
-                owner,
-                repo,
+                owner: targetOwner,
+                repo: targetRepo,
                 pull_number: new_pr.number,
                 reviewers: [author],
               });
@@ -572,8 +585,8 @@ export class Backport {
             console.info("Adding reviewers: " + addedReviewers);
             try {
               await this.github.requestReviewers({
-                owner,
-                repo,
+                owner: targetOwner,
+                repo: targetRepo,
                 pull_number: new_pr.number,
                 reviewers: addedReviewers,
               });
@@ -590,8 +603,8 @@ export class Backport {
             console.info("Adding team reviewers: " + addedTeamReviewers);
             try {
               await this.github.requestReviewers({
-                owner,
-                repo,
+                owner: targetOwner,
+                repo: targetRepo,
                 pull_number: new_pr.number,
                 reviewers: [],
                 team_reviewers: addedTeamReviewers,
@@ -610,8 +623,8 @@ export class Backport {
               await this.github.enableAutoMerge(
                 new_pr.number,
                 {
-                  owner,
-                  repo,
+                  owner: targetOwner,
+                  repo: targetRepo,
                 },
                 this.config.auto_merge_method,
               );
@@ -643,19 +656,23 @@ export class Backport {
               uncommitedShas !== null
                 ? this.composeMessageForSuccessWithConflicts(
                     new_pr.number,
-                    target,
-                    this.shouldUseDownstreamRepo() ? `${owner}/${repo}` : "",
+                    targetBranch,
+                    this.shouldUseDownstreamRepo()
+                      ? `${targetOwner}/${targetRepo}`
+                      : "",
                     branchname,
                     uncommitedShas,
                     this.config.experimental.conflict_resolution,
                   )
                 : this.composeMessageForSuccess(
                     new_pr.number,
-                    target,
-                    this.shouldUseDownstreamRepo() ? `${owner}/${repo}` : "",
+                    targetBranch,
+                    this.shouldUseDownstreamRepo()
+                      ? `${targetOwner}/${targetRepo}`
+                      : "",
                   );
 
-            successByTarget.set(target, true);
+            successByTarget.set(targetBranch, true);
             createdPullRequestNumbers.push(new_pr.number);
             await this.github.createComment({
               owner: workflowOwner,
@@ -668,15 +685,15 @@ export class Backport {
           if (uncommitedShas !== null) {
             const message: string =
               this.composeMessageToResolveCommittedConflicts(
-                target,
+                targetBranch,
                 branchname,
                 uncommitedShas,
                 this.config.experimental.conflict_resolution,
               );
 
             await this.github.createComment({
-              owner,
-              repo,
+              owner: targetOwner,
+              repo: targetRepo,
               issue_number: new_pr.number,
               body: message,
             });
@@ -684,7 +701,7 @@ export class Backport {
         } catch (error) {
           if (error instanceof Error) {
             console.error(error.message);
-            successByTarget.set(target, false);
+            successByTarget.set(targetBranch, false);
             await this.github.createComment({
               owner: workflowOwner,
               repo: workflowRepo,
