@@ -14,6 +14,8 @@ export interface GithubApi {
   getRepo(): Repo;
   getPayload(): Payload;
   getPullNumber(): number;
+  getRunId(): string;
+  getRunUrl(): string;
   createComment(comment: Comment): Promise<{}>;
   getPullRequest(pull_number: number): Promise<PullRequest>;
   isMerged(pull: PullRequest): Promise<boolean>;
@@ -73,6 +75,17 @@ export class Github implements GithubApi {
     // if the pr is not part of the payload
     // the number can be taken from the issue
     return this.#context.issue.number;
+  }
+
+  public getRunId(): string {
+    return process.env.GITHUB_RUN_ID ?? "";
+  }
+
+  public getRunUrl(): string {
+    const serverUrl = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+    const repository = process.env.GITHUB_REPOSITORY ?? "";
+    const runId = this.getRunId();
+    return `${serverUrl}/${repository}/actions/runs/${runId}`;
   }
 
   public async createComment(comment: Comment) {
