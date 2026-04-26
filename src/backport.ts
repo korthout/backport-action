@@ -9,6 +9,11 @@ import {
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
 import {
+  CommentContext,
+  formatInitialComment,
+  formatRunComment,
+} from "./comments.js";
+import {
   CheckoutError,
   CherryPickError,
   CreatePRError,
@@ -48,7 +53,6 @@ type BackportContext = {
   labelsToCopy: string[];
   mainpr: PullRequest;
 };
-
 
 export type Config = {
   pwd: string;
@@ -156,14 +160,51 @@ export class Backport {
           : this.config.source_pr_number;
       const mainpr = await this.github.getPullRequest(pull_number);
 
+      const isSummary = this.config.comment_style === "summary";
+      const commentCtx: CommentContext = {
+        runId: this.github.getRunId(),
+        runUrl: this.github.getRunUrl(),
+      };
+
+      // For the summary style, create the placeholder comment as early as
+      // possible (before validating the PR) so we can update it with errors
+      // even if validation fails. Comment creation is best-effort: on
+      // failure we log and continue without commenting.
+      let summaryCommentId: number | undefined;
+      if (isSummary) {
+        try {
+          summaryCommentId = await this.github.createComment({
+            owner: workflowOwner,
+            repo: workflowRepo,
+            issue_number: pull_number,
+            body: formatInitialComment(commentCtx),
+          });
+        } catch (error) {
+          console.error("Failed to create summary comment:", error);
+        }
+      }
+
+      const updateSummary = async (body: string) => {
+        if (summaryCommentId === undefined) return;
+        try {
+          await this.github.updateComment(summaryCommentId, body);
+        } catch (error) {
+          console.error("Failed to update summary comment:", error);
+        }
+      };
+
       if (!(await this.github.isMerged(mainpr))) {
         const message = "Only merged pull requests can be backported.";
-        this.github.createComment({
-          owner: workflowOwner,
-          repo: workflowRepo,
-          issue_number: pull_number,
-          body: message,
-        });
+        if (isSummary) {
+          await updateSummary(formatRunComment([], [], commentCtx, message));
+        } else {
+          this.github.createComment({
+            owner: workflowOwner,
+            repo: workflowRepo,
+            issue_number: pull_number,
+            body: message,
+          });
+        }
         return;
       }
 
@@ -172,7 +213,17 @@ export class Backport {
         console.log(
           `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.source_labels_pattern?.source}'`,
         );
+        if (isSummary) {
+          // No targets to backport — update to the "backported" wording
+          // with no table. This is not a failure.
+          await updateSummary(formatRunComment([], [], commentCtx));
+        }
         return; // nothing left to do here
+      }
+
+      if (isSummary) {
+        // Targets known but not yet processed — show all-pending table
+        await updateSummary(formatRunComment([], target_branches, commentCtx));
       }
 
       let commitShasToCherryPick: string[];
@@ -187,13 +238,24 @@ export class Backport {
       } catch (error) {
         if (error instanceof MergeCommitsNotAllowedError) {
           console.error(error.message);
-          this.github.createComment({
-            owner: workflowOwner,
-            repo: workflowRepo,
-            issue_number: pull_number,
-            body: error.message,
-          });
+          if (isSummary) {
+            await updateSummary(
+              formatRunComment([], target_branches, commentCtx, error.message),
+            );
+          } else {
+            this.github.createComment({
+              owner: workflowOwner,
+              repo: workflowRepo,
+              issue_number: pull_number,
+              body: error.message,
+            });
+          }
           return;
+        }
+        if (isSummary && error instanceof Error) {
+          await updateSummary(
+            formatRunComment([], target_branches, commentCtx, error.message),
+          );
         }
         throw error;
       }
@@ -229,8 +291,8 @@ export class Backport {
         targetOwner,
         targetRepo,
         pullNumber: pull_number,
-        runId: this.github.getRunId(),
-        runUrl: this.github.getRunUrl(),
+        runId: commentCtx.runId,
+        runUrl: commentCtx.runUrl,
         remote: this.getRemote(),
         commitShasToCherryPick,
         labelsToCopy,
@@ -239,9 +301,20 @@ export class Backport {
 
       const successByTarget = new Map<string, boolean>();
       const createdPullRequestNumbers = new Array<number>();
-      for (const targetBranch of target_branches) {
+      const results: TargetResult[] = [];
+      for (let i = 0; i < target_branches.length; i++) {
+        const targetBranch = target_branches[i];
         const result = await this.backportToTarget(targetBranch, context);
-        await this.handleTargetResultLegacy(result, context);
+        results.push(result);
+
+        if (isSummary) {
+          const remainingTargets = target_branches.slice(i + 1);
+          await updateSummary(
+            formatRunComment(results, remainingTargets, commentCtx),
+          );
+        } else {
+          await this.handleTargetResultLegacy(result, context);
+        }
 
         if (result.status === "skipped") continue;
 

@@ -20,7 +20,8 @@ export type CommentContext = {
   runUrl: string;
 };
 
-const ACTION_LINK = "[Backport-action](https://github.com/korthout/backport-action)";
+const ACTION_LINK =
+  "[Backport-action](https://github.com/korthout/backport-action)";
 
 /**
  * Renders the full progressive summary comment.
@@ -41,8 +42,9 @@ export function formatRunComment(
   const errorBlock = error ? `\n\n${error}` : "";
   const table = formatTable(results, pendingTargets);
   const detailsBlocks = results
-    .filter((r): r is Extract<TargetResult, { status: "failed" }> =>
-      r.status === "failed",
+    .filter(
+      (r): r is Extract<TargetResult, { status: "failed" }> =>
+        r.status === "failed",
     )
     .map((r) => formatSingleTargetComment(r, context))
     .join("\n\n");
@@ -55,7 +57,7 @@ export function formatRunComment(
 }
 
 function formatIntroduction(
-  results: TargetResult[],
+  _results: TargetResult[],
   pendingTargets: string[],
   context: CommentContext,
   error?: string,
@@ -64,10 +66,20 @@ function formatIntroduction(
   if (error) {
     return `${ACTION_LINK} failed to backport this pull request in ${runLink}.`;
   }
-  if (pendingTargets.length > 0 || results.length === 0) {
+  if (pendingTargets.length > 0) {
     return `${ACTION_LINK} is backporting this pull request in ${runLink}.`;
   }
   return `${ACTION_LINK} backported this pull request in ${runLink}.`;
+}
+
+/**
+ * Initial placeholder body posted right after the action starts, before
+ * targets are known. Replaced by `formatRunComment` updates on subsequent
+ * events.
+ */
+export function formatInitialComment(context: CommentContext): string {
+  const runLink = `[workflow run ${context.runId}](${context.runUrl})`;
+  return `${ACTION_LINK} is backporting this pull request in ${runLink}.`;
 }
 
 function formatTable(

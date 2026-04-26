@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   CommentContext,
+  formatInitialComment,
   formatRunComment,
   formatSingleTargetComment,
 } from "../comments.js";
@@ -96,7 +97,10 @@ describe("formatSingleTargetComment", () => {
 
   it("GitRefNotFoundError: includes ref name", () => {
     const out = formatSingleTargetComment(
-      failed("nonexistent", new GitRefNotFoundError("not found", "nonexistent")),
+      failed(
+        "nonexistent",
+        new GitRefNotFoundError("not found", "nonexistent"),
+      ),
       context,
     );
 
@@ -229,15 +233,31 @@ describe("formatRunComment", () => {
     expect(out.match(/:hourglass: Pending/g)).toHaveLength(2);
   });
 
-  it("no targets (early run state): intro only, no table", () => {
+  it("no targets and not pending: intro is 'backported', no table", () => {
     const out = formatRunComment([], [], context);
 
+    expect(out).toContain("backported this pull request");
+    expect(out).not.toContain("is backporting");
+    expect(out).not.toContain("| Target |");
+  });
+});
+
+describe("formatInitialComment", () => {
+  it("renders the early-run placeholder", () => {
+    const out = formatInitialComment(context);
+
     expect(out).toContain("is backporting this pull request");
+    expect(out).toContain("workflow run 12345");
     expect(out).not.toContain("| Target |");
   });
 
   it("error with empty pendingTargets: intro + error message, no table", () => {
-    const out = formatRunComment([], [], context, "Only merged pull requests can be backported.");
+    const out = formatRunComment(
+      [],
+      [],
+      context,
+      "Only merged pull requests can be backported.",
+    );
 
     expect(out).toContain("failed to backport this pull request");
     expect(out).toContain("Only merged pull requests");
