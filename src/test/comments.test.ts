@@ -151,12 +151,12 @@ describe("formatRunComment", () => {
     ];
     const out = formatRunComment(results, [], context);
 
-    expect(out).toContain("unable to cherry-pick");
-    expect(out).toContain("push failed");
-    // stable/8.0 details should appear before stable/7.8 details
-    expect(out.indexOf("unable to cherry-pick")).toBeLessThan(
-      out.indexOf("push failed"),
-    );
+    const detailsBlocks = out.match(/<details>[\s\S]*?<\/details>/g);
+    expect(detailsBlocks).toHaveLength(2);
+    expect(detailsBlocks![0]).toContain("stable/8.0");
+    expect(detailsBlocks![0]).toContain("unable to cherry-pick");
+    expect(detailsBlocks![1]).toContain("stable/7.8");
+    expect(detailsBlocks![1]).toContain("push failed");
   });
 
   it("all targets failed: intro is 'failed to backport'", () => {
