@@ -715,19 +715,22 @@ describe("Backport.run() orchestration", () => {
       const backport = new Backport(github, config, git);
       await backport.run();
 
-      // Find the targets-known update (all pending, no completed rows)
+      const countMatches = (body: string, marker: string) =>
+        (body.match(new RegExp(marker, "g")) ?? []).length;
+
+      // Targets-known update: both rows pending, no completed rows
       const allPending = github.updatedComments.find(
         (u) =>
-          u.body.includes(":hourglass:") &&
+          countMatches(u.body, ":hourglass:") === 2 &&
           !u.body.includes(":white_check_mark:"),
       );
       expect(allPending).toBeDefined();
 
-      // Find partial update (one completed, one pending)
+      // Partial update: exactly one completed, exactly one pending
       const partial = github.updatedComments.find(
         (u) =>
-          u.body.includes(":white_check_mark:") &&
-          u.body.includes(":hourglass:"),
+          countMatches(u.body, ":white_check_mark:") === 1 &&
+          countMatches(u.body, ":hourglass:") === 1,
       );
       expect(partial).toBeDefined();
 
