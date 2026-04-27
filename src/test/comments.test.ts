@@ -160,6 +160,82 @@ describe("formatRunComment", () => {
     );
   });
 
+  it("all targets failed: intro is 'failed to backport'", () => {
+    const results: TargetResult[] = [
+      failed(
+        "stable/8.0",
+        new CherryPickError("cp", "backport-42-to-8.0", ["abc"]),
+      ),
+      failed(
+        "stable/7.8",
+        new GitPushError("push", "backport-42-to-7.8", "origin", 128),
+      ),
+    ];
+    const out = formatRunComment(results, [], context);
+
+    expect(out).toContain("failed to backport this pull request");
+    expect(out).not.toContain("completed backporting");
+    expect(out).not.toContain("is backporting");
+  });
+
+  it("mixed success and failure: intro reports completion with failures", () => {
+    const results: TargetResult[] = [
+      {
+        status: "success",
+        targetBranch: "main",
+        newPrNumber: 100,
+        branchname: "b1",
+      },
+      failed(
+        "stable/8.0",
+        new CherryPickError("cp", "backport-42-to-8.0", ["abc"]),
+      ),
+    ];
+    const out = formatRunComment(results, [], context);
+
+    expect(out).toContain(
+      "completed backporting this pull request with failures",
+    );
+    expect(out).not.toContain("failed to backport");
+  });
+
+  it("failure mixed with skip: intro reports completion with failures", () => {
+    const results: TargetResult[] = [
+      failed(
+        "stable/8.0",
+        new CherryPickError("cp", "backport-42-to-8.0", ["abc"]),
+      ),
+      {
+        status: "skipped",
+        targetBranch: "stable/7.9",
+        reason: "PR already exists",
+      },
+    ];
+    const out = formatRunComment(results, [], context);
+
+    expect(out).toContain(
+      "completed backporting this pull request with failures",
+    );
+    expect(out).not.toContain("failed to backport");
+  });
+
+  it("success_with_conflicts is not a failure for intro wording", () => {
+    const results: TargetResult[] = [
+      {
+        status: "success_with_conflicts",
+        targetBranch: "main",
+        newPrNumber: 200,
+        branchname: "b1",
+        uncommittedShas: ["abc"],
+      },
+    ];
+    const out = formatRunComment(results, [], context);
+
+    expect(out).toContain("backported this pull request");
+    expect(out).not.toContain("with failures");
+    expect(out).not.toContain("failed to backport");
+  });
+
   it("mix of statuses: only failures get details blocks", () => {
     const results: TargetResult[] = [
       {

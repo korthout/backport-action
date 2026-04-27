@@ -57,7 +57,7 @@ export function formatRunComment(
 }
 
 function formatIntroduction(
-  _results: TargetResult[],
+  results: TargetResult[],
   pendingTargets: string[],
   context: CommentContext,
   error?: string,
@@ -68,6 +68,13 @@ function formatIntroduction(
   }
   if (pendingTargets.length > 0) {
     return `${ACTION_LINK} is backporting this pull request in ${runLink}.`;
+  }
+  const failedCount = results.filter((r) => r.status === "failed").length;
+  if (failedCount > 0 && failedCount === results.length) {
+    return `${ACTION_LINK} failed to backport this pull request in ${runLink}.`;
+  }
+  if (failedCount > 0) {
+    return `${ACTION_LINK} completed backporting this pull request with failures in ${runLink}.`;
   }
   return `${ACTION_LINK} backported this pull request in ${runLink}.`;
 }
