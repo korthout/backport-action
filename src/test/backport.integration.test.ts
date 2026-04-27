@@ -697,6 +697,13 @@ describe("Backport.run() orchestration", () => {
 
       // Initial create + targets-known update + 2 per-target updates = 3 updates
       expect(github.updatedComments.length).toBeGreaterThanOrEqual(3);
+
+      // Every update targets the comment that was created
+      const id = github.comments[0].id;
+      expect(github.updatedComments.every((u) => u.comment_id === id)).toBe(
+        true,
+      );
+
       const finalBody =
         github.updatedComments[github.updatedComments.length - 1].body;
       expect(finalBody).toContain("backported");
