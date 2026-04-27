@@ -648,4 +648,205 @@ describe("Backport.run() orchestration", () => {
       );
     });
   });
+
+  describe("comment_style: legacy (default)", () => {
+    it("single target: posts one comment and never updates", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit();
+      const config = makeConfig();
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.comments).toHaveLength(1);
+      expect(github.comments[0].body).toContain("Successfully created");
+      expect(github.updatedComments).toHaveLength(0);
+    });
+
+    it("multiple targets: posts one comment per target and never updates", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport main" }, { name: "backport release" }],
+        },
+      });
+      const git = createMockGit();
+      const config = makeConfig();
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.comments).toHaveLength(2);
+      expect(github.comments[0].body).toContain("Successfully created");
+      expect(github.comments[1].body).toContain("Successfully created");
+      expect(github.updatedComments).toHaveLength(0);
+    });
+  });
+
+  describe("comment_style: summary", () => {
+    it("creates a single comment up front and updates it after each target", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport main" }, { name: "backport release" }],
+        },
+      });
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.comments).toHaveLength(1);
+      expect(github.comments[0].body).toContain("is backporting");
+
+      // Initial create + targets-known update + 2 per-target updates = 3 updates
+      expect(github.updatedComments.length).toBeGreaterThanOrEqual(3);
+
+      // Every update targets the comment that was created
+      const id = github.comments[0].id;
+      expect(github.updatedComments.every((u) => u.comment_id === id)).toBe(
+        true,
+      );
+
+      const finalBody =
+        github.updatedComments[github.updatedComments.length - 1].body;
+      expect(finalBody).toContain("backported");
+      expect(finalBody).toContain(":white_check_mark: Created #100");
+      expect(finalBody).toContain(":white_check_mark: Created #101");
+    });
+
+    it("progressive updates show all-pending, then partial, then all-resolved", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport main" }, { name: "backport release" }],
+        },
+      });
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      const countMatches = (body: string, marker: string) =>
+        (body.match(new RegExp(marker, "g")) ?? []).length;
+
+      // Targets-known update: both rows pending, no completed rows
+      const allPending = github.updatedComments.find(
+        (u) =>
+          countMatches(u.body, ":hourglass:") === 2 &&
+          !u.body.includes(":white_check_mark:"),
+      );
+      expect(allPending).toBeDefined();
+
+      // Partial update: exactly one completed, exactly one pending
+      const partial = github.updatedComments.find(
+        (u) =>
+          countMatches(u.body, ":white_check_mark:") === 1 &&
+          countMatches(u.body, ":hourglass:") === 1,
+      );
+      expect(partial).toBeDefined();
+
+      // Final update has both completed, no pending rows
+      const final = github.updatedComments[github.updatedComments.length - 1];
+      expect(final.body).toContain(":white_check_mark: Created #100");
+      expect(final.body).toContain(":white_check_mark: Created #101");
+      expect(final.body).not.toContain(":hourglass:");
+    });
+
+    it("failing target: final comment has details block with recovery instructions", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit({
+        cherryPick: vi.fn().mockRejectedValue(new Error("cherry-pick failed")),
+      });
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      const final =
+        github.updatedComments[github.updatedComments.length - 1].body;
+      expect(final).toContain(":x: Failed");
+      expect(final).toContain("<details>");
+      expect(final).toContain("unable to cherry-pick");
+    });
+
+    it("skipped target (PR already exists): summary cell shows skipped", async () => {
+      const github = new FakeGithub({
+        existingPRBranches: ["backport-42-to-main"],
+      });
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      const final =
+        github.updatedComments[github.updatedComments.length - 1].body;
+      expect(final).toContain(":heavy_minus_sign: Skipped");
+      expect(final).toContain("PR already exists");
+    });
+
+    it("no targets: comment is updated to 'backported' with no table", async () => {
+      const github = new FakeGithub({
+        sourcePr: { labels: [{ name: "bug" }] },
+      });
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      const final =
+        github.updatedComments[github.updatedComments.length - 1].body;
+      expect(final).toContain("backported this pull request");
+      expect(final).not.toContain("| Target |");
+    });
+
+    it("unmerged PR: comment is updated to 'failed to backport' with error", async () => {
+      const github = new FakeGithub({ merged: false });
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      const final =
+        github.updatedComments[github.updatedComments.length - 1].body;
+      expect(final).toContain("failed to backport this pull request");
+      expect(final).toContain("Only merged pull requests");
+    });
+
+    it("comment creation failure: backport still succeeds", async () => {
+      const github = new FakeGithub();
+      github.failOn("createComment", new Error("comment creation failed"));
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs).toHaveLength(1);
+      expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+    });
+
+    it("comment update failure: backport still succeeds", async () => {
+      const github = new FakeGithub();
+      github.failOn("updateComment", new Error("update failed"));
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs).toHaveLength(1);
+      expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+    });
+
+    it("outputs are correct on the success path", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit();
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+      expect(core.setOutput).toHaveBeenCalledWith(
+        "was_successful_by_target",
+        expect.stringContaining("main=true"),
+      );
+      expect(core.setOutput).toHaveBeenCalledWith(
+        "created_pull_numbers",
+        "100",
+      );
+    });
+  });
 });

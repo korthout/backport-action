@@ -77,7 +77,9 @@ export class FakeGithub implements GithubApi {
   private _failures = new Map<keyof GithubApi, Error>();
 
   readonly createdPRs: Array<CreatePullRequest & { number: number }> = [];
-  readonly comments: Comment[] = [];
+  readonly comments: Array<Comment & { id: number }> = [];
+  readonly updatedComments: Array<{ comment_id: number; body: string }> = [];
+  private _nextCommentId = 1000;
   readonly labelsByPR = new Map<number, string[]>();
   readonly assigneesByPR = new Map<number, string[]>();
   readonly reviewersByPR = new Map<number, string[]>();
@@ -155,10 +157,18 @@ export class FakeGithub implements GithubApi {
     return this._mergeStrategyResult;
   }
 
-  async createComment(comment: Comment): Promise<{}> {
+  async createComment(comment: Comment): Promise<number> {
     if (this._failures.has("createComment"))
       throw this._failures.get("createComment")!;
-    this.comments.push(comment);
+    const id = this._nextCommentId++;
+    this.comments.push({ ...comment, id });
+    return id;
+  }
+
+  async updateComment(comment_id: number, body: string): Promise<{}> {
+    if (this._failures.has("updateComment"))
+      throw this._failures.get("updateComment")!;
+    this.updatedComments.push({ comment_id, body });
     return {};
   }
 

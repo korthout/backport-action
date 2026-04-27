@@ -66,3 +66,32 @@ export class CreatePRError extends BackportError {
     this.responseMessage = responseMessage;
   }
 }
+
+/**
+ * Outcome of a single per-target backport attempt.
+ *
+ * Lives in errors.ts so both backport.ts (which produces the result) and
+ * comments.ts (which renders it) can import it without depending on each
+ * other.
+ */
+export type TargetResult =
+  | {
+      status: "success";
+      targetBranch: string;
+      newPrNumber: number;
+      branchname: string;
+    }
+  | {
+      status: "success_with_conflicts";
+      targetBranch: string;
+      newPrNumber: number;
+      branchname: string;
+      uncommittedShas: string[];
+    }
+  | { status: "skipped"; targetBranch: string; reason: string }
+  | {
+      status: "failed";
+      targetBranch: string;
+      error: BackportError | Error;
+      branchname?: string;
+    };

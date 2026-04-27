@@ -38,6 +38,7 @@ async function run(): Promise<void> {
   const add_team_reviewers = core.getInput("add_team_reviewers");
   const auto_merge_enabled = core.getInput("auto_merge_enabled");
   const auto_merge_method = core.getInput("auto_merge_method");
+  const comment_style = core.getInput("comment_style");
   const experimental = JSON.parse(core.getInput("experimental"));
   const source_pr_number = core.getInput("source_pr_number");
 
@@ -61,6 +62,13 @@ async function run(): Promise<void> {
     auto_merge_method !== "rebase"
   ) {
     const message = `Expected input 'auto_merge_method' to be either 'merge', 'squash', or 'rebase', but was '${auto_merge_method}'`;
+    console.error(message);
+    core.setFailed(message);
+    return;
+  }
+
+  if (comment_style !== "legacy" && comment_style !== "summary") {
+    const message = `Expected input 'comment_style' to be either 'legacy' or 'summary', but was '${comment_style}'`;
     console.error(message);
     core.setFailed(message);
     return;
@@ -135,6 +143,7 @@ async function run(): Promise<void> {
             .filter(Boolean),
     auto_merge_enabled: auto_merge_enabled === "true",
     auto_merge_method: auto_merge_method as "merge" | "squash" | "rebase",
+    comment_style: comment_style as "legacy" | "summary",
     experimental: { ...experimentalDefaults, ...experimental },
     source_pr_number:
       source_pr_number === "" ? undefined : parseInt(source_pr_number),
