@@ -137,7 +137,7 @@ export function formatSingleTargetComment(
       `:x: ${targetBranch} — target branch not found`,
       dedent`Tried to fetch \`${error.ref}\`, but the ref was not found on the remote.
 
-             Please ensure that this Github repo has a branch named \`${error.ref}\`.`,
+             Please ensure that this GitHub repo has a branch named \`${error.ref}\`.`,
     );
   }
 

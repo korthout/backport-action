@@ -75,14 +75,14 @@ export function composeMessageToResolveCommittedConflicts(
   target: string,
   branchname: string,
   commitShasToCherryPick: string[],
-  confictResolution: string,
+  conflictResolution: string,
 ): string {
   const suggestion = composeSuggestion(
     target,
     branchname,
     commitShasToCherryPick,
     true,
-    confictResolution,
+    conflictResolution,
   );
 
   return dedent`Please cherry-pick the changes locally and resolve any conflicts.
@@ -91,7 +91,7 @@ export function composeMessageToResolveCommittedConflicts(
 
 function composeMessageForFetchTargetFailure(target: string): string {
   return dedent`Backport failed for \`${target}\`: couldn't find remote ref \`${target}\`.
-                Please ensure that this Github repo has a branch named \`${target}\`.`;
+                Please ensure that this GitHub repo has a branch named \`${target}\`.`;
 }
 
 function composeMessageForCheckoutFailure(
@@ -146,10 +146,10 @@ function composeSuggestion(
   branchname: string,
   commitShasToCherryPick: string[],
   branchExist: boolean,
-  confictResolution: string = "fail",
+  conflictResolution: string = "fail",
 ) {
   if (branchExist) {
-    if (confictResolution === "draft_commit_conflicts") {
+    if (conflictResolution === "draft_commit_conflicts") {
       return dedent`\`\`\`bash
       git fetch origin ${branchname}
       git worktree add --checkout .worktree/${branchname} ${branchname}
