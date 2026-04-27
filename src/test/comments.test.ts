@@ -23,9 +23,8 @@ const context: CommentContext = {
 function failed(
   targetBranch: string,
   error: Error,
-  branchname?: string,
 ): Extract<TargetResult, { status: "failed" }> {
-  return { status: "failed", targetBranch, error, branchname };
+  return { status: "failed", targetBranch, error };
 }
 
 describe("formatSingleTargetComment", () => {
@@ -316,16 +315,6 @@ describe("formatRunComment", () => {
     expect(out).not.toContain("is backporting");
     expect(out).not.toContain("| Target |");
   });
-});
-
-describe("formatInitialComment", () => {
-  it("renders the early-run placeholder", () => {
-    const out = formatInitialComment(context);
-
-    expect(out).toContain("is backporting this pull request");
-    expect(out).toContain("workflow run 12345");
-    expect(out).not.toContain("| Target |");
-  });
 
   it("error with empty pendingTargets: intro + error message, no table", () => {
     const out = formatRunComment(
@@ -382,5 +371,15 @@ describe("formatInitialComment", () => {
 
     expect(out).toContain(":warning: Drafted with conflicts #200");
     expect(out).not.toContain("<details>");
+  });
+});
+
+describe("formatInitialComment", () => {
+  it("renders the early-run placeholder", () => {
+    const out = formatInitialComment(context);
+
+    expect(out).toContain("is backporting this pull request");
+    expect(out).toContain("workflow run 12345");
+    expect(out).not.toContain("| Target |");
   });
 });

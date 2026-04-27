@@ -650,7 +650,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   describe("comment_style: legacy (default)", () => {
-    it("posts per-target comments and never updates", async () => {
+    it("single target: posts one comment and never updates", async () => {
       const github = new FakeGithub();
       const git = createMockGit();
       const config = makeConfig();
@@ -659,6 +659,23 @@ describe("Backport.run() orchestration", () => {
 
       expect(github.comments).toHaveLength(1);
       expect(github.comments[0].body).toContain("Successfully created");
+      expect(github.updatedComments).toHaveLength(0);
+    });
+
+    it("multiple targets: posts one comment per target and never updates", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport main" }, { name: "backport release" }],
+        },
+      });
+      const git = createMockGit();
+      const config = makeConfig();
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.comments).toHaveLength(2);
+      expect(github.comments[0].body).toContain("Successfully created");
+      expect(github.comments[1].body).toContain("Successfully created");
       expect(github.updatedComments).toHaveLength(0);
     });
   });
