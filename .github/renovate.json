@@ -7,7 +7,7 @@
   ],
   "packageRules": [
     {
-      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "matchUpdateTypes": ["patch", "pin", "digest", "lockFileMaintenance"],
       "addLabels": ["automerge"]
     }
   ]
