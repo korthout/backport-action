@@ -681,7 +681,7 @@ describe("Backport.run() orchestration", () => {
   });
 
   describe("comment_style: summary", () => {
-    it("creates a single comment up front and updates it after each target", async () => {
+    it("lazily creates one comment with the targets-known body and updates it after each target", async () => {
       const github = new FakeGithub({
         sourcePr: {
           labels: [{ name: "backport main" }, { name: "backport release" }],
@@ -693,10 +693,11 @@ describe("Backport.run() orchestration", () => {
       await backport.run();
 
       expect(github.comments).toHaveLength(1);
-      expect(github.comments[0].body).toContain("is backporting");
+      // First update is the create itself, body shows targets pending.
+      expect(github.comments[0].body).toContain(":hourglass:");
 
-      // Initial create + targets-known update + 2 per-target updates = 3 updates
-      expect(github.updatedComments.length).toBeGreaterThanOrEqual(3);
+      // Two per-target updates after the create
+      expect(github.updatedComments.length).toBeGreaterThanOrEqual(2);
 
       // Every update targets the comment that was created
       const id = github.comments[0].id;
@@ -725,13 +726,10 @@ describe("Backport.run() orchestration", () => {
       const countMatches = (body: string, marker: string) =>
         (body.match(new RegExp(marker, "g")) ?? []).length;
 
-      // Targets-known update: both rows pending, no completed rows
-      const allPending = github.updatedComments.find(
-        (u) =>
-          countMatches(u.body, ":hourglass:") === 2 &&
-          !u.body.includes(":white_check_mark:"),
-      );
-      expect(allPending).toBeDefined();
+      // First state is the create itself: both rows pending, no completed rows.
+      const allPendingBody = github.comments[0].body;
+      expect(countMatches(allPendingBody, ":hourglass:")).toBe(2);
+      expect(allPendingBody).not.toContain(":white_check_mark:");
 
       // Partial update: exactly one completed, exactly one pending
       const partial = github.updatedComments.find(
@@ -779,7 +777,7 @@ describe("Backport.run() orchestration", () => {
       expect(final).toContain("PR already exists");
     });
 
-    it("no targets: comment is updated to 'backported' with no table", async () => {
+    it("no targets: no summary comment is created (#629)", async () => {
       const github = new FakeGithub({
         sourcePr: { labels: [{ name: "bug" }] },
       });
@@ -788,23 +786,27 @@ describe("Backport.run() orchestration", () => {
       const backport = new Backport(github, config, git);
       await backport.run();
 
-      const final =
-        github.updatedComments[github.updatedComments.length - 1].body;
-      expect(final).toContain("backported this pull request");
-      expect(final).not.toContain("| Target |");
+      // Comment must not be created at all when there are no target
+      // branches — the previous behaviour left an empty "backported"
+      // comment on every merged PR that did not opt into a backport.
+      expect(github.comments).toHaveLength(0);
+      expect(github.updatedComments).toHaveLength(0);
     });
 
-    it("unmerged PR: comment is updated to 'failed to backport' with error", async () => {
+    it("unmerged PR: lazy-creates the comment with the 'failed to backport' body", async () => {
       const github = new FakeGithub({ merged: false });
       const git = createMockGit();
       const config = makeConfig({ comment_style: "summary" });
       const backport = new Backport(github, config, git);
       await backport.run();
 
-      const final =
-        github.updatedComments[github.updatedComments.length - 1].body;
+      // Comment is created (not updated) on the first updateSummary
+      // call, so the failure body should be in the create itself.
+      expect(github.comments).toHaveLength(1);
+      const final = github.comments[0].body;
       expect(final).toContain("failed to backport this pull request");
       expect(final).toContain("Only merged pull requests");
+      expect(github.updatedComments).toHaveLength(0);
     });
 
     it("comment creation failure: backport still succeeds", async () => {
