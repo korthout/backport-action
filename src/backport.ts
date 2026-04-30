@@ -8,11 +8,7 @@ import {
 } from "./github.js";
 import { GithubApi } from "./github.js";
 import { GitApi, GitRefNotFoundError } from "./git.js";
-import {
-  CommentContext,
-  formatInitialComment,
-  formatRunComment,
-} from "./comments.js";
+import { CommentContext, formatRunComment } from "./comments.js";
 import {
   CheckoutError,
   CherryPickError,
@@ -172,26 +168,27 @@ export class Backport {
         runUrl: this.github.getRunUrl(),
       };
 
-      // For the summary style, create the placeholder comment as early as
-      // possible (before validating the PR) so we can update it with errors
-      // even if validation fails. Comment creation is best-effort: on
-      // failure we log and continue without commenting.
+      // For the summary style we lazily create the placeholder comment on
+      // the first call to updateSummary. Creating it upfront caused #629:
+      // when the merged PR carries no labels matching the backport pattern,
+      // the "no target branches" early return left an empty summary
+      // comment on every merged PR.
       let summaryCommentId: number | undefined;
-      if (isSummary) {
-        try {
-          summaryCommentId = await this.github.createComment({
-            owner: workflowOwner,
-            repo: workflowRepo,
-            issue_number: pull_number,
-            body: formatInitialComment(commentCtx),
-          });
-        } catch (error) {
-          console.error("Failed to create summary comment:", error);
-        }
-      }
-
       const updateSummary = async (body: string) => {
-        if (summaryCommentId === undefined) return;
+        if (!isSummary) return;
+        if (summaryCommentId === undefined) {
+          try {
+            summaryCommentId = await this.github.createComment({
+              owner: workflowOwner,
+              repo: workflowRepo,
+              issue_number: pull_number,
+              body,
+            });
+          } catch (error) {
+            console.error("Failed to create summary comment:", error);
+          }
+          return;
+        }
         try {
           await this.github.updateComment(summaryCommentId, body);
         } catch (error) {
@@ -219,11 +216,9 @@ export class Backport {
         console.log(
           `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.source_labels_pattern?.source}'`,
         );
-        if (isSummary) {
-          // No targets to backport — update to the "backported" wording
-          // with no table. This is not a failure.
-          await updateSummary(formatRunComment([], [], commentCtx));
-        }
+        // Don't create a summary comment for the no-targets path — there
+        // is nothing meaningful to report and the comment would be added
+        // noise on every merged PR that does not opt into a backport.
         return; // nothing left to do here
       }
 
