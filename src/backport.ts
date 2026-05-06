@@ -586,19 +586,28 @@ export class Backport {
     });
 
     if (result.status === "success_with_conflicts") {
-      const conflictMessage = composeMessageToResolveCommittedConflicts(
-        targetBranch,
-        branchname,
-        result.uncommittedShas,
-        this.config.experimental.conflict_resolution,
-      );
-      await this.github.createComment({
-        owner: targetOwner,
-        repo: targetRepo,
-        issue_number: newPrNumber,
-        body: conflictMessage,
-      });
+      await this.commentResolveConflictsOnDraftPr(result, context);
     }
+  }
+
+  private async commentResolveConflictsOnDraftPr(
+    result: Extract<TargetResult, { status: "success_with_conflicts" }>,
+    context: BackportContext,
+  ): Promise<void> {
+    const { targetOwner, targetRepo } = context;
+    const { targetBranch, newPrNumber, branchname } = result;
+    const conflictMessage = composeMessageToResolveCommittedConflicts(
+      targetBranch,
+      branchname,
+      result.uncommittedShas,
+      this.config.experimental.conflict_resolution,
+    );
+    await this.github.createComment({
+      owner: targetOwner,
+      repo: targetRepo,
+      issue_number: newPrNumber,
+      body: conflictMessage,
+    });
   }
 
   private composePRContent(target: string, main: PullRequest): PRContent {
