@@ -864,6 +864,25 @@ describe("Backport.run() orchestration", () => {
       expect(body).toContain("git cherry-pick -x abc123");
     });
 
+    it("draft-PR comment failure: backport still succeeds in summary mode", async () => {
+      const github = new FakeGithub();
+      github.failOn("createComment", new Error("create failed"));
+      const git = createMockGit({
+        // non-null array signals which SHAs still need to be cherry-picked as there were conflicts encountered
+        cherryPick: vi.fn().mockResolvedValue(["abc123"]),
+      });
+      const config = makeConfig({
+        comment_style: "summary",
+        experimental: { conflict_resolution: "draft_commit_conflicts" },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs).toHaveLength(1);
+      expect(github.createdPRs[0].draft).toBe(true);
+      expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+    });
+
     it("outputs are correct on the success path", async () => {
       const github = new FakeGithub();
       const git = createMockGit();

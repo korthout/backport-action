@@ -318,6 +318,19 @@ export class Backport {
           await updateSummary(
             formatRunComment(results, remainingTargets, commentCtx),
           );
+          if (result.status === "success_with_conflicts") {
+            // Best-effort: a failure to post the resolve-conflicts comment
+            // shouldn't flip a success_with_conflicts target into a hard run
+            // failure or block subsequent targets.
+            try {
+              await this.commentResolveConflictsOnDraftPr(result, context);
+            } catch (error) {
+              console.error(
+                "Failed to post resolve-conflicts comment on draft PR:",
+                error,
+              );
+            }
+          }
         } else {
           await this.handleTargetResultLegacy(result, context);
         }
