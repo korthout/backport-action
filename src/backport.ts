@@ -318,6 +318,19 @@ export class Backport {
           await updateSummary(
             formatRunComment(results, remainingTargets, commentCtx),
           );
+          if (result.status === "success_with_conflicts") {
+            // Best-effort: a failure to post the resolve-conflicts comment
+            // shouldn't flip a success_with_conflicts target into a hard run
+            // failure or block subsequent targets.
+            try {
+              await this.commentResolveConflictsOnDraftPr(result, context);
+            } catch (error) {
+              console.error(
+                "Failed to post resolve-conflicts comment on draft PR:",
+                error,
+              );
+            }
+          }
         } else {
           await this.handleTargetResultLegacy(result, context);
         }
@@ -586,19 +599,28 @@ export class Backport {
     });
 
     if (result.status === "success_with_conflicts") {
-      const conflictMessage = composeMessageToResolveCommittedConflicts(
-        targetBranch,
-        branchname,
-        result.uncommittedShas,
-        this.config.experimental.conflict_resolution,
-      );
-      await this.github.createComment({
-        owner: targetOwner,
-        repo: targetRepo,
-        issue_number: newPrNumber,
-        body: conflictMessage,
-      });
+      await this.commentResolveConflictsOnDraftPr(result, context);
     }
+  }
+
+  private async commentResolveConflictsOnDraftPr(
+    result: Extract<TargetResult, { status: "success_with_conflicts" }>,
+    context: BackportContext,
+  ): Promise<void> {
+    const { targetOwner, targetRepo } = context;
+    const { targetBranch, newPrNumber, branchname } = result;
+    const conflictMessage = composeMessageToResolveCommittedConflicts(
+      targetBranch,
+      branchname,
+      result.uncommittedShas,
+      this.config.experimental.conflict_resolution,
+    );
+    await this.github.createComment({
+      owner: targetOwner,
+      repo: targetRepo,
+      issue_number: newPrNumber,
+      body: conflictMessage,
+    });
   }
 
   private composePRContent(target: string, main: PullRequest): PRContent {
