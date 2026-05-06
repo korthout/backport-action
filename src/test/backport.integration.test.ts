@@ -831,6 +831,39 @@ describe("Backport.run() orchestration", () => {
       expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
     });
 
+    it("conflicts with draft_commit_conflicts: comments on the draft PR with resolve-conflicts instructions", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit({
+        // non-null array signals which SHAs still need to be cherry-picked as there were conflicts encountered
+        cherryPick: vi.fn().mockResolvedValue(["abc123"]),
+      });
+      const config = makeConfig({
+        comment_style: "summary",
+        experimental: { conflict_resolution: "draft_commit_conflicts" },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs).toHaveLength(1);
+      expect(github.createdPRs[0].draft).toBe(true);
+
+      const draftPrComments = github.comments.filter(
+        (c) => c.issue_number === 100,
+      );
+      expect(draftPrComments).toHaveLength(1);
+      const body = draftPrComments[0].body;
+      expect(body).toContain(
+        "Please cherry-pick the changes locally and resolve any conflicts",
+      );
+      expect(body).toContain("git fetch origin backport-42-to-main");
+      expect(body).toContain(
+        "git worktree add --checkout .worktree/backport-42-to-main backport-42-to-main",
+      );
+      expect(body).toContain("cd .worktree/backport-42-to-main");
+      expect(body).toContain("git reset --hard HEAD^");
+      expect(body).toContain("git cherry-pick -x abc123");
+    });
+
     it("outputs are correct on the success path", async () => {
       const github = new FakeGithub();
       const git = createMockGit();
