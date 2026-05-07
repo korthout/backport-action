@@ -779,7 +779,7 @@ describe("Backport.run() orchestration", () => {
       expect(final).toContain("PR already exists");
     });
 
-    it("no targets: comment is updated to 'backported' with no table", async () => {
+    it("no targets: comment explains nothing was backported, not success", async () => {
       const github = new FakeGithub({
         sourcePr: { labels: [{ name: "bug" }] },
       });
@@ -790,7 +790,18 @@ describe("Backport.run() orchestration", () => {
 
       const final =
         github.updatedComments[github.updatedComments.length - 1].body;
-      expect(final).toContain("backported this pull request");
+      // Must not imply success or failure: the action did not attempt a backport.
+      expect(final).not.toContain("backported this pull request");
+      expect(final).not.toContain("failed to backport");
+      expect(final).toContain(
+        "found no target branches to backport this pull request to",
+      );
+      expect(final).toContain(
+        "This can happen when the pull request has no labels matching `label_pattern`, or when no `target_branches` were configured.",
+      );
+      expect(final).toContain(
+        "To avoid unnecessary action runs, update your workflow so this action only runs for PRs that should be backported, such as PRs with a matching backport label or runs with explicit `target_branches`.",
+      );
       expect(final).not.toContain("| Target |");
     });
 

@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   CommentContext,
   formatInitialComment,
+  formatNoTargetsComment,
   formatRunComment,
   formatSingleTargetComment,
 } from "../comments.js";
@@ -308,14 +309,6 @@ describe("formatRunComment", () => {
     expect(out.match(/:hourglass: Pending/g)).toHaveLength(2);
   });
 
-  it("no targets and not pending: intro is 'backported', no table", () => {
-    const out = formatRunComment([], [], context);
-
-    expect(out).toContain("backported this pull request");
-    expect(out).not.toContain("is backporting");
-    expect(out).not.toContain("| Target |");
-  });
-
   it("error with empty pendingTargets: intro + error message, no table", () => {
     const out = formatRunComment(
       [],
@@ -371,6 +364,47 @@ describe("formatRunComment", () => {
 
     expect(out).toContain(":warning: Drafted with conflicts #200");
     expect(out).not.toContain("<details>");
+  });
+});
+
+describe("formatNoTargetsComment", () => {
+  it("does not claim the PR was backported or that backport failed", () => {
+    const out = formatNoTargetsComment(context);
+
+    expect(out).not.toContain("backported this pull request");
+    expect(out).not.toContain("failed to backport");
+    expect(out).not.toContain("is backporting");
+  });
+
+  it("intro states no target branches were found and links the run", () => {
+    const out = formatNoTargetsComment(context);
+
+    expect(out).toContain(
+      `[Backport-action](https://github.com/korthout/backport-action) found no target branches to backport this pull request to in [workflow run ${context.runId}](${context.runUrl}).`,
+    );
+  });
+
+  it("explains the two reasons no targets were found", () => {
+    const out = formatNoTargetsComment(context);
+
+    expect(out).toContain(
+      "This can happen when the pull request has no labels matching `label_pattern`, or when no `target_branches` were configured.",
+    );
+  });
+
+  it("hints at workflow-level filtering to avoid unnecessary runs", () => {
+    const out = formatNoTargetsComment(context);
+
+    expect(out).toContain(
+      "To avoid unnecessary action runs, update your workflow so this action only runs for PRs that should be backported, such as PRs with a matching backport label or runs with explicit `target_branches`.",
+    );
+  });
+
+  it("renders no result table", () => {
+    const out = formatNoTargetsComment(context);
+
+    expect(out).not.toContain("| Target |");
+    expect(out).not.toContain(":hourglass: Pending");
   });
 });
 

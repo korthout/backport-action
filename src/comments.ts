@@ -89,6 +89,21 @@ export function formatInitialComment(context: CommentContext): string {
   return `${ACTION_LINK} is backporting this pull request in ${runLink}.`;
 }
 
+/**
+ * Body for the terminal "no target branches found" outcome. The action ran,
+ * determined there was nothing to backport, and stopped — neither a success
+ * nor a failure, so it gets its own wording instead of being squeezed into
+ * `formatRunComment`.
+ */
+export function formatNoTargetsComment(context: CommentContext): string {
+  const runLink = `[workflow run ${context.runId}](${context.runUrl})`;
+  return dedent`${ACTION_LINK} found no target branches to backport this pull request to in ${runLink}.
+
+                This can happen when the pull request has no labels matching \`label_pattern\`, or when no \`target_branches\` were configured.
+
+                To avoid unnecessary action runs, update your workflow so this action only runs for PRs that should be backported, such as PRs with a matching backport label or runs with explicit \`target_branches\`.`;
+}
+
 function formatTable(
   results: TargetResult[],
   pendingTargets: string[],

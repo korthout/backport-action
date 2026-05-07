@@ -11,6 +11,7 @@ import { GitApi, GitRefNotFoundError } from "./git.js";
 import {
   CommentContext,
   formatInitialComment,
+  formatNoTargetsComment,
   formatRunComment,
 } from "./comments.js";
 import {
@@ -220,9 +221,7 @@ export class Backport {
           `Nothing to backport: no 'target_branches' specified and none of the labels match the backport pattern '${this.config.source_labels_pattern?.source}'`,
         );
         if (isSummary) {
-          // No targets to backport — update to the "backported" wording
-          // with no table. This is not a failure.
-          await updateSummary(formatRunComment([], [], commentCtx));
+          await updateSummary(formatNoTargetsComment(commentCtx));
         }
         return; // nothing left to do here
       }
