@@ -45,8 +45,10 @@ jobs:
   backport:
     name: Backport pull request
     runs-on: ubuntu-latest
-    # Don't run on closed unmerged pull requests
-    if: github.event.pull_request.merged
+    # Only run on merged PRs with a backport label (default `label_pattern`)
+    if: >
+      github.event.pull_request.merged &&
+      contains(toJSON(github.event.pull_request.labels.*.name), '"backport ')
     steps:
       - uses: actions/checkout@v4
       - name: Create backport pull requests
@@ -80,14 +82,14 @@ jobs:
     name: Backport pull request
     runs-on: ubuntu-latest
 
-    # Only run when pull request is merged
-    # or when a comment starting with `/backport` is created by someone other than the
-    # https://github.com/backport-action bot user (user id: 97796249). Note that if you use your
-    # own PAT as `github_token`, that you should replace this id with yours.
+    # Run on merged PRs with a backport label (default `label_pattern`),
+    # or on `/backport` comments from a non-bot user (id 97796249 is the
+    # backport-action bot; replace with your PAT's user id if applicable).
     if: >
       (
         github.event_name == 'pull_request_target' &&
-        github.event.pull_request.merged
+        github.event.pull_request.merged &&
+        contains(toJSON(github.event.pull_request.labels.*.name), '"backport ')
       ) || (
         github.event_name == 'issue_comment' &&
         github.event.issue.pull_request &&
