@@ -83,8 +83,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Run on merged PRs with a backport label (default `label_pattern`),
-    # or on `/backport` comments from a non-bot user (id 97796249 is the
-    # backport-action bot; replace with your PAT's user id if applicable).
+    # or on `/backport` comments.
     if: >
       (
         github.event_name == 'pull_request_target' &&
@@ -93,7 +92,6 @@ jobs:
       ) || (
         github.event_name == 'issue_comment' &&
         github.event.issue.pull_request &&
-        github.event.comment.user.id != 97796249 &&
         startsWith(github.event.comment.body, '/backport')
       )
     steps:
