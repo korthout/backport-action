@@ -50,7 +50,7 @@ jobs:
       github.event.pull_request.merged &&
       contains(toJSON(github.event.pull_request.labels.*.name), '"backport ')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Create backport pull requests
         uses: korthout/backport-action@v4
 ```
@@ -83,8 +83,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Run on merged PRs with a backport label (default `label_pattern`),
-    # or on `/backport` comments from a non-bot user (id 97796249 is the
-    # backport-action bot; replace with your PAT's user id if applicable).
+    # or on `/backport` comments.
     if: >
       (
         github.event_name == 'pull_request_target' &&
@@ -93,11 +92,10 @@ jobs:
       ) || (
         github.event_name == 'issue_comment' &&
         github.event.issue.pull_request &&
-        github.event.comment.user.id != 97796249 &&
         startsWith(github.event.comment.body, '/backport')
       )
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Create backport pull requests
         uses: korthout/backport-action@v4
 ```
@@ -105,15 +103,71 @@ jobs:
 </p>
 </details>
 
+### Determine target branches dynamically
+
+When the default [`label_pattern`](#label_pattern) can't express your targeting rule, compute [`target_branches`](#target_branches) at workflow runtime instead. The target might come from a reviewer's comment, the pull request's base branch, or a config file in the repo.
+
+<details><summary>Determine target branches dynamically from a comment</summary>
+ <p>
+
+The example uses the comment case: someone writes `/backport <branch>` on a merged pull request, and `<branch>` becomes the target. The first job parses the comment; the second runs the backport only when parsing yielded a non-empty branch. Replace the parse step with whatever computes the target for your repo.
+
+```yaml
+name: Backport via comment
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: write # so it can comment
+  pull-requests: write # so it can create pull requests
+jobs:
+  determine-target-branch:
+    # Only run on PR comments starting with `/backport ` (note the trailing space — an argument is required).
+    if: >
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/backport ')
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.parse-comment.outputs.branch }}
+    steps:
+      - id: parse-comment
+        # Take the first line after `/backport ` as the target branch.
+        # The comment body is passed via env to avoid script injection.
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          branch=$(printf '%s' "$COMMENT_BODY" | head -n1 | sed 's|^/backport ||')
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+
+  backport:
+    needs: determine-target-branch
+    if: needs.determine-target-branch.outputs.branch != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Create backport pull requests
+        uses: korthout/backport-action@v4
+        with:
+          target_branches: ${{ needs.determine-target-branch.outputs.branch }}
+```
+
+`target_branches` accepts a space-delimited list, so the same parsing approach extends to `/backport branch-a branch-b` if you want to allow multiple targets per comment.
+
+</p>
+</details>
+
 ### Signing cherry-picked commits
 
-By default, the committer of the cherry‑picked commits is the user `github-actions[bot]`.
-The original author remains the *author* of the commit; only the *committer* changes.
-By default, the cherry-picked commits are not signed.
+You may want the cherry-picked commits to be signed, for example to satisfy a protected branch rule, an org policy, or the repo's existing convention.
 
-If you need the cherry‑picked commits to be signed (e.g. to satisfy a protected branch rule requiring signed commits) you can configure a signing identity.
+<details><summary>Sign cherry-picked commits with GPG</summary>
+ <p>
 
-Below is a GPG example (pin the third‑party action by commit for supply‑chain security):
+By default, cherry-picked commits are committed by `github-actions[bot]` and are not signed. The original author remains the *author*; only the *committer* changes.
+
+To sign them, add a step before the backport that configures git to sign commits (for example by importing a GPG key that enables `git_commit_gpgsign`), then pass the matching committer name and email to the action so the signature lines up with the committer.
+
+Pin any third‑party action you use for this by commit SHA for supply‑chain security.
 
 ```yaml
 ...
@@ -134,10 +188,10 @@ Below is a GPG example (pin the third‑party action by commit for supply‑chai
 ```
 
 > **Note**
-> The cherry-picked commits will still be shown as "Partially verified" (instead of "Unverified") in the GitHub UI.
-> This is a limitation of GitHub and does not indicate a problem with the action itself.
-> Despite the cherry-picked commit being signed by the specified committer, there is no way to preserve the original (author's) signature.
-> However, the commit is cherry-picked with the [`-x`](https://git-scm.com/docs/git-cherry-pick#Documentation/git-cherry-pick.txt--x) flag ensuring that it references the original commit as an audit trail.
+> Commits appear as "Partially verified" (not "Unverified") in the GitHub UI. This is a GitHub limitation: the original author's signature can't be preserved when re-committing. The cherry-pick uses [`-x`](https://git-scm.com/docs/git-cherry-pick#Documentation/git-cherry-pick.txt--x) so the new commit references the original as an audit trail.
+
+</p>
+</details>
 
 ## Inputs
 
@@ -426,8 +480,10 @@ The action will backport the pull request to each specified target branch (space
 Note that the pull request's headref is excluded automatically.
 See [How it works](#how-it-works).
 
-Can be used in addition to backport labels.
+Can be used on its own (no labels required) or alongside backport labels — when both are set, the action backports to the union of the two.
 By default, only backport labels are used to specify the target branches.
+
+See also [Determine target branches dynamically](#determine-target-branches-dynamically) for computing this input at workflow runtime.
 
 ## Placeholders
 In the `pull_description` and `pull_title` inputs, placeholders can be used to define variable values.
