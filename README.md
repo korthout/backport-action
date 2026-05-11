@@ -50,7 +50,7 @@ jobs:
       github.event.pull_request.merged &&
       contains(toJSON(github.event.pull_request.labels.*.name), '"backport ')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Create backport pull requests
         uses: korthout/backport-action@v4
 ```
@@ -95,7 +95,7 @@ jobs:
         startsWith(github.event.comment.body, '/backport')
       )
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Create backport pull requests
         uses: korthout/backport-action@v4
 ```
@@ -144,7 +144,7 @@ jobs:
     if: needs.determine-target-branch.outputs.branch != ''
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Create backport pull requests
         uses: korthout/backport-action@v4
         with:
