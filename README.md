@@ -426,7 +426,7 @@ The action will backport the pull request to each specified target branch (space
 Note that the pull request's headref is excluded automatically.
 See [How it works](#how-it-works).
 
-Can be used in addition to backport labels.
+Can be used on its own (no labels required) or alongside backport labels — when both are set, the action backports to the union of the two.
 By default, only backport labels are used to specify the target branches.
 
 ## Placeholders
