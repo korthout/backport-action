@@ -164,6 +164,9 @@ By default, the cherry-picked commits are not signed.
 
 If you need the cherry‑picked commits to be signed (e.g. to satisfy a protected branch rule requiring signed commits) you can configure a signing identity.
 
+<details><summary>Sign cherry-picked commits with GPG</summary>
+ <p>
+
 Below is a GPG example (pin the third‑party action by commit for supply‑chain security):
 
 ```yaml
@@ -189,6 +192,9 @@ Below is a GPG example (pin the third‑party action by commit for supply‑chai
 > This is a limitation of GitHub and does not indicate a problem with the action itself.
 > Despite the cherry-picked commit being signed by the specified committer, there is no way to preserve the original (author's) signature.
 > However, the commit is cherry-picked with the [`-x`](https://git-scm.com/docs/git-cherry-pick#Documentation/git-cherry-pick.txt--x) flag ensuring that it references the original commit as an audit trail.
+
+</p>
+</details>
 
 ## Inputs
 
