@@ -30,6 +30,7 @@ This action has many users; maintainer burden compounds. When facing tradeoffs, 
 - Tests: `npm test` (or `npm run test-verbose` for individual names)
 - **Never commit `dist/` in a PR** — the Publish workflow rebuilds it post-merge; including it breaks backporting (see CI.md)
 - Merging goes through the Mergify queue (`@mergifyio queue`) — don't merge or push to `main` directly
+- Input docs live in two places: `README.md` (under `## Inputs`) and `action.yml` (`description:` field). Keep them in sync — any change to one must be mirrored in the other.
 
 ## Pointers
 
