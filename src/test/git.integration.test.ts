@@ -35,6 +35,8 @@ import {
   afterAll,
   afterEach,
 } from "vitest";
+import { readFile } from "fs/promises";
+import { join } from "path";
 import { devNull } from "os";
 import type { TestRepo } from "./helpers/test-repo.js";
 import { Backport } from "../backport.js";
@@ -590,6 +592,117 @@ describe("Backport.run() with real git", () => {
           },
         ],
       );
+    },
+  );
+});
+
+describe("cherry-pick whitespace-tolerant mode", () => {
+  const savedEnv: Record<string, string | undefined> = {};
+  let template: RepoTemplate;
+
+  beforeAll(async () => {
+    savedEnv.GIT_CONFIG_GLOBAL = process.env.GIT_CONFIG_GLOBAL;
+    savedEnv.GIT_CONFIG_NOSYSTEM = process.env.GIT_CONFIG_NOSYSTEM;
+    process.env.GIT_CONFIG_GLOBAL = devNull;
+    process.env.GIT_CONFIG_NOSYSTEM = "1";
+    template = await createRepoTemplate();
+  });
+
+  afterAll(async () => {
+    for (const [key, value] of Object.entries(savedEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    await template.cleanup();
+  });
+
+  afterEach(async (ctx) => {
+    if (ctx.repo) await ctx.repo.cleanup();
+  });
+
+  function setupGit() {
+    return new Git("Test", "test@test.com", process.env.GIT_SILENT === "1");
+  }
+
+  it.concurrent(
+    // This test documents the #529 bug class: repos that declare
+    // `merge=union` for a path — the common Visual Studio convention for
+    // `.csproj`/`.sln` files — get silent content duplication when the
+    // target branch's context lines differ from the source parent only by
+    // trailing whitespace. Without a custom merge driver, this kind of
+    // divergence produces an explicit conflict; the union driver instead
+    // combines both sides of the unaligned hunk, so it keeps both the target
+    // branch's version of line2/line3 and the source's inserted content —
+    // the cherry-pick exits 0 with line2/line3 doubled in the file.
+    //
+    // This test fails red today because the resulting file content has
+    // those lines doubled. It goes green when whitespace-tolerant mode is
+    // wired in (Step 2), since -Xignore-space-at-eol lets the merge ignore
+    // the trailing-whitespace difference and align cleanly up front.
+    "default mode fails when context lines differ only by trailing whitespace (reproducer)",
+    async (ctx) => {
+      const repo = (ctx.repo = await template.createTestRepo());
+      const git = setupGit();
+
+      // Declare merge=union for feature.txt — the real-world trigger for
+      // #529.
+      await addCommit(
+        repo.workDir,
+        ".gitattributes",
+        "feature.txt merge=union\n",
+        "Add .gitattributes",
+      );
+      await pushBranch(repo.workDir);
+
+      // Shared ancestor commit on main: header/footer anchor lines on either
+      // side of line1-3, so both branches have common content to align on.
+      const baseSha = await addCommit(
+        repo.workDir,
+        "feature.txt",
+        "header\nline1\nline2\nline3\nfooter\n",
+        "Add feature.txt with initial content",
+      );
+      await pushBranch(repo.workDir);
+
+      // Create release branch from that shared ancestor, so feature.txt's
+      // history (and the .gitattributes) is common to both branches.
+      await createBranch(repo.workDir, "release", baseSha);
+
+      // On main: add line_new between line2 and line3 (the feature commit to
+      // backport).
+      const featureSha = await addCommit(
+        repo.workDir,
+        "feature.txt",
+        "header\nline1\nline2\nline_new\nline3\nfooter\n",
+        "Add line_new to feature.txt",
+      );
+      await pushBranch(repo.workDir);
+
+      // Switch to release so the cherry-pick lands there. Only the context
+      // lines adjacent to the insertion point gain trailing whitespace;
+      // header/line1/footer stay exact matches so the merge has anchors to
+      // align on.
+      await gitCmd("checkout release", repo.workDir);
+      await addCommit(
+        repo.workDir,
+        "feature.txt",
+        "header\nline1\nline2  \nline3  \nfooter\n",
+        "Add trailing whitespace to feature.txt on release",
+      );
+      await gitCmd("push origin release", repo.workDir);
+
+      // With default cherry-pick, this exits 0 but silently duplicates
+      // line2/line3 — the assertion below catches the wrong content.
+      await git.cherryPick([featureSha], "fail", repo.workDir);
+
+      const content = await readFile(
+        join(repo.workDir, "feature.txt"),
+        "utf-8",
+      );
+      // Each line should appear exactly once; no duplication.
+      ctx
+        .expect(content)
+        .toBe("header\nline1\nline2\nline_new\nline3\nfooter\n");
     },
   );
 });
