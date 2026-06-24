@@ -224,6 +224,7 @@ describe("Backport.run() orchestration", () => {
       const config = makeConfig({
         commits: {
           cherry_picking: "pull_request_head",
+          cherry_picking_merge_mode: "default",
           merge_commits: "fail",
         },
       });

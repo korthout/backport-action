@@ -75,6 +75,7 @@ export type Config = {
   target_branches?: string;
   commits: {
     cherry_picking: "auto" | "pull_request_head";
+    cherry_picking_merge_mode: "default" | "whitespace_tolerant";
     merge_commits: "fail" | "skip";
   };
   copy_milestone: boolean;
@@ -412,12 +413,18 @@ export class Backport {
 
       let uncommittedShas: string[] | null;
 
+      if (
+        this.config.commits.cherry_picking_merge_mode === "whitespace_tolerant"
+      ) {
+        console.log("Cherry-picking with whitespace-tolerant merge.");
+      }
+
       try {
         uncommittedShas = await this.git.cherryPick(
           commitShasToCherryPick,
           this.config.experimental.conflict_resolution,
           this.config.pwd,
-          "default",
+          this.config.commits.cherry_picking_merge_mode,
         );
       } catch (error) {
         const message =

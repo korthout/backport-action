@@ -304,6 +304,18 @@ Specifically, those reachable from the pull request's head and not reachable fro
 
 By default, the action cherry-picks the commits based on the method used to merge the pull request.
 
+### `cherry_picking_merge_mode`
+
+Default: `default`
+
+Sets the merge strategy option for cherry-picking. Accepted values:
+`default` (standard cherry-pick behavior) or `whitespace_tolerant`
+(ignores trailing whitespace when matching context lines, equivalent
+to `git cherry-pick -Xignore-space-at-eol`). Use `whitespace_tolerant`
+when the target branch has diverged from the source branch only in
+trailing whitespace, which would otherwise cause cherry-pick conflicts
+or silent line duplication.
+
 ### `comment_style`
 
 Default: `legacy`
