@@ -625,21 +625,17 @@ describe("cherry-pick whitespace-tolerant mode", () => {
   }
 
   it.concurrent(
-    // This test documents the #529 bug class: repos that declare
+    // This test proves the fix for the #529 bug class: repos that declare
     // `merge=union` for a path — the common Visual Studio convention for
     // `.csproj`/`.sln` files — get silent content duplication when the
     // target branch's context lines differ from the source parent only by
-    // trailing whitespace. Without a custom merge driver, this kind of
-    // divergence produces an explicit conflict; the union driver instead
-    // combines both sides of the unaligned hunk, so it keeps both the target
-    // branch's version of line2/line3 and the source's inserted content —
-    // the cherry-pick exits 0 with line2/line3 doubled in the file.
+    // trailing whitespace, because the union merge driver combines both
+    // sides of a hunk it can't align instead of flagging a conflict.
     //
-    // This test fails red today because the resulting file content has
-    // those lines doubled. It goes green when whitespace-tolerant mode is
-    // wired in (Step 2), since -Xignore-space-at-eol lets the merge ignore
-    // the trailing-whitespace difference and align cleanly up front.
-    "default mode fails when context lines differ only by trailing whitespace (reproducer)",
+    // With whitespace_tolerant mode (-Xignore-space-at-eol), the cherry-pick
+    // applies cleanly: the merge ignores the trailing-whitespace difference
+    // and aligns up front, so the union driver never has to guess.
+    "whitespace_tolerant mode applies cleanly when context lines differ only by trailing whitespace",
     async (ctx) => {
       const repo = (ctx.repo = await template.createTestRepo());
       const git = setupGit();
@@ -691,9 +687,15 @@ describe("cherry-pick whitespace-tolerant mode", () => {
       );
       await gitCmd("push origin release", repo.workDir);
 
-      // With default cherry-pick, this exits 0 but silently duplicates
-      // line2/line3 — the assertion below catches the wrong content.
-      await git.cherryPick([featureSha], "fail", repo.workDir, "default");
+      // With whitespace_tolerant mode (-Xignore-space-at-eol) the cherry-pick
+      // applies cleanly: trailing whitespace differences in context lines are
+      // ignored, line_new is inserted cleanly, and no duplication occurs.
+      await git.cherryPick(
+        [featureSha],
+        "fail",
+        repo.workDir,
+        "whitespace_tolerant",
+      );
 
       const content = await readFile(
         join(repo.workDir, "feature.txt"),
