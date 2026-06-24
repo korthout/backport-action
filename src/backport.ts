@@ -417,6 +417,7 @@ export class Backport {
           commitShasToCherryPick,
           this.config.experimental.conflict_resolution,
           this.config.pwd,
+          "default",
         );
       } catch (error) {
         const message =

@@ -693,7 +693,7 @@ describe("cherry-pick whitespace-tolerant mode", () => {
 
       // With default cherry-pick, this exits 0 but silently duplicates
       // line2/line3 — the assertion below catches the wrong content.
-      await git.cherryPick([featureSha], "fail", repo.workDir);
+      await git.cherryPick([featureSha], "fail", repo.workDir, "default");
 
       const content = await readFile(
         join(repo.workDir, "feature.txt"),

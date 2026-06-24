@@ -235,6 +235,7 @@ describe("Backport.run() orchestration", () => {
         ["sha1", "sha2"],
         expect.anything(),
         expect.anything(),
+        "default",
       );
     });
 
