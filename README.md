@@ -314,7 +314,10 @@ Sets the merge strategy option for cherry-picking. Accepted values:
 to `git cherry-pick -Xignore-space-at-eol`). Use `whitespace_tolerant`
 when the target branch has diverged from the source branch only in
 trailing whitespace, which would otherwise cause cherry-pick conflicts
-or silent line duplication.
+— or, if your `.gitattributes` declares `merge=union` for the affected
+file type (a common Visual Studio convention for `.csproj`/`.sln`
+files), silently duplicated lines or references with no conflict to
+flag it.
 
 ### `comment_style`
 
