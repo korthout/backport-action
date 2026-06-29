@@ -416,7 +416,7 @@ export class Backport {
       if (
         this.config.commits.cherry_picking_merge_mode === "whitespace_tolerant"
       ) {
-        console.log("Cherry-picking with whitespace-tolerant merge.");
+        console.log("Cherry-picking in whitespace-tolerant mode.");
       }
 
       try {
