@@ -94,3 +94,12 @@ jobs:
 
       - name: Print next development version commit
         run: git show ${{ steps.commit-next-dev.outputs.commit_sha }} | cat
+
+      - name: Create draft release
+        if: ${{ inputs.dryRun == false }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v${{ inputs.releaseVersion }} \
+            --draft \
+            --generate-notes
