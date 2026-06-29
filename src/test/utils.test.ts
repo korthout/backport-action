@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import dedent from "dedent";
-import { getMentionedIssueRefs, replacePlaceholders } from "../utils.js";
+import {
+  coerceCherryPickingMergeMode,
+  getMentionedIssueRefs,
+  replacePlaceholders,
+} from "../utils.js";
 
 describe("get mentioned issues", () => {
   describe("returns an empty list", () => {
@@ -241,6 +245,32 @@ describe("compose body/title", () => {
         "Backport of pull made by @foo-author",
       );
     });
+  });
+});
+
+describe("coerceCherryPickingMergeMode", () => {
+  it('coerces empty string to "default"', () => {
+    expect(coerceCherryPickingMergeMode("")).toEqual("default");
+  });
+
+  it('passes through "default"', () => {
+    expect(coerceCherryPickingMergeMode("default")).toEqual("default");
+  });
+
+  it('passes through "whitespace_tolerant"', () => {
+    expect(coerceCherryPickingMergeMode("whitespace_tolerant")).toEqual(
+      "whitespace_tolerant",
+    );
+  });
+
+  it('returns "invalid" for an unrecognized value', () => {
+    expect(coerceCherryPickingMergeMode("invalid_value")).toEqual("invalid");
+  });
+
+  it('returns "invalid" for wrong case (case-sensitive)', () => {
+    expect(coerceCherryPickingMergeMode("WHITESPACE_TOLERANT")).toEqual(
+      "invalid",
+    );
   });
 });
 

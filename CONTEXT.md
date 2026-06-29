@@ -30,6 +30,10 @@ The new commits created on the target branch by `git cherry-pick`. The commit au
 **Merge method**:
 How a pull request is merged on GitHub. One of: squash-and-merge, rebase-and-merge, or merge commit. The action *observes* the original pull request's merge method (consumed by `cherry_picking: auto`) and *configures* the backport pull request's merge method (via `auto_merge_method`). Always disambiguate which pull request's merge method is meant.
 
+**Cherry-pick merge mode**:
+The action's abstraction over git's strategy options for `git cherry-pick`. Controlled via the `cherry_picking_merge_mode` input. Values are `default` (standard cherry-pick behavior) and `whitespace_tolerant` (trailing whitespace differences are ignored when cherry-picking). Not to be confused with the pull request's **merge method**.
+_Avoid_: "merge strategy option" (a git-internal term; this action redefines the concept for its own abstraction)
+
 **PR author**:
 The GitHub user who opened a pull request. The action can copy the original PR author to the backport PR as assignee or reviewer (`add_author_as_assignee`, `add_author_as_reviewer`, `pull_author` placeholder).
 _Avoid_: just "author" (collides with commit author)

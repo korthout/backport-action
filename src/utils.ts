@@ -51,6 +51,16 @@ const patterns = {
   ref: /(?:^| )((?<org>[^\n #\/]+)\/(?<repo>[^\n #\/]+))?#(?<number>[1-9][0-9]*)(?: |$)/gm,
 };
 
+export function coerceCherryPickingMergeMode(
+  raw: string,
+): "default" | "whitespace_tolerant" | "invalid" {
+  const value = raw === "" ? "default" : raw;
+  if (value === "default" || value === "whitespace_tolerant") {
+    return value;
+  }
+  return "invalid";
+}
+
 const toRef = (url: string) => {
   // matchAll is not yet available to directly access the captured groups of all matches
   // so this maps the urls to GitHub refs by matching again without the global flag
