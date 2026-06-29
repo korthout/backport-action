@@ -32,6 +32,7 @@ export interface GitApi {
     commitShas: string[],
     conflictResolution: string,
     pwd: string,
+    mergeMode: "default" | "whitespace_tolerant",
   ): Promise<string[] | null>;
 }
 
@@ -186,7 +187,11 @@ export class Git implements GitApi {
     commitShas: string[],
     conflictResolution: string,
     pwd: string,
+    mergeMode: "default" | "whitespace_tolerant",
   ): Promise<string[] | null> {
+    const strategyArgs =
+      mergeMode === "whitespace_tolerant" ? ["-Xignore-space-at-eol"] : [];
+
     const abortCherryPickAndThrow = async (
       commitShas: string[],
       exitCode: number,
@@ -200,7 +205,7 @@ export class Git implements GitApi {
     if (conflictResolution === `fail`) {
       const { exitCode } = await this.git(
         "cherry-pick",
-        ["-x", ...commitShas],
+        ["-x", ...strategyArgs, ...commitShas],
         pwd,
       );
 
@@ -216,7 +221,7 @@ export class Git implements GitApi {
       while (uncommittedShas.length > 0) {
         const { exitCode } = await this.git(
           "cherry-pick",
-          ["-x", uncommittedShas[0]],
+          ["-x", ...strategyArgs, uncommittedShas[0]],
           pwd,
         );
 

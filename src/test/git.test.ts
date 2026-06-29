@@ -1,21 +1,23 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 let response = { exitCode: 0, stdout: "" };
 let responseCommit = { exitCode: 0, stdout: "" };
 
-vi.mock("@actions/exec", () => ({
-  getExecOutput: vi.fn(
-    (command: string, args?: readonly string[] | undefined) => {
-      if (command === "git" && args) {
-        const subCommand = args[0];
-        if (subCommand === "commit") {
-          // Mock behavior for "git commit"
-          return responseCommit;
-        }
+const getExecOutputMock = vi.fn(
+  (command: string, args?: readonly string[] | undefined) => {
+    if (command === "git" && args) {
+      const subCommand = args[0];
+      if (subCommand === "commit") {
+        // Mock behavior for "git commit"
+        return responseCommit;
       }
-      return response;
-    },
-  ),
+    }
+    return response;
+  },
+);
+
+vi.mock("@actions/exec", () => ({
+  getExecOutput: getExecOutputMock,
 }));
 
 const { Git, GitRefNotFoundError } = await import("../git.js");
@@ -57,7 +59,9 @@ describe("git.cherryPick", () => {
     describe("throws Error", () => {
       it("when failing with an unexpected non-zero exit code", async () => {
         response.exitCode = 1;
-        await expect(git.cherryPick(["unknown"], `fail`, "")).rejects.toThrow(
+        await expect(
+          git.cherryPick(["unknown"], `fail`, "", "default"),
+        ).rejects.toThrow(
           `'git cherry-pick -x unknown' failed with exit code 1`,
         );
       });
@@ -67,7 +71,7 @@ describe("git.cherryPick", () => {
       it("when success", async () => {
         response.exitCode = 0;
         await expect(
-          git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
+          git.cherryPick(["unknown"], `draft_commit_conflicts`, "", "default"),
         ).resolves.toBe(null);
       });
     });
@@ -78,7 +82,7 @@ describe("git.cherryPick", () => {
       it("when failing with an unexpected non-zero and non-one exit code", async () => {
         response.exitCode = 128;
         await expect(
-          git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
+          git.cherryPick(["unknown"], `draft_commit_conflicts`, "", "default"),
         ).rejects.toThrow(
           `'git cherry-pick -x unknown' failed with exit code 128`,
         );
@@ -88,7 +92,7 @@ describe("git.cherryPick", () => {
         response.exitCode = 1;
         responseCommit.exitCode = 1;
         await expect(
-          git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
+          git.cherryPick(["unknown"], `draft_commit_conflicts`, "", "default"),
         ).rejects.toThrow(
           `'git cherry-pick -x unknown' failed with exit code 1`,
         );
@@ -99,7 +103,12 @@ describe("git.cherryPick", () => {
           response.exitCode = 1;
           responseCommit.exitCode = 0;
           await expect(
-            git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
+            git.cherryPick(
+              ["unknown"],
+              `draft_commit_conflicts`,
+              "",
+              "default",
+            ),
           ).resolves.toEqual(["unknown"]);
         });
       });
@@ -108,10 +117,78 @@ describe("git.cherryPick", () => {
         it("when success", async () => {
           response.exitCode = 0;
           await expect(
-            git.cherryPick(["unknown"], `draft_commit_conflicts`, ""),
+            git.cherryPick(
+              ["unknown"],
+              `draft_commit_conflicts`,
+              "",
+              "default",
+            ),
           ).resolves.toBe(null);
         });
       });
+    });
+  });
+});
+
+describe("git.cherryPick mergeMode arg contract", () => {
+  beforeEach(() => {
+    response.exitCode = 0;
+    responseCommit.exitCode = 0;
+    getExecOutputMock.mockClear();
+  });
+
+  describe("fail mode (conflict_resolution: fail)", () => {
+    it("default mode passes no extra flags", async () => {
+      await git.cherryPick(["abc123"], "fail", "", "default");
+      const cherryPickCall = getExecOutputMock.mock.calls.find(
+        ([, args]) => Array.isArray(args) && args[0] === "cherry-pick",
+      );
+      expect(cherryPickCall).toBeDefined();
+      expect(cherryPickCall![1]).toEqual(["cherry-pick", "-x", "abc123"]);
+    });
+
+    it("whitespace_tolerant mode adds -Xignore-space-at-eol", async () => {
+      await git.cherryPick(["abc123"], "fail", "", "whitespace_tolerant");
+      const cherryPickCall = getExecOutputMock.mock.calls.find(
+        ([, args]) => Array.isArray(args) && args[0] === "cherry-pick",
+      );
+      expect(cherryPickCall).toBeDefined();
+      expect(cherryPickCall![1]).toEqual([
+        "cherry-pick",
+        "-x",
+        "-Xignore-space-at-eol",
+        "abc123",
+      ]);
+    });
+  });
+
+  describe("draft mode (conflict_resolution: draft_commit_conflicts)", () => {
+    it("default mode passes no extra flags", async () => {
+      await git.cherryPick(["abc123"], "draft_commit_conflicts", "", "default");
+      const cherryPickCall = getExecOutputMock.mock.calls.find(
+        ([, args]) => Array.isArray(args) && args[0] === "cherry-pick",
+      );
+      expect(cherryPickCall).toBeDefined();
+      expect(cherryPickCall![1]).toEqual(["cherry-pick", "-x", "abc123"]);
+    });
+
+    it("whitespace_tolerant mode adds -Xignore-space-at-eol", async () => {
+      await git.cherryPick(
+        ["abc123"],
+        "draft_commit_conflicts",
+        "",
+        "whitespace_tolerant",
+      );
+      const cherryPickCall = getExecOutputMock.mock.calls.find(
+        ([, args]) => Array.isArray(args) && args[0] === "cherry-pick",
+      );
+      expect(cherryPickCall).toBeDefined();
+      expect(cherryPickCall![1]).toEqual([
+        "cherry-pick",
+        "-x",
+        "-Xignore-space-at-eol",
+        "abc123",
+      ]);
     });
   });
 });

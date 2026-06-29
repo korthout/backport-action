@@ -12,7 +12,11 @@ export function makeConfig(overrides?: Partial<Config>): Config {
     add_labels: [],
     add_reviewers: [],
     add_team_reviewers: [],
-    commits: { cherry_picking: "auto", merge_commits: "fail" },
+    commits: {
+      cherry_picking: "auto",
+      cherry_picking_merge_mode: "default",
+      merge_commits: "fail",
+    },
     copy_milestone: false,
     copy_assignees: false,
     copy_requested_reviewers: false,
