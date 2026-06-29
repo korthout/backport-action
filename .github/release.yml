@@ -1,11 +1,15 @@
 changelog:
   categories:
+    - title: What's Changed
+      labels:
+        - "*"
+      exclude:
+        labels:
+          - dependencies
+          - maintenance
     - title: Updated dependencies
       labels:
         - dependencies
     - title: Maintenance changes
       labels:
         - maintenance
-    - title: What's Changed
-      labels:
-        - "*"
