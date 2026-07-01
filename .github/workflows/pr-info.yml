@@ -19,7 +19,7 @@ jobs:
             const isAutoMerge = labels.includes('automerge') && author === 'renovate[bot]';
             const message = isAutoMerge
               ? 'This PR will be merged automatically once the build check passes.'
-              : 'This PR can be added to the merge queue by commenting `@mergifyio queue`.\n\nIf this PR is a maintenance change (CI, tooling, internal refactor) rather than a user-visible change, please add the `maintenance` label.';
+              : 'This PR can be added to the merge queue by commenting `@mergifyio queue`.';
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,

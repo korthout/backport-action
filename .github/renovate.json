@@ -5,7 +5,6 @@
     "helpers:pinGitHubActionDigestsToSemver",
     ":semanticCommitsDisabled"
   ],
-  "addLabels": ["dependencies"],
   "packageRules": [
     {
       "matchUpdateTypes": ["patch", "pin", "digest", "lockFileMaintenance"],
