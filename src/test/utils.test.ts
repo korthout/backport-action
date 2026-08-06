@@ -245,6 +245,54 @@ describe("compose body/title", () => {
         "Backport of pull made by @foo-author",
       );
     });
+
+    describe("for a template that repeats a placeholder", () => {
+      it("with pull_author placeholder", () => {
+        const template = "Backported by @${pull_author}, cc @${pull_author}";
+        expect(replacePlaceholders(template, main_default, target)).toEqual(
+          "Backported by @foo-author, cc @foo-author",
+        );
+      });
+
+      it("with pull_number placeholder", () => {
+        const template = "Backport of #${pull_number} (see #${pull_number})";
+        expect(replacePlaceholders(template, main_default, target)).toEqual(
+          "Backport of #123 (see #123)",
+        );
+      });
+
+      it("with pull_title placeholder", () => {
+        const template = "${pull_title} (backport of ${pull_title})";
+        expect(replacePlaceholders(template, main_default, target)).toEqual(
+          "some pr title (backport of some pr title)",
+        );
+      });
+
+      it("with pull_description placeholder", () => {
+        const template = "${pull_description} -- repeated: ${pull_description}";
+        expect(replacePlaceholders(template, main_default, target)).toEqual(
+          "foo-body -- repeated: foo-body",
+        );
+      });
+
+      it("with target_branch placeholder", () => {
+        const template = "${target_branch}: backport to ${target_branch}";
+        expect(replacePlaceholders(template, main_default, target)).toEqual(
+          "foo-target: backport to foo-target",
+        );
+      });
+
+      it("with issue_refs placeholder", () => {
+        const template = "Refers to ${issue_refs} and again ${issue_refs}";
+        expect(
+          replacePlaceholders(
+            template,
+            { ...main_default, body: "Body mentions #123 and that's it." },
+            target,
+          ),
+        ).toEqual("Refers to #123 and again #123");
+      });
+    });
   });
 });
 
