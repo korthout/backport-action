@@ -352,6 +352,29 @@ describe("Backport.run() orchestration", () => {
         expect.objectContaining({ title: "[Backport main] Test PR" }),
       );
     });
+
+    it("repeated placeholders: replaces every occurrence", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit();
+      const config = makeConfig({
+        pull: {
+          title: "${target_branch}: backport to ${target_branch}",
+          description: "Backport of #${pull_number} (see #${pull_number})",
+          branch_name:
+            "${target_branch}/backport-${pull_number}-to-${target_branch}",
+        },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs[0]).toEqual(
+        expect.objectContaining({
+          title: "main: backport to main",
+          body: "Backport of #42 (see #42)",
+          head: "main/backport-42-to-main",
+        }),
+      );
+    });
   });
 
   describe("assignees", () => {
