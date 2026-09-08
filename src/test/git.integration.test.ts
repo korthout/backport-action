@@ -46,6 +46,7 @@ import { FakeGithub } from "./helpers/fake-github.js";
 import { makeConfig } from "./helpers/config.js";
 import {
   createRepoTemplate,
+  addAlreadyBackportedCommit,
   addCommit,
   addConflictingCommits,
   createBranch,
@@ -197,6 +198,217 @@ describe("Backport.run() with real git", () => {
       ctx.expect(commits).toHaveLength(1);
       const content = await gitCmd(`show ${commits[0]}`, repo.workDir);
       ctx.expect(content).toContain("BACKPORT-CONFLICT");
+    },
+  );
+
+  it.concurrent(
+    "already backported: no PR, no failure comment",
+    async (ctx) => {
+      const repo = (ctx.repo = await template.createTestRepo());
+      const git = setupGit();
+
+      await createBranch(repo.workDir, "release", repo.initialCommitSha);
+
+      const featureSha = await addAlreadyBackportedCommit(
+        repo.workDir,
+        "release",
+        "README.md",
+      );
+      await createPullRequestRef(repo.workDir, 42, featureSha);
+
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport release" }],
+          commitShas: [featureSha],
+          mergeCommitSha: featureSha,
+        },
+      });
+
+      const config = makeConfig({ pwd: repo.workDir });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      ctx.expect(github.createdPRs).toHaveLength(0);
+      ctx.expect(github.comments).toHaveLength(0);
+    },
+  );
+
+  it.concurrent(
+    "already backported (draft mode): no draft PR, no conflict commit",
+    async (ctx) => {
+      const repo = (ctx.repo = await template.createTestRepo());
+      const git = setupGit();
+
+      await createBranch(repo.workDir, "release", repo.initialCommitSha);
+
+      const featureSha = await addAlreadyBackportedCommit(
+        repo.workDir,
+        "release",
+        "README.md",
+      );
+      await createPullRequestRef(repo.workDir, 42, featureSha);
+
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport release" }],
+          commitShas: [featureSha],
+          mergeCommitSha: featureSha,
+        },
+      });
+
+      const config = makeConfig({
+        pwd: repo.workDir,
+        experimental: { conflict_resolution: "draft_commit_conflicts" },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      ctx.expect(github.createdPRs).toHaveLength(0);
+      ctx.expect(github.comments).toHaveLength(0);
+      const commits = await git.findCommitsInRange(
+        "release..backport-42-to-release",
+        repo.workDir,
+      );
+      ctx.expect(commits).toHaveLength(0);
+    },
+  );
+
+  it.concurrent(
+    "already backported (empty_commits: fail): posts a comment naming the real reason",
+    async (ctx) => {
+      const repo = (ctx.repo = await template.createTestRepo());
+      const git = setupGit();
+
+      await createBranch(repo.workDir, "release", repo.initialCommitSha);
+
+      const featureSha = await addAlreadyBackportedCommit(
+        repo.workDir,
+        "release",
+        "README.md",
+      );
+      await createPullRequestRef(repo.workDir, 42, featureSha);
+
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport release" }],
+          commitShas: [featureSha],
+          mergeCommitSha: featureSha,
+        },
+      });
+
+      const config = makeConfig({
+        pwd: repo.workDir,
+        commits: {
+          cherry_picking: "auto",
+          cherry_picking_merge_mode: "default",
+          empty_commits: "fail",
+          merge_commits: "fail",
+        },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      ctx.expect(github.createdPRs).toHaveLength(0);
+      ctx.expect(github.comments).toContainEqual(
+        ctx.expect.objectContaining({
+          body: ctx.expect.stringContaining("already contains the changes"),
+        }),
+      );
+      ctx.expect(github.comments).not.toContainEqual(
+        ctx.expect.objectContaining({
+          body: ctx.expect.stringContaining("unable to cherry-pick"),
+        }),
+      );
+    },
+  );
+
+  it.concurrent(
+    "partially backported: cherry-picks only the commits missing from the target",
+    async (ctx) => {
+      const repo = (ctx.repo = await template.createTestRepo());
+      const git = setupGit();
+
+      await createBranch(repo.workDir, "release", repo.initialCommitSha);
+
+      const backportedSha = await addAlreadyBackportedCommit(
+        repo.workDir,
+        "release",
+        "already-there.md",
+      );
+      const newSha = await addCommit(
+        repo.workDir,
+        "new.md",
+        "brand new content",
+        "Add new.md",
+      );
+      await pushBranch(repo.workDir);
+      await createPullRequestRef(repo.workDir, 42, newSha);
+
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport release" }],
+          commitShas: [backportedSha, newSha],
+          mergeCommitSha: newSha,
+        },
+        mergeStrategyResult: MergeStrategy.MERGECOMMIT,
+        nextPrNumber: 999,
+      });
+
+      const config = makeConfig({ pwd: repo.workDir });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      ctx.expect(github.createdPRs).toHaveLength(1);
+      ctx.expect(github.createdPRs[0]).toMatchObject({ draft: false });
+      await expectCherryPickedCommits(
+        ctx,
+        git,
+        repo.workDir,
+        "release..backport-42-to-release",
+        [{ message: "Add new.md", cherryPickedFrom: newSha }],
+      );
+    },
+  );
+
+  it.concurrent(
+    "already backported commit followed by a conflicting one: reports the conflict",
+    async (ctx) => {
+      const repo = (ctx.repo = await template.createTestRepo());
+      const git = setupGit();
+
+      await createBranch(repo.workDir, "release", repo.initialCommitSha);
+
+      const backportedSha = await addAlreadyBackportedCommit(
+        repo.workDir,
+        "release",
+        "already-there.md",
+      );
+      const conflictingSha = await addConflictingCommits(
+        repo.workDir,
+        "release",
+        "shared.md",
+      );
+      await createPullRequestRef(repo.workDir, 42, conflictingSha);
+
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport release" }],
+          commitShas: [backportedSha, conflictingSha],
+          mergeCommitSha: conflictingSha,
+        },
+        mergeStrategyResult: MergeStrategy.MERGECOMMIT,
+      });
+
+      const config = makeConfig({ pwd: repo.workDir });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      ctx.expect(github.createdPRs).toHaveLength(0);
+      ctx.expect(github.comments).toContainEqual(
+        ctx.expect.objectContaining({
+          body: ctx.expect.stringContaining("unable to cherry-pick"),
+        }),
+      );
     },
   );
 
@@ -437,7 +649,12 @@ describe("Backport.run() with real git", () => {
 
       const config = makeConfig({
         pwd: repo.workDir,
-        commits: { cherry_picking: "auto", merge_commits: "skip" },
+        commits: {
+          cherry_picking: "auto",
+          cherry_picking_merge_mode: "default",
+          empty_commits: "skip",
+          merge_commits: "skip",
+        },
       });
       const backport = new Backport(github, config, git);
       await backport.run();

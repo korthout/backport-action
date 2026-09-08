@@ -29,6 +29,7 @@ async function run(): Promise<void> {
   const target_branches = core.getInput("target_branches");
   const cherry_picking = core.getInput("cherry_picking");
   const cherry_picking_merge_mode = core.getInput("cherry_picking_merge_mode");
+  const empty_commits = core.getInput("empty_commits");
   const merge_commits = core.getInput("merge_commits");
   const copy_assignees = core.getInput("copy_assignees");
   const copy_milestone = core.getInput("copy_milestone");
@@ -56,6 +57,13 @@ async function run(): Promise<void> {
   );
   if (coercedCherryPickingMergeMode === "invalid") {
     const message = `Invalid value for \`cherry_picking_merge_mode\`: \`${cherry_picking_merge_mode}\`. Accepted values: \`default\`, \`whitespace_tolerant\`.`;
+    console.error(message);
+    core.setFailed(message);
+    return;
+  }
+
+  if (empty_commits != "fail" && empty_commits != "skip") {
+    const message = `Expected input 'empty_commits' to be either 'fail' or 'skip', but was '${empty_commits}'`;
     console.error(message);
     core.setFailed(message);
     return;
@@ -135,6 +143,7 @@ async function run(): Promise<void> {
     commits: {
       cherry_picking,
       cherry_picking_merge_mode: coercedCherryPickingMergeMode,
+      empty_commits,
       merge_commits,
     },
     copy_assignees: copy_assignees === "true",

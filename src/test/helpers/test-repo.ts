@@ -172,6 +172,33 @@ export async function addConflictingCommits(
 }
 
 /**
+ * Sets up a commit on main whose changes the target branch already contains,
+ * by cherry-picking it onto the target branch first. This is the state a
+ * repeat backport run finds after an earlier backport was merged.
+ * Returns the SHA of the commit on main (to use as the PR merge_commit_sha).
+ */
+export async function addAlreadyBackportedCommit(
+  dir: string,
+  targetBranch: string,
+  file: string,
+): Promise<string> {
+  const featureSha = await addCommit(
+    dir,
+    file,
+    `content from main for ${file}`,
+    `Change ${file} on main`,
+  );
+  await pushBranch(dir);
+
+  await gitCmd(`checkout ${targetBranch}`, dir);
+  await gitCmd(`cherry-pick -x ${featureSha}`, dir);
+  await gitCmd(`push origin ${targetBranch}`, dir);
+  await gitCmd("checkout main", dir);
+
+  return featureSha;
+}
+
+/**
  * Creates a pull request ref in the bare remote, simulating what GitHub does.
  * This allows `git fetch origin refs/pull/<number>/head` to succeed.
  */

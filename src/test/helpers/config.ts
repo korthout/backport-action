@@ -15,6 +15,7 @@ export function makeConfig(overrides?: Partial<Config>): Config {
     commits: {
       cherry_picking: "auto",
       cherry_picking_merge_mode: "default",
+      empty_commits: "skip",
       merge_commits: "fail",
     },
     copy_milestone: false,

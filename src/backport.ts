@@ -7,7 +7,7 @@ import {
   RequestError,
 } from "./github.js";
 import { GithubApi } from "./github.js";
-import { GitApi, GitRefNotFoundError } from "./git.js";
+import { CherryPickResult, GitApi, GitRefNotFoundError } from "./git.js";
 import {
   CommentContext,
   formatInitialComment,
@@ -18,6 +18,7 @@ import {
   CheckoutError,
   CherryPickError,
   CreatePRError,
+  EmptyCherryPickError,
   GitPushError,
   TargetResult,
 } from "./errors.js";
@@ -76,6 +77,7 @@ export type Config = {
   commits: {
     cherry_picking: "auto" | "pull_request_head";
     cherry_picking_merge_mode: "default" | "whitespace_tolerant";
+    empty_commits: "fail" | "skip";
     merge_commits: "fail" | "skip";
   };
   copy_milestone: boolean;
@@ -411,7 +413,7 @@ export class Backport {
         };
       }
 
-      let uncommittedShas: string[] | null;
+      let cherryPick: CherryPickResult;
 
       if (
         this.config.commits.cherry_picking_merge_mode === "whitespace_tolerant"
@@ -420,13 +422,17 @@ export class Backport {
       }
 
       try {
-        uncommittedShas = await this.git.cherryPick(
+        cherryPick = await this.git.cherryPick(
           commitShasToCherryPick,
           this.config.experimental.conflict_resolution,
           this.config.pwd,
           this.config.commits.cherry_picking_merge_mode,
+          this.config.commits.empty_commits,
         );
       } catch (error) {
+        if (error instanceof EmptyCherryPickError) {
+          return { status: "failed", targetBranch, branchname, error };
+        }
         const message =
           error instanceof Error
             ? error.message
@@ -440,6 +446,17 @@ export class Backport {
             branchname,
             commitShasToCherryPick,
           ),
+        };
+      }
+
+      if (cherryPick.status === "empty") {
+        console.log(
+          `Nothing to backport to ${targetBranch}, it already contains these changes`,
+        );
+        return {
+          status: "skipped",
+          targetBranch,
+          reason: "target branch already contains these changes",
         };
       }
 
@@ -481,7 +498,7 @@ export class Backport {
           head: branchname,
           base: targetBranch,
           maintainer_can_modify: true,
-          draft: uncommittedShas !== null,
+          draft: cherryPick.status === "conflicts",
         });
       } catch (error) {
         if (!(error instanceof RequestError)) throw error;
@@ -524,13 +541,13 @@ export class Backport {
         { owner: context.workflowOwner, repo: context.workflowRepo },
       );
 
-      if (uncommittedShas !== null) {
+      if (cherryPick.status === "conflicts") {
         return {
           status: "success_with_conflicts",
           targetBranch,
           newPrNumber: new_pr.number,
           branchname,
-          uncommittedShas,
+          uncommittedShas: cherryPick.uncommittedShas,
         };
       }
       return {

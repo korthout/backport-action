@@ -365,6 +365,17 @@ Note that this does not request reviews from those users who already reviewed th
 Use `copy_all_reviewers` instead to also request reviews from those users.
 By default, the requested reviewers are not copied.
 
+### `empty_commits`
+
+Default: `skip`
+
+Specifies how the action should deal with commits that are empty on the target branch, i.e. commits whose changes the target branch already contains. This is what a repeat backport run encounters after an earlier backport was merged.
+
+- When set to `skip` the action cherry-picks the remaining commits. When every commit is empty there is nothing to backport, so the action creates no pull request and reports the target branch as skipped.
+- When set to `fail` the backport fails when the action encounters an empty commit.
+
+Note that commits which were already empty in the original pull request are treated the same way.
+
 ### `experimental`
 
 Default:

@@ -9,7 +9,7 @@ export function createMockGit(overrides?: Partial<GitApi>): GitApi {
     findMergeCommits: vi.fn().mockResolvedValue([]),
     push: vi.fn().mockResolvedValue(undefined),
     checkout: vi.fn().mockResolvedValue(undefined),
-    cherryPick: vi.fn().mockResolvedValue(null),
+    cherryPick: vi.fn().mockResolvedValue({ status: "picked" }),
     ...overrides,
   };
 }
