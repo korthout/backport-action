@@ -36,6 +36,16 @@ export class CherryPickError extends BackportError {
   }
 }
 
+export class EmptyCherryPickError extends BackportError {
+  commits: string[];
+
+  constructor(message: string, commits: string[]) {
+    super(message);
+    this.name = "EmptyCherryPickError";
+    this.commits = commits;
+  }
+}
+
 export class GitPushError extends BackportError {
   branch: string;
   remote: string;

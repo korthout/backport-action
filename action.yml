@@ -107,6 +107,13 @@ inputs:
       Use `copy_all_reviewers` instead to also request reviews from those users.
       By default, the requested reviewers are not copied.
     default: false
+  empty_commits:
+    description: >
+      Specifies how the action should deal with commits that are empty on the target branch,
+      i.e. commits whose changes the target branch already contains.
+      When set to `skip` the action cherry-picks the remaining commits, and creates no pull request when every commit is empty.
+      When set to `fail` the backport fails when the action encounters an empty commit.
+    default: skip
   experimental:
     description: >
       Configure experimental features by passing a JSON object.
