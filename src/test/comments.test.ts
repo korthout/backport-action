@@ -11,6 +11,7 @@ import {
   CheckoutError,
   CherryPickError,
   CreatePRError,
+  EmptyCherryPickError,
   GitPushError,
   TargetResult,
 } from "../errors.js";
@@ -63,6 +64,20 @@ describe("formatSingleTargetComment", () => {
     expect(out).toContain("stable/8.0");
     expect(out).toContain("backport-42-to-8.0");
     expect(out).toContain("abc def");
+  });
+
+  it("EmptyCherryPickError: says the target already has the changes", () => {
+    const out = formatSingleTargetComment(
+      failed(
+        "stable/8.0",
+        new EmptyCherryPickError("cherry-pick is empty", ["abc"]),
+      ),
+      context,
+    );
+
+    expect(out).toContain("already contains their changes");
+    expect(out).toContain("stable/8.0");
+    expect(out).not.toContain("resolve any conflicts");
   });
 
   it("GitPushError: includes branch, remote, and exit code with PAT recovery", () => {

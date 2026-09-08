@@ -4,6 +4,7 @@ import {
   CheckoutError,
   CherryPickError,
   CreatePRError,
+  EmptyCherryPickError,
   GitPushError,
   TargetResult,
 } from "./errors.js";
@@ -169,6 +170,15 @@ export function formatSingleTargetComment(
              git switch --create ${error.branch}
              git cherry-pick -x ${error.commits.join(" ")}
              \`\`\``,
+    );
+  }
+
+  if (error instanceof EmptyCherryPickError) {
+    return wrapDetails(
+      `:x: ${targetBranch} — changes already present`,
+      dedent`Tried to cherry-pick commits onto \`${targetBranch}\`, but it already contains their changes, so the cherry-pick was empty.
+
+             Set \`empty_commits: skip\` to skip such commits instead.`,
     );
   }
 

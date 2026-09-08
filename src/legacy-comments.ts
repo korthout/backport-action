@@ -4,6 +4,7 @@ import {
   CheckoutError,
   CherryPickError,
   CreatePRError,
+  EmptyCherryPickError,
   GitPushError,
   TargetResult,
 } from "./errors.js";
@@ -22,6 +23,9 @@ export function composeFailureMessage(
       error.branch,
       error.commits,
     );
+  }
+  if (error instanceof EmptyCherryPickError) {
+    return composeMessageForEmptyCherryPick(targetBranch);
   }
   if (error instanceof CherryPickError) {
     return composeMessageForCherryPickFailure(
@@ -131,6 +135,12 @@ function composeMessageForCherryPickFailure(
 
                 Please cherry-pick the changes locally and resolve any conflicts.
                 ${suggestion}`;
+}
+
+function composeMessageForEmptyCherryPick(target: string): string {
+  return dedent`Backport failed for \`${target}\`, because \`${target}\` already contains the changes of the commit(s) to backport.
+
+                Set \`empty_commits: skip\` to skip such commits instead.`;
 }
 
 function composeMessageForGitPushFailure(
