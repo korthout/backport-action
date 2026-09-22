@@ -128,7 +128,8 @@ describe("Backport.run() orchestration", () => {
       const git = createMockGit({
         cherryPick: vi.fn().mockImplementation(async () => {
           cherryPickCallCount++;
-          if (cherryPickCallCount === 1) return null;
+          if (cherryPickCallCount === 1)
+            return { status: "picked", skippedShas: [] };
           throw new Error("cherry-pick failed");
         }),
       });
@@ -240,6 +241,21 @@ describe("Backport.run() orchestration", () => {
       );
     });
 
+    it("every commit already on the target (skip mode): no PR, no comment, still successful", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit({
+        cherryPick: vi.fn().mockResolvedValue({ status: "empty" }),
+      });
+      const config = makeConfig();
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs).toHaveLength(0);
+      expect(github.comments).toHaveLength(0);
+      expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+      expect(core.setOutput).toHaveBeenCalledWith("created_pull_numbers", "");
+    });
+
     it("cherry-pick fails: posts failure comment with manual instructions", async () => {
       const github = new FakeGithub();
       const git = createMockGit({
@@ -260,7 +276,11 @@ describe("Backport.run() orchestration", () => {
     it("cherry-pick with conflicts (draft mode): creates draft PR, posts conflict comment", async () => {
       const github = new FakeGithub();
       const git = createMockGit({
-        cherryPick: vi.fn().mockResolvedValue(["abc123"]),
+        cherryPick: vi.fn().mockResolvedValue({
+          status: "conflicts",
+          uncommittedShas: ["abc123"],
+          skippedShas: [],
+        }),
       });
       const config = makeConfig({
         experimental: { conflict_resolution: "draft_commit_conflicts" },
@@ -683,6 +703,22 @@ describe("Backport.run() orchestration", () => {
   });
 
   describe("comment_style: summary", () => {
+    it("empty cherry-pick: the summary table marks the target as skipped", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit({
+        cherryPick: vi.fn().mockResolvedValue({ status: "empty" }),
+      });
+      const config = makeConfig({ comment_style: "summary" });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs).toHaveLength(0);
+      const final = github.updatedComments[github.updatedComments.length - 1];
+      expect(final.body).toContain(
+        ":heavy_minus_sign: Skipped (target already contains changes)",
+      );
+    });
+
     it("creates a single comment up front and updates it after each target", async () => {
       const github = new FakeGithub({
         sourcePr: {
@@ -848,7 +884,11 @@ describe("Backport.run() orchestration", () => {
       const github = new FakeGithub();
       const git = createMockGit({
         // non-null array signals which SHAs still need to be cherry-picked as there were conflicts encountered
-        cherryPick: vi.fn().mockResolvedValue(["abc123"]),
+        cherryPick: vi.fn().mockResolvedValue({
+          status: "conflicts",
+          uncommittedShas: ["abc123"],
+          skippedShas: [],
+        }),
       });
       const config = makeConfig({
         comment_style: "summary",
@@ -882,7 +922,11 @@ describe("Backport.run() orchestration", () => {
       github.failOn("createComment", new Error("create failed"));
       const git = createMockGit({
         // non-null array signals which SHAs still need to be cherry-picked as there were conflicts encountered
-        cherryPick: vi.fn().mockResolvedValue(["abc123"]),
+        cherryPick: vi.fn().mockResolvedValue({
+          status: "conflicts",
+          uncommittedShas: ["abc123"],
+          skippedShas: [],
+        }),
       });
       const config = makeConfig({
         comment_style: "summary",
