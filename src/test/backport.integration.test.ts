@@ -256,6 +256,50 @@ describe("Backport.run() orchestration", () => {
       expect(core.setOutput).toHaveBeenCalledWith("created_pull_numbers", "");
     });
 
+    it("skipped commits: legacy success comment names them, backport PR gets its own comment", async () => {
+      const github = new FakeGithub({ nextPrNumber: 777 });
+      const git = createMockGit({
+        cherryPick: vi
+          .fn()
+          .mockResolvedValue({ status: "picked", skippedShas: ["abc123"] }),
+      });
+      const config = makeConfig();
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.comments).toContainEqual(
+        expect.objectContaining({
+          issue_number: 42,
+          body: expect.stringContaining(
+            "1 commit skipped (target already contains changes)",
+          ),
+        }),
+      );
+      expect(github.comments).toContainEqual(
+        expect.objectContaining({
+          issue_number: 777,
+          body: expect.stringContaining("abc123"),
+        }),
+      );
+    });
+
+    it("no skipped commits: no extra comment on the backport PR", async () => {
+      const github = new FakeGithub({ nextPrNumber: 777 });
+      const git = createMockGit();
+      const config = makeConfig();
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(
+        github.comments.filter((c) => c.issue_number === 777),
+      ).toHaveLength(0);
+      expect(github.comments).not.toContainEqual(
+        expect.objectContaining({
+          body: expect.stringContaining("skipped"),
+        }),
+      );
+    });
+
     it("cherry-pick fails: posts failure comment with manual instructions", async () => {
       const github = new FakeGithub();
       const git = createMockGit({

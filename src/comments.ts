@@ -8,6 +8,7 @@ import {
   TargetResult,
 } from "./errors.js";
 import { GitRefNotFoundError } from "./git.js";
+import { describeSkippedCommits } from "./utils.js";
 
 /**
  * Per-run context required to render the summary comment.
@@ -124,14 +125,19 @@ function formatTable(
 function formatStatusCell(result: TargetResult): string {
   switch (result.status) {
     case "success":
-      return `:white_check_mark: Created #${result.newPrNumber}`;
+      return `:white_check_mark: Created #${result.newPrNumber}${formatSkippedSuffix(result.skippedShas)}`;
     case "success_with_conflicts":
-      return `:warning: Drafted with conflicts #${result.newPrNumber}`;
+      return `:warning: Drafted with conflicts #${result.newPrNumber}${formatSkippedSuffix(result.skippedShas)}`;
     case "skipped":
       return `:heavy_minus_sign: Skipped (${result.reason})`;
     case "failed":
       return ":x: Failed";
   }
+}
+
+function formatSkippedSuffix(skippedShas: string[]): string {
+  if (skippedShas.length === 0) return "";
+  return ` — ${describeSkippedCommits(skippedShas)}`;
 }
 
 /**

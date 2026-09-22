@@ -23,6 +23,7 @@ import {
 } from "./errors.js";
 import {
   composeFailureMessage,
+  composeMessageForSkippedCommits,
   composeMessageForSuccess,
   composeMessageForSuccessWithConflicts,
   composeMessageToResolveCommittedConflicts,
@@ -318,18 +319,24 @@ export class Backport {
           await updateSummary(
             formatRunComment(results, remainingTargets, commentCtx),
           );
-          if (result.status === "success_with_conflicts") {
-            // Best-effort: a failure to post the resolve-conflicts comment
-            // shouldn't flip a success_with_conflicts target into a hard run
-            // failure or block subsequent targets.
-            try {
+          // Best-effort: a failure to comment on the backport pull request
+          // shouldn't flip the target into a hard run failure or block
+          // subsequent targets.
+          try {
+            if (result.status === "success_with_conflicts") {
               await this.commentResolveConflictsOnDraftPr(result, context);
-            } catch (error) {
-              console.error(
-                "Failed to post resolve-conflicts comment on draft PR:",
-                error,
-              );
             }
+            if (
+              result.status === "success" ||
+              result.status === "success_with_conflicts"
+            ) {
+              await this.commentSkippedCommitsOnBackportPr(result, context);
+            }
+          } catch (error) {
+            console.error(
+              "Failed to post comment on the backport pull request:",
+              error,
+            );
           }
         } else {
           await this.handleTargetResultLegacy(result, context);
@@ -542,6 +549,7 @@ export class Backport {
           newPrNumber: new_pr.number,
           branchname,
           uncommittedShas: cherryPick.uncommittedShas,
+          skippedShas: cherryPick.skippedShas,
         };
       }
       return {
@@ -549,6 +557,7 @@ export class Backport {
         targetBranch,
         newPrNumber: new_pr.number,
         branchname,
+        skippedShas: cherryPick.skippedShas,
       };
     } catch (error) {
       if (error instanceof Error) {
@@ -606,8 +615,14 @@ export class Backport {
             branchname,
             result.uncommittedShas,
             this.config.experimental.conflict_resolution,
+            result.skippedShas,
           )
-        : composeMessageForSuccess(newPrNumber, targetBranch, downstream);
+        : composeMessageForSuccess(
+            newPrNumber,
+            targetBranch,
+            downstream,
+            result.skippedShas,
+          );
 
     await this.github.createComment({
       owner: workflowOwner,
@@ -619,6 +634,28 @@ export class Backport {
     if (result.status === "success_with_conflicts") {
       await this.commentResolveConflictsOnDraftPr(result, context);
     }
+
+    await this.commentSkippedCommitsOnBackportPr(result, context);
+  }
+
+  private async commentSkippedCommitsOnBackportPr(
+    result: Extract<
+      TargetResult,
+      { status: "success" | "success_with_conflicts" }
+    >,
+    context: BackportContext,
+  ): Promise<void> {
+    if (result.skippedShas.length === 0) return;
+
+    await this.github.createComment({
+      owner: context.targetOwner,
+      repo: context.targetRepo,
+      issue_number: result.newPrNumber,
+      body: composeMessageForSkippedCommits(
+        result.targetBranch,
+        result.skippedShas,
+      ),
+    });
   }
 
   private async commentResolveConflictsOnDraftPr(

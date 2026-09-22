@@ -8,6 +8,7 @@ import {
   TargetResult,
 } from "./errors.js";
 import { GitRefNotFoundError } from "./git.js";
+import { describeSkippedCommits } from "./utils.js";
 
 export function composeFailureMessage(
   result: Extract<TargetResult, { status: "failed" }>,
@@ -46,9 +47,10 @@ export function composeMessageForSuccess(
   pr_number: number,
   target: string,
   downstream: string,
+  skippedShas: string[],
 ): string {
   return dedent`Successfully created backport PR for \`${target}\`:
-                - ${downstream}#${pr_number}`;
+                - ${downstream}#${pr_number}${composeSkippedSuffix(skippedShas)}`;
 }
 
 export function composeMessageForSuccessWithConflicts(
@@ -58,6 +60,7 @@ export function composeMessageForSuccessWithConflicts(
   branchname: string,
   commitShasToCherryPick: string[],
   conflictResolution: string,
+  skippedShas: string[],
 ): string {
   const suggestionToResolve = composeMessageToResolveCommittedConflicts(
     target,
@@ -66,9 +69,24 @@ export function composeMessageForSuccessWithConflicts(
     conflictResolution,
   );
   return dedent`Created backport PR for \`${target}\`:
-                - ${downstream}#${pr_number} with remaining conflicts!
+                - ${downstream}#${pr_number} with remaining conflicts!${composeSkippedSuffix(skippedShas)}
 
                 ${suggestionToResolve}`;
+}
+
+function composeSkippedSuffix(skippedShas: string[]): string {
+  if (skippedShas.length === 0) return "";
+  return `\n- ${describeSkippedCommits(skippedShas)}`;
+}
+
+export function composeMessageForSkippedCommits(
+  target: string,
+  skippedShas: string[],
+): string {
+  const list = skippedShas.map((sha) => `- ${sha}`).join("\n");
+  return dedent`\`${target}\` already contains the changes of these commits, so they were skipped and this pull request has fewer commits than the original pull request:
+
+                ${list}`;
 }
 
 export function composeMessageToResolveCommittedConflicts(

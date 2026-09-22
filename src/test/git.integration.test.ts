@@ -318,6 +318,21 @@ describe("Backport.run() with real git", () => {
         "release..backport-42-to-release",
         [{ message: "Add new.md", cherryPickedFrom: newSha }],
       );
+
+      ctx.expect(github.comments).toContainEqual(
+        ctx.expect.objectContaining({
+          issue_number: 42,
+          body: ctx.expect.stringContaining(
+            "1 commit skipped (target already contains changes)",
+          ),
+        }),
+      );
+      ctx.expect(github.comments).toContainEqual(
+        ctx.expect.objectContaining({
+          issue_number: 999,
+          body: ctx.expect.stringContaining(backportedSha),
+        }),
+      );
     },
   );
 

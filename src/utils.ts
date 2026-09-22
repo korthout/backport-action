@@ -74,3 +74,13 @@ const toRef = (url: string) => {
   const [, org, repo, number] = result;
   return `${org}/${repo}#${number}`;
 };
+
+/**
+ * Describes commits dropped from a cherry-pick because the target branch
+ * already contained them, e.g. "1 commit skipped (target already contains
+ * changes)". Shared so both comment styles word it identically.
+ */
+export function describeSkippedCommits(skippedShas: string[]): string {
+  const plural = skippedShas.length === 1 ? "commit" : "commits";
+  return `${skippedShas.length} ${plural} skipped (target already contains changes)`;
+}
