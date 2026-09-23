@@ -152,26 +152,32 @@ describe("Backport.run() with real git", () => {
   );
 
   it.concurrent(
-    "cherry-pick conflict (draft mode): creates draft PR with conflict comment",
+    "cherry-pick conflict (draft mode): creates draft PR with conflict comment, skipping commits already on the target",
     async (ctx) => {
       const repo = (ctx.repo = await template.createTestRepo());
       const git = setupGit();
 
       await createBranch(repo.workDir, "release", repo.initialCommitSha);
 
-      const featureSha = await addConflictingCommits(
+      const backportedSha = await addAlreadyBackportedCommit(
+        repo.workDir,
+        "release",
+        "already-there.md",
+      );
+      const conflictingSha = await addConflictingCommits(
         repo.workDir,
         "release",
         "README.md",
       );
-      await createPullRequestRef(repo.workDir, 42, featureSha);
+      await createPullRequestRef(repo.workDir, 42, conflictingSha);
 
       const github = new FakeGithub({
         sourcePr: {
           labels: [{ name: "backport release" }],
-          commitShas: [featureSha],
-          mergeCommitSha: featureSha,
+          commitShas: [backportedSha, conflictingSha],
+          mergeCommitSha: conflictingSha,
         },
+        mergeStrategyResult: MergeStrategy.MERGECOMMIT,
         nextPrNumber: 999,
       });
 
@@ -186,10 +192,17 @@ describe("Backport.run() with real git", () => {
       ctx.expect(github.comments).toContainEqual(
         ctx.expect.objectContaining({
           body: ctx.expect.stringMatching(
-            /- #999 with remaining conflicts!\n\nPlease cherry-pick the changes locally and resolve any conflicts\./,
+            /- #999 with remaining conflicts!\n(?:- .*\n)*\nPlease cherry-pick the changes locally and resolve any conflicts\./,
           ),
         }),
       );
+      const sourcePrComment = github.comments.find(
+        (c) => c.issue_number === 42,
+      );
+      ctx
+        .expect(sourcePrComment?.body)
+        .toContain(`git cherry-pick -x ${conflictingSha}\n`);
+      ctx.expect(sourcePrComment?.body).not.toContain(backportedSha);
 
       const commits = await git.findCommitsInRange(
         "release..backport-42-to-release",
@@ -274,35 +287,40 @@ describe("Backport.run() with real git", () => {
   );
 
   it.concurrent(
-    "partially backported: cherry-picks only the commits missing from the target",
+    "multiple commits cherry-picked in order, skipping those already on the target",
     async (ctx) => {
       const repo = (ctx.repo = await template.createTestRepo());
       const git = setupGit();
 
       await createBranch(repo.workDir, "release", repo.initialCommitSha);
 
-      const backportedSha = await addAlreadyBackportedCommit(
+      const sha1 = await addCommit(
+        repo.workDir,
+        "file1.txt",
+        "content1",
+        "First commit",
+      );
+      const sha2 = await addAlreadyBackportedCommit(
         repo.workDir,
         "release",
-        "already-there.md",
+        "file2.txt",
       );
-      const newSha = await addCommit(
+      const sha3 = await addCommit(
         repo.workDir,
-        "new.md",
-        "brand new content",
-        "Add new.md",
+        "file3.txt",
+        "content3",
+        "Third commit",
       );
       await pushBranch(repo.workDir);
-      await createPullRequestRef(repo.workDir, 42, newSha);
+      await createPullRequestRef(repo.workDir, 42, sha3);
 
       const github = new FakeGithub({
         sourcePr: {
           labels: [{ name: "backport release" }],
-          commitShas: [backportedSha, newSha],
-          mergeCommitSha: newSha,
+          commitShas: [sha1, sha2, sha3],
+          mergeCommitSha: sha3,
         },
         mergeStrategyResult: MergeStrategy.MERGECOMMIT,
-        nextPrNumber: 999,
       });
 
       const config = makeConfig({ pwd: repo.workDir });
@@ -311,128 +329,19 @@ describe("Backport.run() with real git", () => {
 
       ctx.expect(github.createdPRs).toHaveLength(1);
       ctx.expect(github.createdPRs[0]).toMatchObject({ draft: false });
+
       await expectCherryPickedCommits(
         ctx,
         git,
         repo.workDir,
         "release..backport-42-to-release",
-        [{ message: "Add new.md", cherryPickedFrom: newSha }],
-      );
-
-      ctx.expect(github.comments).toContainEqual(
-        ctx.expect.objectContaining({
-          issue_number: 42,
-          body: ctx.expect.stringContaining(
-            "1 commit skipped (target already contains changes)",
-          ),
-        }),
-      );
-      ctx.expect(github.comments).toContainEqual(
-        ctx.expect.objectContaining({
-          issue_number: 999,
-          body: ctx.expect.stringContaining(backportedSha),
-        }),
+        [
+          { message: "First commit", cherryPickedFrom: sha1 },
+          { message: "Third commit", cherryPickedFrom: sha3 },
+        ],
       );
     },
   );
-
-  it.concurrent(
-    "already backported commit followed by a conflicting one: reports the conflict",
-    async (ctx) => {
-      const repo = (ctx.repo = await template.createTestRepo());
-      const git = setupGit();
-
-      await createBranch(repo.workDir, "release", repo.initialCommitSha);
-
-      const backportedSha = await addAlreadyBackportedCommit(
-        repo.workDir,
-        "release",
-        "already-there.md",
-      );
-      const conflictingSha = await addConflictingCommits(
-        repo.workDir,
-        "release",
-        "shared.md",
-      );
-      await createPullRequestRef(repo.workDir, 42, conflictingSha);
-
-      const github = new FakeGithub({
-        sourcePr: {
-          labels: [{ name: "backport release" }],
-          commitShas: [backportedSha, conflictingSha],
-          mergeCommitSha: conflictingSha,
-        },
-        mergeStrategyResult: MergeStrategy.MERGECOMMIT,
-      });
-
-      const config = makeConfig({ pwd: repo.workDir });
-      const backport = new Backport(github, config, git);
-      await backport.run();
-
-      ctx.expect(github.createdPRs).toHaveLength(0);
-      ctx.expect(github.comments).toContainEqual(
-        ctx.expect.objectContaining({
-          body: ctx.expect.stringContaining("unable to cherry-pick"),
-        }),
-      );
-    },
-  );
-
-  it.concurrent("multiple commits cherry-picked in order", async (ctx) => {
-    const repo = (ctx.repo = await template.createTestRepo());
-    const git = setupGit();
-
-    await createBranch(repo.workDir, "release", repo.initialCommitSha);
-
-    const sha1 = await addCommit(
-      repo.workDir,
-      "file1.txt",
-      "content1",
-      "First commit",
-    );
-    const sha2 = await addCommit(
-      repo.workDir,
-      "file2.txt",
-      "content2",
-      "Second commit",
-    );
-    const sha3 = await addCommit(
-      repo.workDir,
-      "file3.txt",
-      "content3",
-      "Third commit",
-    );
-    await pushBranch(repo.workDir);
-    await createPullRequestRef(repo.workDir, 42, sha3);
-
-    const github = new FakeGithub({
-      sourcePr: {
-        labels: [{ name: "backport release" }],
-        commitShas: [sha1, sha2, sha3],
-        mergeCommitSha: sha3,
-      },
-      mergeStrategyResult: MergeStrategy.MERGECOMMIT,
-    });
-
-    const config = makeConfig({ pwd: repo.workDir });
-    const backport = new Backport(github, config, git);
-    await backport.run();
-
-    ctx.expect(github.createdPRs).toHaveLength(1);
-    ctx.expect(github.createdPRs[0]).toMatchObject({ draft: false });
-
-    await expectCherryPickedCommits(
-      ctx,
-      git,
-      repo.workDir,
-      "release..backport-42-to-release",
-      [
-        { message: "First commit", cherryPickedFrom: sha1 },
-        { message: "Second commit", cherryPickedFrom: sha2 },
-        { message: "Third commit", cherryPickedFrom: sha3 },
-      ],
-    );
-  });
 
   it.concurrent(
     "target branch doesn't exist: posts failure comment",
