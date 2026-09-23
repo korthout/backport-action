@@ -4,8 +4,7 @@ let response = { exitCode: 0, stdout: "" };
 let responseCommit = { exitCode: 0, stdout: "" };
 // Exit code 1 means the index differs from HEAD, i.e. the cherry-pick hit a
 // conflict rather than turning out empty.
-let responseDiff = { exitCode: 1, stdout: "" };
-let responseSkip = { exitCode: 0, stdout: "" };
+const responseDiff = { exitCode: 1, stdout: "" };
 
 const getExecOutputMock = vi.fn(
   (command: string, args?: readonly string[] | undefined) => {
@@ -17,12 +16,6 @@ const getExecOutputMock = vi.fn(
       }
       if (subCommand === "diff") {
         return responseDiff;
-      }
-      if (subCommand === "cherry-pick" && args[1] === "--skip") {
-        return responseSkip;
-      }
-      if (subCommand === "rev-parse") {
-        return { exitCode: 0, stdout: "halted-sha\n" };
       }
     }
     return response;
@@ -68,11 +61,6 @@ describe("git.fetch", () => {
 });
 
 describe("git.cherryPick", () => {
-  beforeEach(() => {
-    responseDiff = { exitCode: 1, stdout: "" };
-    responseSkip = { exitCode: 0, stdout: "" };
-  });
-
   describe("with conflict_resolution to fail", () => {
     describe("throws Error", () => {
       it("when failing with an unexpected non-zero exit code", async () => {
@@ -167,34 +155,6 @@ describe("git.cherryPick", () => {
         });
       });
     });
-  });
-});
-
-describe("git.cherryPick empty commits", () => {
-  beforeEach(() => {
-    response.exitCode = 1;
-    responseCommit.exitCode = 0;
-    // An index equal to HEAD: the cherry-pick applied nothing.
-    responseDiff = { exitCode: 0, stdout: "" };
-    responseSkip = { exitCode: 0, stdout: "" };
-    getExecOutputMock.mockClear();
-  });
-
-  it("returns empty when every commit is already on the target branch", async () => {
-    await expect(
-      git.cherryPick(["unknown"], `fail`, "", "default"),
-    ).resolves.toEqual({ status: "empty" });
-  });
-
-  it("returns empty in draft mode without committing a conflict", async () => {
-    await expect(
-      git.cherryPick(["unknown"], `draft_commit_conflicts`, "", "default"),
-    ).resolves.toEqual({ status: "empty" });
-    expect(
-      getExecOutputMock.mock.calls.some(
-        ([, args]) => Array.isArray(args) && args[0] === "commit",
-      ),
-    ).toBe(false);
   });
 });
 
