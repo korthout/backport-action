@@ -14,9 +14,17 @@ export class GitRefNotFoundError extends BackportError {
 /**
  * Outcome of cherry-picking the commits of a pull request onto a target branch.
  *
- * `skippedShas` holds the commits the target branch already contained, which
- * were dropped from the cherry-pick. `empty` means every commit was skipped,
- * so the branch holds nothing to open a pull request for.
+ * Statuses:
+ * - `picked`: every commit was cherry-picked, except the skipped ones.
+ * - `conflicts`: a commit conflicted and was committed with its conflict markers.
+ * - `empty`: every commit was skipped, so the branch holds nothing to open a
+ *   pull request for.
+ *
+ * Fields:
+ * - `skippedShas`: the commits the target branch already contained, which
+ *   were dropped from the cherry-pick.
+ * - `uncommittedShas`: the conflicting commit followed by the commits not yet
+ *   cherry-picked, which the user must still apply.
  */
 export type CherryPickResult =
   | { status: "picked"; skippedShas: string[] }
