@@ -27,6 +27,10 @@ The set of commits selected from the original pull request's history and passed 
 **Cherry-picked commits**:
 The new commits created on the target branch by `git cherry-pick`. The commit author is preserved from the input commits; the commit committer is overwritten by `git_committer_name` / `git_committer_email` (defaulting to `github-actions[bot]`). Each carries an `-x` trailer referencing the input commit as audit trail.
 
+**Skipped commit**:
+A commit to backport whose changes the target branch already contains, so no cherry-picked commit is created for it.
+_Avoid_: empty commit, empty cherry-pick (git mechanics), already-backported commit (the changes may have reached the target another way)
+
 **Merge method**:
 How a pull request is merged on GitHub. One of: squash-and-merge, rebase-and-merge, or merge commit. The action *observes* the original pull request's merge method (consumed by `cherry_picking: auto`) and *configures* the backport pull request's merge method (via `auto_merge_method`). Always disambiguate which pull request's merge method is meant.
 
@@ -46,7 +50,8 @@ Git commit metadata. Cherry-picking preserves the commit author and overwrites t
 - An **original pull request** produces zero or more **backport pull requests**, one per attempted **target branch**.
 - A **backport pull request** lives on a **target branch** inside the **target repository**.
 - A **backport label** on the **original pull request** selects one **target branch**.
-- The **commits to backport** (input to cherry-pick) become **cherry-picked commits** (output, on the target branch) after `git cherry-pick`.
+- The **commits to backport** (input to cherry-pick) become **cherry-picked commits** (output, on the target branch) after `git cherry-pick`, except for **skipped commits**.
+- When every commit to backport is a **skipped commit**, no **backport pull request** is created for that **target branch**.
 - The **original pull request's** **merge method** determines which **commits to backport** are selected when `cherry_picking: auto`.
 
 ## Example dialogue
@@ -62,4 +67,5 @@ Git commit metadata. Cherry-picking preserves the commit author and overwrites t
 - "Downstream repo" — resolved to **target repository** in prose. Input names `downstream_repo`/`downstream_owner` are experimental and likely renamed on promotion.
 - "Merge commit" was overloaded across: a merge method, an intermediate commit in PR history (`merge_commits` input), and the result of auto-merge. Resolved by always pairing with context; no coined term for the intermediate case.
 - "Author" was used for three concepts: PR author, commit author, commit committer. Resolved by always qualifying ("PR author" / "commit author" / "commit committer").
-- "Successful" / "failed" / "skipped" / "attempted" — intentionally *not* glossarised. The output `was_successful` is documented precisely in `README.md`; surrounding adjectives are plain English.
+- "Successful" / "failed" / "skipped" / "attempted" — intentionally *not* glossarised. The output `was_successful` is documented precisely in `README.md`; surrounding adjectives are plain English. The one exception is **skipped commit**, a named category of commit.
+- "Skipped" merge commits: `merge_commits: skip` leaves merge commits out of the **commits to backport**. They are *excluded*, not **skipped commits**. The input value `skip` is frozen API; in prose, say "excluded" or "ignored".
