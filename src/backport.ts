@@ -418,7 +418,7 @@ export class Backport {
         };
       }
 
-      let cherryPick: CherryPickResult;
+      let cherryPickResult: CherryPickResult;
 
       if (
         this.config.commits.cherry_picking_merge_mode === "whitespace_tolerant"
@@ -427,7 +427,7 @@ export class Backport {
       }
 
       try {
-        cherryPick = await this.git.cherryPick(
+        cherryPickResult = await this.git.cherryPick(
           commitShasToCherryPick,
           this.config.experimental.conflict_resolution,
           this.config.pwd,
@@ -450,7 +450,7 @@ export class Backport {
         };
       }
 
-      if (cherryPick.status === "empty") {
+      if (cherryPickResult.status === "empty") {
         console.log(
           `Nothing to backport to ${targetBranch}, it already contains these changes`,
         );
@@ -499,7 +499,7 @@ export class Backport {
           head: branchname,
           base: targetBranch,
           maintainer_can_modify: true,
-          draft: cherryPick.status === "conflicts",
+          draft: cherryPickResult.status === "conflicts",
         });
       } catch (error) {
         if (!(error instanceof RequestError)) throw error;
@@ -542,14 +542,14 @@ export class Backport {
         { owner: context.workflowOwner, repo: context.workflowRepo },
       );
 
-      if (cherryPick.status === "conflicts") {
+      if (cherryPickResult.status === "conflicts") {
         return {
           status: "success_with_conflicts",
           targetBranch,
           newPrNumber: new_pr.number,
           branchname,
-          uncommittedShas: cherryPick.uncommittedShas,
-          skippedShas: cherryPick.skippedShas,
+          uncommittedShas: cherryPickResult.uncommittedShas,
+          skippedShas: cherryPickResult.skippedShas,
         };
       }
       return {
@@ -557,7 +557,7 @@ export class Backport {
         targetBranch,
         newPrNumber: new_pr.number,
         branchname,
-        skippedShas: cherryPick.skippedShas,
+        skippedShas: cherryPickResult.skippedShas,
       };
     } catch (error) {
       if (error instanceof Error) {
