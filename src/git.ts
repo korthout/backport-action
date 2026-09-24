@@ -212,8 +212,8 @@ export class Git implements GitApi {
    */
   private async isEmptyPick(pwd: string): Promise<boolean> {
     const { exitCode } = await this.git(
-      "diff",
-      ["--cached", "--quiet", "HEAD"],
+      "diff-index",
+      ["--cached", "--quiet", "HEAD", "--"],
       pwd,
     );
     return exitCode === 0;
