@@ -76,7 +76,7 @@ export function composeMessageForSuccessWithConflicts(
 
 function composeSkippedSuffix(skippedShas: string[]): string {
   if (skippedShas.length === 0) return "";
-  return `\n- ${describeSkippedCommits(skippedShas)}`;
+  return ` — ${describeSkippedCommits(skippedShas)}`;
 }
 
 export function composeMessageForSkippedCommits(

@@ -276,7 +276,7 @@ describe("Backport.run() orchestration", () => {
         expect.objectContaining({
           issue_number: 42,
           body: expect.stringContaining(
-            "1 commit skipped (target already contains changes)",
+            "#777 — 1 commit skipped (target already contains changes)",
           ),
         }),
       );
@@ -307,7 +307,7 @@ describe("Backport.run() orchestration", () => {
         expect.objectContaining({
           issue_number: 42,
           body: expect.stringContaining(
-            "#777 with remaining conflicts!\n- 1 commit skipped (target already contains changes)",
+            "#777 with remaining conflicts! — 1 commit skipped (target already contains changes)",
           ),
         }),
       );

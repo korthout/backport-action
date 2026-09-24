@@ -192,7 +192,7 @@ describe("Backport.run() with real git", () => {
       ctx.expect(github.comments).toContainEqual(
         ctx.expect.objectContaining({
           body: ctx.expect.stringMatching(
-            /- #999 with remaining conflicts!\n(?:- .*\n)*\nPlease cherry-pick the changes locally and resolve any conflicts\./,
+            /- #999 with remaining conflicts! — 1 commit skipped \(target already contains changes\)\n\nPlease cherry-pick the changes locally and resolve any conflicts\./,
           ),
         }),
       );
