@@ -80,6 +80,7 @@ export type TargetResult =
       targetBranch: string;
       newPrNumber: number;
       branchname: string;
+      skippedShas: string[];
     }
   | {
       status: "success_with_conflicts";
@@ -87,6 +88,7 @@ export type TargetResult =
       newPrNumber: number;
       branchname: string;
       uncommittedShas: string[];
+      skippedShas: string[];
     }
   | { status: "skipped"; targetBranch: string; reason: string }
   | {

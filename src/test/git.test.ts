@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 let response = { exitCode: 0, stdout: "" };
 let responseCommit = { exitCode: 0, stdout: "" };
+// Exit code 1 means the index differs from HEAD, i.e. the cherry-pick hit a
+// conflict rather than turning out empty.
+const responseDiff = { exitCode: 1, stdout: "" };
 
 const getExecOutputMock = vi.fn(
   (command: string, args?: readonly string[] | undefined) => {
@@ -10,6 +13,9 @@ const getExecOutputMock = vi.fn(
       if (subCommand === "commit") {
         // Mock behavior for "git commit"
         return responseCommit;
+      }
+      if (subCommand === "diff") {
+        return responseDiff;
       }
     }
     return response;
@@ -71,8 +77,14 @@ describe("git.cherryPick", () => {
       it("when success", async () => {
         response.exitCode = 0;
         await expect(
-          git.cherryPick(["unknown"], `draft_commit_conflicts`, "", "default"),
-        ).resolves.toBe(null);
+          git.cherryPick(
+            ["unknown"],
+            `draft_commit_conflicts`,
+            "",
+            "default",
+            `skip`,
+          ),
+        ).resolves.toEqual({ status: "picked", skippedShas: [] });
       });
     });
   });
@@ -82,7 +94,13 @@ describe("git.cherryPick", () => {
       it("when failing with an unexpected non-zero and non-one exit code", async () => {
         response.exitCode = 128;
         await expect(
-          git.cherryPick(["unknown"], `draft_commit_conflicts`, "", "default"),
+          git.cherryPick(
+            ["unknown"],
+            `draft_commit_conflicts`,
+            "",
+            "default",
+            `skip`,
+          ),
         ).rejects.toThrow(
           `'git cherry-pick -x unknown' failed with exit code 128`,
         );
@@ -92,7 +110,13 @@ describe("git.cherryPick", () => {
         response.exitCode = 1;
         responseCommit.exitCode = 1;
         await expect(
-          git.cherryPick(["unknown"], `draft_commit_conflicts`, "", "default"),
+          git.cherryPick(
+            ["unknown"],
+            `draft_commit_conflicts`,
+            "",
+            "default",
+            `skip`,
+          ),
         ).rejects.toThrow(
           `'git cherry-pick -x unknown' failed with exit code 1`,
         );
@@ -109,7 +133,11 @@ describe("git.cherryPick", () => {
               "",
               "default",
             ),
-          ).resolves.toEqual(["unknown"]);
+          ).resolves.toEqual({
+            status: "conflicts",
+            uncommittedShas: ["unknown"],
+            skippedShas: [],
+          });
         });
       });
 
@@ -123,7 +151,7 @@ describe("git.cherryPick", () => {
               "",
               "default",
             ),
-          ).resolves.toBe(null);
+          ).resolves.toEqual({ status: "picked", skippedShas: [] });
         });
       });
     });

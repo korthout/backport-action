@@ -11,6 +11,26 @@ export class GitRefNotFoundError extends BackportError {
   }
 }
 
+/**
+ * Outcome of cherry-picking the commits of a pull request onto a target branch.
+ *
+ * Statuses:
+ * - `picked`: every commit was cherry-picked, except the skipped ones.
+ * - `conflicts`: a commit conflicted and was committed with its conflict markers.
+ * - `empty`: every commit was skipped, so the branch holds nothing to open a
+ *   pull request for.
+ *
+ * Fields:
+ * - `skippedShas`: the commits the target branch already contained, which
+ *   were dropped from the cherry-pick.
+ * - `uncommittedShas`: the conflicting commit followed by the commits not yet
+ *   cherry-picked, which the user must still apply.
+ */
+export type CherryPickResult =
+  | { status: "picked"; skippedShas: string[] }
+  | { status: "conflicts"; uncommittedShas: string[]; skippedShas: string[] }
+  | { status: "empty" };
+
 export interface GitApi {
   fetch(
     ref: string,
@@ -33,7 +53,7 @@ export interface GitApi {
     conflictResolution: string,
     pwd: string,
     mergeMode: "default" | "whitespace_tolerant",
-  ): Promise<string[] | null>;
+  ): Promise<CherryPickResult>;
 }
 
 export class Git implements GitApi {
@@ -183,12 +203,28 @@ export class Git implements GitApi {
     }
   }
 
+  /**
+   * Reports whether the halted cherry-pick applied nothing, i.e. the target
+   * branch already contains the changes of the commit.
+   *
+   * Only valid on exit code 1. A cherry-pick that refuses to start exits 128
+   * instead, so on exit code 1 the index holds nothing but this cherry-pick.
+   */
+  private async isEmptyPick(pwd: string): Promise<boolean> {
+    const { exitCode } = await this.git(
+      "diff-index",
+      ["--cached", "--quiet", "HEAD", "--"],
+      pwd,
+    );
+    return exitCode === 0;
+  }
+
   public async cherryPick(
     commitShas: string[],
     conflictResolution: string,
     pwd: string,
     mergeMode: "default" | "whitespace_tolerant",
-  ): Promise<string[] | null> {
+  ): Promise<CherryPickResult> {
     const strategyArgs =
       mergeMode === "whitespace_tolerant" ? ["-Xignore-space-at-eol"] : [];
 
@@ -202,18 +238,41 @@ export class Git implements GitApi {
       );
     };
 
+    const haltedSha = async () => {
+      const { stdout } = await this.git("rev-parse", ["CHERRY_PICK_HEAD"], pwd);
+      return stdout.trim();
+    };
+
+    let skippedShas: string[] = [];
+    const everyCommitWasEmpty = () =>
+      skippedShas.length > 0 && skippedShas.length === commitShas.length;
+
     if (conflictResolution === `fail`) {
-      const { exitCode } = await this.git(
+      let { exitCode } = await this.git(
         "cherry-pick",
         ["-x", ...strategyArgs, ...commitShas],
         pwd,
       );
 
+      // `--skip` resumes the sequence, which halts again on the next empty
+      // commit or conflict, so this drains any number of empty commits.
+      while (exitCode === 1 && (await this.isEmptyPick(pwd))) {
+        const sha = await haltedSha();
+        console.log(`Skipping ${sha}, the target branch already contains it`);
+        skippedShas.push(sha);
+        ({ exitCode } = await this.git("cherry-pick", ["--skip"], pwd));
+      }
+
       if (exitCode !== 0) {
         await abortCherryPickAndThrow(commitShas, exitCode);
       }
 
-      return null;
+      // No cherry-pick is in progress here, so this must not abort one.
+      if (everyCommitWasEmpty()) {
+        return { status: "empty" };
+      }
+
+      return { status: "picked", skippedShas };
     } else {
       let uncommittedShas: string[] = [...commitShas];
 
@@ -227,6 +286,30 @@ export class Git implements GitApi {
 
         if (exitCode !== 0) {
           if (exitCode === 1) {
+            if (await this.isEmptyPick(pwd)) {
+              console.log(
+                `Skipping ${uncommittedShas[0]}, the target branch already contains it`,
+              );
+              skippedShas.push(uncommittedShas[0]);
+
+              // Clears the sequencer state, which would block the next commit.
+              const { exitCode: skipExitCode } = await this.git(
+                "cherry-pick",
+                ["--skip"],
+                pwd,
+              );
+
+              if (skipExitCode !== 0) {
+                await abortCherryPickAndThrow(
+                  [uncommittedShas[0]],
+                  skipExitCode,
+                );
+              }
+
+              uncommittedShas.shift();
+              continue;
+            }
+
             // conflict encountered
             if (conflictResolution === `draft_commit_conflicts`) {
               // Commit the conflict, resolution of this commit is left to the user.
@@ -241,7 +324,7 @@ export class Git implements GitApi {
                 await abortCherryPickAndThrow(commitShas, exitCode);
               }
 
-              return uncommittedShas;
+              return { status: "conflicts", uncommittedShas, skippedShas };
             } else {
               throw new Error(
                 `'Unsupported conflict_resolution method ${conflictResolution}`,
@@ -257,7 +340,11 @@ export class Git implements GitApi {
         uncommittedShas.shift();
       }
 
-      return null;
+      if (everyCommitWasEmpty()) {
+        return { status: "empty" };
+      }
+
+      return { status: "picked", skippedShas };
     }
   }
 }
