@@ -647,12 +647,17 @@ export class Backport {
   ): Promise<void> {
     if (result.skippedShas.length === 0) return;
 
+    // The backport PR may live in another target repository, where a bare #N points elsewhere.
+    const originalRepo = this.shouldUseDownstreamRepo()
+      ? `${context.workflowOwner}/${context.workflowRepo}`
+      : "";
     await this.github.createComment({
       owner: context.targetOwner,
       repo: context.targetRepo,
       issue_number: result.newPrNumber,
       body: composeMessageForSkippedCommits(
         result.targetBranch,
+        `${originalRepo}#${context.pullNumber}`,
         result.skippedShas,
       ),
     });

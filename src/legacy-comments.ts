@@ -81,10 +81,13 @@ function composeSkippedSuffix(skippedShas: string[]): string {
 
 export function composeMessageForSkippedCommits(
   target: string,
+  originalPr: string,
   skippedShas: string[],
 ): string {
   const list = skippedShas.map((sha) => `- ${sha}`).join("\n");
-  return dedent`\`${target}\` already contains the changes of these commits, so they were skipped and this pull request has fewer commits than the original pull request:
+  const [commits, their] =
+    skippedShas.length === 1 ? ["commit", "its"] : ["commits", "their"];
+  return dedent`Skipped ${skippedShas.length} ${commits} from ${originalPr} because \`${target}\` already contains ${their} changes:
 
                 ${list}`;
 }

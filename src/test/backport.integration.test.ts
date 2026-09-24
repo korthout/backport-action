@@ -283,7 +283,31 @@ describe("Backport.run() orchestration", () => {
       expect(github.comments).toContainEqual(
         expect.objectContaining({
           issue_number: 777,
-          body: expect.stringContaining("abc123"),
+          body: expect.stringContaining(
+            "Skipped 1 commit from #42 because `main` already contains its changes:\n\n- abc123",
+          ),
+        }),
+      );
+    });
+
+    it("multiple skipped commits: backport PR comment uses plural wording", async () => {
+      const github = new FakeGithub({ nextPrNumber: 777 });
+      const git = createMockGit({
+        cherryPick: vi.fn().mockResolvedValue({
+          status: "picked",
+          skippedShas: ["abc123", "bcd234"],
+        }),
+      });
+      const config = makeConfig();
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.comments).toContainEqual(
+        expect.objectContaining({
+          issue_number: 777,
+          body: expect.stringContaining(
+            "Skipped 2 commits from #42 because `main` already contains their changes:\n\n- abc123\n- bcd234",
+          ),
         }),
       );
     });
@@ -741,6 +765,35 @@ describe("Backport.run() orchestration", () => {
         expect.any(String),
         "downstream",
         "/tmp",
+      );
+    });
+
+    it("downstream repo with skipped commits: backport PR comment names the source PR with its repo", async () => {
+      const github = new FakeGithub({ nextPrNumber: 777 });
+      const git = createMockGit({
+        cherryPick: vi
+          .fn()
+          .mockResolvedValue({ status: "picked", skippedShas: ["abc123"] }),
+      });
+      const config = makeConfig({
+        experimental: {
+          conflict_resolution: "fail",
+          downstream_repo: "downstream-repo",
+          downstream_owner: "downstream-owner",
+        },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.comments).toContainEqual(
+        expect.objectContaining({
+          owner: "downstream-owner",
+          repo: "downstream-repo",
+          issue_number: 777,
+          body: expect.stringContaining(
+            "Skipped 1 commit from test-owner/test-repo#42 because",
+          ),
+        }),
       );
     });
   });
