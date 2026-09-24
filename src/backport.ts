@@ -7,7 +7,7 @@ import {
   RequestError,
 } from "./github.js";
 import { GithubApi } from "./github.js";
-import { GitApi, GitRefNotFoundError } from "./git.js";
+import { CherryPickResult, GitApi, GitRefNotFoundError } from "./git.js";
 import {
   CommentContext,
   formatInitialComment,
@@ -23,6 +23,7 @@ import {
 } from "./errors.js";
 import {
   composeFailureMessage,
+  composeMessageForSkippedCommits,
   composeMessageForSuccess,
   composeMessageForSuccessWithConflicts,
   composeMessageToResolveCommittedConflicts,
@@ -318,18 +319,24 @@ export class Backport {
           await updateSummary(
             formatRunComment(results, remainingTargets, commentCtx),
           );
-          if (result.status === "success_with_conflicts") {
-            // Best-effort: a failure to post the resolve-conflicts comment
-            // shouldn't flip a success_with_conflicts target into a hard run
-            // failure or block subsequent targets.
-            try {
+          // Best-effort: a failure to comment on the backport pull request
+          // shouldn't flip the target into a hard run failure or block
+          // subsequent targets.
+          try {
+            if (result.status === "success_with_conflicts") {
               await this.commentResolveConflictsOnDraftPr(result, context);
-            } catch (error) {
-              console.error(
-                "Failed to post resolve-conflicts comment on draft PR:",
-                error,
-              );
             }
+            if (
+              result.status === "success" ||
+              result.status === "success_with_conflicts"
+            ) {
+              await this.commentSkippedCommitsOnBackportPr(result, context);
+            }
+          } catch (error) {
+            console.error(
+              "Failed to post comment on the backport pull request:",
+              error,
+            );
           }
         } else {
           await this.handleTargetResultLegacy(result, context);
@@ -411,7 +418,7 @@ export class Backport {
         };
       }
 
-      let uncommittedShas: string[] | null;
+      let cherryPickResult: CherryPickResult;
 
       if (
         this.config.commits.cherry_picking_merge_mode === "whitespace_tolerant"
@@ -420,7 +427,7 @@ export class Backport {
       }
 
       try {
-        uncommittedShas = await this.git.cherryPick(
+        cherryPickResult = await this.git.cherryPick(
           commitShasToCherryPick,
           this.config.experimental.conflict_resolution,
           this.config.pwd,
@@ -440,6 +447,17 @@ export class Backport {
             branchname,
             commitShasToCherryPick,
           ),
+        };
+      }
+
+      if (cherryPickResult.status === "empty") {
+        console.log(
+          `Nothing to backport to ${targetBranch}, it already contains these changes`,
+        );
+        return {
+          status: "skipped",
+          targetBranch,
+          reason: "target already contains changes",
         };
       }
 
@@ -481,7 +499,7 @@ export class Backport {
           head: branchname,
           base: targetBranch,
           maintainer_can_modify: true,
-          draft: uncommittedShas !== null,
+          draft: cherryPickResult.status === "conflicts",
         });
       } catch (error) {
         if (!(error instanceof RequestError)) throw error;
@@ -524,13 +542,14 @@ export class Backport {
         { owner: context.workflowOwner, repo: context.workflowRepo },
       );
 
-      if (uncommittedShas !== null) {
+      if (cherryPickResult.status === "conflicts") {
         return {
           status: "success_with_conflicts",
           targetBranch,
           newPrNumber: new_pr.number,
           branchname,
-          uncommittedShas,
+          uncommittedShas: cherryPickResult.uncommittedShas,
+          skippedShas: cherryPickResult.skippedShas,
         };
       }
       return {
@@ -538,6 +557,7 @@ export class Backport {
         targetBranch,
         newPrNumber: new_pr.number,
         branchname,
+        skippedShas: cherryPickResult.skippedShas,
       };
     } catch (error) {
       if (error instanceof Error) {
@@ -595,8 +615,14 @@ export class Backport {
             branchname,
             result.uncommittedShas,
             this.config.experimental.conflict_resolution,
+            result.skippedShas,
           )
-        : composeMessageForSuccess(newPrNumber, targetBranch, downstream);
+        : composeMessageForSuccess(
+            newPrNumber,
+            targetBranch,
+            downstream,
+            result.skippedShas,
+          );
 
     await this.github.createComment({
       owner: workflowOwner,
@@ -608,6 +634,33 @@ export class Backport {
     if (result.status === "success_with_conflicts") {
       await this.commentResolveConflictsOnDraftPr(result, context);
     }
+
+    await this.commentSkippedCommitsOnBackportPr(result, context);
+  }
+
+  private async commentSkippedCommitsOnBackportPr(
+    result: Extract<
+      TargetResult,
+      { status: "success" | "success_with_conflicts" }
+    >,
+    context: BackportContext,
+  ): Promise<void> {
+    if (result.skippedShas.length === 0) return;
+
+    // The backport PR may live in another target repository, where a bare #N points elsewhere.
+    const originalRepo = this.shouldUseDownstreamRepo()
+      ? `${context.workflowOwner}/${context.workflowRepo}`
+      : "";
+    await this.github.createComment({
+      owner: context.targetOwner,
+      repo: context.targetRepo,
+      issue_number: result.newPrNumber,
+      body: composeMessageForSkippedCommits(
+        result.targetBranch,
+        `${originalRepo}#${context.pullNumber}`,
+        result.skippedShas,
+      ),
+    });
   }
 
   private async commentResolveConflictsOnDraftPr(

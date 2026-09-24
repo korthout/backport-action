@@ -121,6 +121,47 @@ describe("formatSingleTargetComment", () => {
 });
 
 describe("formatRunComment", () => {
+  it("success with skipped commits: status cell names how many were skipped", () => {
+    const out = formatRunComment(
+      [
+        {
+          status: "success",
+          targetBranch: "release",
+          newPrNumber: 101,
+          branchname: "backport-42-to-release",
+          skippedShas: ["abc123"],
+        },
+      ],
+      [],
+      context,
+    );
+
+    expect(out).toContain(
+      ":white_check_mark: Created #101 — 1 commit skipped (target already contains changes)",
+    );
+  });
+
+  it("success_with_conflicts with skipped commits: suffix uses plural", () => {
+    const out = formatRunComment(
+      [
+        {
+          status: "success_with_conflicts",
+          targetBranch: "release",
+          newPrNumber: 102,
+          branchname: "backport-42-to-release",
+          uncommittedShas: ["def456"],
+          skippedShas: ["abc123", "bcd234"],
+        },
+      ],
+      [],
+      context,
+    );
+
+    expect(out).toContain(
+      ":warning: Drafted with conflicts #102 — 2 commits skipped (target already contains changes)",
+    );
+  });
+
   it("single success: table renders with PR link in status cell", () => {
     const results: TargetResult[] = [
       {
@@ -128,6 +169,7 @@ describe("formatRunComment", () => {
         targetBranch: "main",
         newPrNumber: 123,
         branchname: "backport-42-to-main",
+        skippedShas: [],
       },
     ];
     const out = formatRunComment(results, [], context);
@@ -185,6 +227,7 @@ describe("formatRunComment", () => {
         targetBranch: "main",
         newPrNumber: 100,
         branchname: "b1",
+        skippedShas: [],
       },
       failed(
         "stable/8.0",
@@ -226,6 +269,7 @@ describe("formatRunComment", () => {
         targetBranch: "main",
         newPrNumber: 200,
         branchname: "b1",
+        skippedShas: [],
         uncommittedShas: ["abc"],
       },
     ];
@@ -243,6 +287,7 @@ describe("formatRunComment", () => {
         targetBranch: "main",
         newPrNumber: 100,
         branchname: "b1",
+        skippedShas: [],
       },
       failed(
         "stable/8.0",
@@ -271,12 +316,14 @@ describe("formatRunComment", () => {
         targetBranch: "main",
         newPrNumber: 100,
         branchname: "b1",
+        skippedShas: [],
       },
       {
         status: "success",
         targetBranch: "stable/8.2",
         newPrNumber: 101,
         branchname: "b2",
+        skippedShas: [],
       },
     ];
     const out = formatRunComment(results, [], context);
@@ -342,6 +389,7 @@ describe("formatRunComment", () => {
         targetBranch: "main",
         newPrNumber: 123,
         branchname: "b1",
+        skippedShas: [],
       },
     ];
     const out = formatRunComment(results, [], context);
@@ -357,6 +405,7 @@ describe("formatRunComment", () => {
         targetBranch: "main",
         newPrNumber: 200,
         branchname: "b1",
+        skippedShas: [],
         uncommittedShas: ["abc"],
       },
     ];
