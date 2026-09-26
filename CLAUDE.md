@@ -12,7 +12,11 @@ Preserve when making changes:
 
 ## Don't break user space
 
-Any behavioral change a user didn't explicitly configure is forbidden. This includes action `inputs`/`outputs`, the workflow events the action runs on, and assumptions about the environment (e.g. the checked-out git repository).
+Action `inputs`/`outputs`, the workflow events the action runs on, and assumptions about the environment (e.g. the checked-out git repository) break only in a major version.
+
+Behavior may also break in a minor or patch, but only when the old behavior was **unusable** (the run failed or the operation did not complete), **unstable** (nondeterministic), or **unobservable**. Otherwise it is breaking however wrong the old behavior was — "nobody could legitimately depend on that" is not the test; a user who worked around the bug is a real dependent.
+
+Majors are allowed (v0–v4) and are the normal way to ship a breaking change. Prefer one over a config option, which costs two code paths and docs forever; add an option only when both behaviors have a real constituency (e.g. `cherry_picking_merge_mode`).
 
 ## Maintainability
 
