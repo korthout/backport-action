@@ -245,6 +245,104 @@ describe("compose body/title", () => {
         "Backport of pull made by @foo-author",
       );
     });
+
+    describe("for a template that repeats a placeholder", () => {
+      it("with pull_author placeholder", () => {
+        const template = "Backported by @${pull_author}, cc @${pull_author}";
+        expect(replacePlaceholders(template, main_default, target)).toEqual(
+          "Backported by @foo-author, cc @foo-author",
+        );
+      });
+
+      it("with pull_number placeholder", () => {
+        const template = "Backport of #${pull_number} (see #${pull_number})";
+        expect(replacePlaceholders(template, main_default, target)).toEqual(
+          "Backport of #123 (see #123)",
+        );
+      });
+
+      it("with pull_title placeholder", () => {
+        const template = "${pull_title} (backport of ${pull_title})";
+        expect(replacePlaceholders(template, main_default, target)).toEqual(
+          "some pr title (backport of some pr title)",
+        );
+      });
+
+      it("with pull_description placeholder", () => {
+        const template = "${pull_description} -- repeated: ${pull_description}";
+        expect(replacePlaceholders(template, main_default, target)).toEqual(
+          "foo-body -- repeated: foo-body",
+        );
+      });
+
+      it("with target_branch placeholder", () => {
+        const template = "${target_branch}: backport to ${target_branch}";
+        expect(replacePlaceholders(template, main_default, target)).toEqual(
+          "foo-target: backport to foo-target",
+        );
+      });
+
+      it("with issue_refs placeholder", () => {
+        const template = "Refers to ${issue_refs} and again ${issue_refs}";
+        expect(
+          replacePlaceholders(
+            template,
+            { ...main_default, body: "Body mentions #123 and that's it." },
+            target,
+          ),
+        ).toEqual("Refers to #123 and again #123");
+      });
+    });
+
+    describe("inserts placeholder values verbatim", () => {
+      it("does not corrupt a body containing $$ (whole-match token)", () => {
+        const template = "${pull_description}";
+        const body = "Run `echo $$ > app.pid` to reproduce.";
+        expect(
+          replacePlaceholders(template, { ...main_default, body }, target),
+        ).toEqual(body);
+      });
+
+      it("does not corrupt a body containing $& (matched-substring token)", () => {
+        const template = "${pull_description}";
+        const body = "Replace with `sed 's/x/$&/'`.";
+        expect(
+          replacePlaceholders(template, { ...main_default, body }, target),
+        ).toEqual(body);
+      });
+
+      it("does not corrupt a body containing $` (preceding-portion token)", () => {
+        const template = "Backport:\n${pull_description}";
+        const body = "Costs $`5` per run.";
+        expect(
+          replacePlaceholders(template, { ...main_default, body }, target),
+        ).toEqual("Backport:\nCosts $`5` per run.");
+      });
+
+      it("does not corrupt a body containing $' (following-portion token)", () => {
+        const template = "${pull_description}";
+        const body = "Use `printf $'a\nb'` instead.";
+        expect(
+          replacePlaceholders(template, { ...main_default, body }, target),
+        ).toEqual(body);
+      });
+
+      it("does not corrupt a body containing $1 (capture group token)", () => {
+        const template = "${pull_description}";
+        const body = "Pass `$1` through.";
+        expect(
+          replacePlaceholders(template, { ...main_default, body }, target),
+        ).toEqual(body);
+      });
+
+      it("does not expand placeholders inside inserted content", () => {
+        const template = "${pull_description}";
+        const body = "Target is ${target_branch}";
+        expect(
+          replacePlaceholders(template, { ...main_default, body }, target),
+        ).toEqual("Target is ${target_branch}");
+      });
+    });
   });
 });
 
