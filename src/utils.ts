@@ -22,17 +22,21 @@ export function replacePlaceholders(
 }
 
 /**
- * @param body Text in which to search for mentioned issues
+ * @param body Text in which to search for mentioned issues, references inside comments (`<!-- ... -->`) are ignored
  * @returns All found mentioned issues as GitHub issue references
  */
 export function getMentionedIssueRefs(body: string | null): string[] {
+  const text = body?.replace(patterns.comment, "");
   const issueUrls =
-    body?.match(patterns.url.global)?.map((url) => toRef(url)) ?? [];
-  const issueRefs = body?.match(patterns.ref) ?? [];
+    text?.match(patterns.url.global)?.map((url) => toRef(url)) ?? [];
+  const issueRefs = text?.match(patterns.ref) ?? [];
   return issueUrls.concat(issueRefs).map((ref) => ref.trim());
 }
 
 const patterns = {
+  // matches closed comments (`<!-- ... -->`), which GitHub does not render, including multi-line ones
+  comment: /<!--[\s\S]*?-->/g,
+
   // matches urls to github issues at start, middle, end of line as individual word
   // may be lead and trailed by whitespace which should be trimmed
   // captures the `org`, `repo` and `number` of the issue
