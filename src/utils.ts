@@ -23,14 +23,15 @@ export function replacePlaceholders(
 
 /**
  * @param body Text in which to search for mentioned issues, references inside comments (`<!-- ... -->`) are ignored
- * @returns All found mentioned issues as GitHub issue references
+ * @returns All found mentioned issues as GitHub issue references, each once in the order first found
  */
 export function getMentionedIssueRefs(body: string | null): string[] {
   const text = body?.replace(patterns.comment, "");
   const issueUrls =
     text?.match(patterns.url.global)?.map((url) => toRef(url)) ?? [];
   const issueRefs = text?.match(patterns.ref) ?? [];
-  return issueUrls.concat(issueRefs).map((ref) => ref.trim());
+  const refs = issueUrls.concat(issueRefs).map((ref) => ref.trim());
+  return [...new Set(refs)];
 }
 
 const patterns = {
