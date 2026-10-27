@@ -146,6 +146,40 @@ describe("get mentioned issues", () => {
     });
   });
 
+  describe("returns each reference once", () => {
+    it("for a text with a repeated issue reference", () => {
+      expect(getMentionedIssueRefs("Fixes #123 and see #123 again")).toEqual([
+        "#123",
+      ]);
+    });
+    it("for a text with a repeated external issue reference", () => {
+      expect(
+        getMentionedIssueRefs("zeebe-io/zeebe#123 and zeebe-io/zeebe#123"),
+      ).toEqual(["zeebe-io/zeebe#123"]);
+    });
+    it("for a text with a repeated issue url", () => {
+      expect(
+        getMentionedIssueRefs(
+          "github.com/zeebe-io/zeebe/issues/123 and github.com/zeebe-io/zeebe/issues/123",
+        ),
+      ).toEqual(["zeebe-io/zeebe#123"]);
+    });
+    it("for a text with an issue url and an external issue reference to the same issue", () => {
+      expect(
+        getMentionedIssueRefs(
+          "github.com/zeebe-io/zeebe/issues/123 and zeebe-io/zeebe#123",
+        ),
+      ).toEqual(["zeebe-io/zeebe#123"]);
+    });
+    it("in the order in which they were first found", () => {
+      expect(getMentionedIssueRefs("#1 and #2 and #1 and #3 and #2")).toEqual([
+        "#1",
+        "#2",
+        "#3",
+      ]);
+    });
+  });
+
   describe("ignores references inside comments", () => {
     it("for a multi-line comment in a pull request template", () => {
       const body = dedent`
@@ -260,6 +294,19 @@ describe("compose body/title", () => {
             {
               ...main_default,
               body: "Body mentions #123 and that's it.",
+            },
+            target,
+          ),
+        ).toEqual("Backport that refers to: #123");
+      });
+
+      it("and body refers to the same issue more than once", () => {
+        expect(
+          replacePlaceholders(
+            template,
+            {
+              ...main_default,
+              body: "Fixes #123 and see #123 again",
             },
             target,
           ),
