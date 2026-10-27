@@ -1,6 +1,6 @@
 ---
 name: decision-brief
-description: Prepares product-decision briefs for backport-action issues and pull requests, so the maintainer only has to make the call ("do we want this, and how does it fit the product?"). Also mines past maintainer decisions from closed issues/PRs into draft ADRs, and records a decision once made (ADR, labels, drafted reply). Use whenever the user wants to triage, decide on, or prepare a decision for an issue, feature request, or contribution; asks "should we do #N", "is this a fit", "prep this for me"; wants to work through the decision backlog; or wants to bootstrap or extend the ADRs from history.
+description: Use when deciding whether a backport-action issue, feature request or PR fits the product ("should we do #N?"), working through the decision backlog, recording a decision, or mining past decisions into ADRs.
 ---
 
 # Decision brief
@@ -71,8 +71,8 @@ The option, and why, in 2–4 sentences.
 
 Why these rules matter:
 
-- **Decline, docs-only and "already possible" are always options.** Agents drift toward "add an input"; every input is permanent maintainer burden and dilutes "No inputs required". A good brief is often "decline, here's the workaround".
-- **Behavior changes users didn't configure need v5.** Mark them explicitly; an additive v4.x path is often hiding next to the breaking one (e.g. add a new input and deprecate the experimental key, flip the default later).
+- **Decline, docs-only and "already possible" are always options.** Agents drift toward "add an input". An input doesn't cost "No inputs required", because it defaults to the existing behavior. It is permanent maintainer burden, though, so it has to pass ADR-0002. A good brief is often "decline, here's the workaround".
+- **Behavior changes users didn't configure need v5,** except the bug fixes and patch-release exceptions in ADR-0001. Mark them explicitly; an additive v4.x path is often hiding next to the breaking one (e.g. add a new input and deprecate the experimental key, flip the default later).
 - **Security is a fit question.** Anything that runs user-supplied code or uses PR-head content under `pull_request_target` is a likely decline; say so plainly.
 - **Questions must be decisive.** Don't ask what the code or history can answer — answer it in the brief.
 
@@ -89,8 +89,8 @@ For a PR, add a `## Contribution` section: does the diff match the recommended o
 
 Goal: turn decisions the maintainer already made into written precedent, so briefs stop judging against the three values alone.
 
-1. Collect closed issues and PRs where the maintainer (`korthout`) explained a yes/no or a design choice: closed-as-not-planned issues, declined PRs, long design threads, review comments that changed a contribution's direction. Include git history for shape-changing commits (e.g. inputs renamed/graduated out of `experimental`).
-2. Cluster into principles (e.g. "experimental features graduate by redesign in a major version"). Each principle cites 1+ source links with the maintainer's own words quoted briefly.
+1. Collect closed issues and PRs where the maintainer (`korthout`) explained a yes/no or a design choice: closed-as-not-planned issues, declined PRs, long design threads, review comments that changed a contribution's direction. Include git history for shape-changing commits (e.g. inputs renamed or promoted out of `experimental`).
+2. Cluster into principles (e.g. "experimental features are promoted in a major version"). Each principle cites 1+ source links with the maintainer's own words quoted briefly.
 3. Write candidates to `thoughts/decisions/bootstrap.md` — one per principle, each tagged *strong* (stated explicitly, repeatedly) or *inferred* (implied by one action). Do not write `docs/adr/` yet.
 4. The maintainer reviews the list; accepted principles go through **record**.
 
@@ -98,7 +98,7 @@ Goal: turn decisions the maintainer already made into written precedent, so brie
 
 Once the maintainer decides:
 
-1. Write or extend an ADR in `docs/adr/` following `.claude/skills/grill-me-with-docs/ADR-FORMAT.md` — only when the decision is reusable precedent, not for one-off yes/no calls. Update `CONTEXT.md` if a term was sharpened.
+1. Write or extend an ADR in `docs/adr/` following `.claude/skills/grill-me-with-docs/ADR-FORMAT.md` — only when the decision is reusable precedent, not for one-off yes/no calls. Add or update its row in `docs/adr/README.md`. Update `CONTEXT.md` if a term was sharpened.
 2. Draft the issue reply in the maintainer's voice: decision, the reason in user terms, the workaround if declined, and for accepted issues what a contribution should look like (link the ADR). Keep it short and friendly.
 3. Propose labels (`accepted`, `declined`, `needs-design`).
 4. Show the draft reply and labels, and wait for approval before touching GitHub.
