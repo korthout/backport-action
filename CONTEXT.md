@@ -45,6 +45,30 @@ _Avoid_: just "author" (collides with commit author)
 **Commit author** / **commit committer**:
 Git commit metadata. Cherry-picking preserves the commit author and overwrites the commit committer. Always pair "commit" with the word.
 
+**Summary comment**:
+The single comment on the original pull request that reports every target branch's status for one run of the action.
+_Avoid_: status comment, progress comment
+
+**Backport pull request comment**:
+A comment on a backport pull request that tells its reviewer what differs from the original pull request and what is left to do, such as skipped commits or conflicts to resolve.
+_Avoid_: backport comment (ambiguous about which pull request it's on)
+
+**Misconfiguration**:
+A problem with the workflow's setup that the action can detect, such as an invalid input value, conflicting inputs, or missing permissions. It means no backport could succeed, so it fails the job before backporting starts.
+_Avoid_: invalid config, bad input
+
+**Experimental feature**:
+A feature configured through one or more keys of the `experimental` input. Its behavior may change in any release, but it is only dropped or promoted in a major release.
+_Avoid_: experimental input (that's the single `experimental` input itself), feature flag
+
+**Promotion**:
+Replacing an experimental feature's keys with regular inputs. It completes in a major release, optionally after a minor release that already adds the regular inputs while the keys keep working.
+_Avoid_: graduation
+
+**Failed backport**:
+A target branch for which the action could not create a backport pull request, for example because of a cherry-pick conflict. Reported per target branch.
+_Avoid_: failed target
+
 ## Relationships
 
 - An **original pull request** produces zero or more **backport pull requests**, one per attempted **target branch**.
@@ -52,6 +76,8 @@ Git commit metadata. Cherry-picking preserves the commit author and overwrites t
 - A **backport label** on the **original pull request** selects one **target branch**.
 - The **commits to backport** (input to cherry-pick) become **cherry-picked commits** (output, on the target branch) after `git cherry-pick`, except for **skipped commits**.
 - When every commit to backport is a **skipped commit**, no **backport pull request** is created for that **target branch**.
+- One run produces one **summary comment** on the **original pull request**, plus zero or more **backport pull request comments** on each **backport pull request**.
+- A **failed backport** affects only its own **target branch**. A **misconfiguration** stops the action before any **target branch** is attempted.
 - The **original pull request's** **merge method** determines which **commits to backport** are selected when `cherry_picking: auto`.
 
 ## Example dialogue
@@ -68,4 +94,6 @@ Git commit metadata. Cherry-picking preserves the commit author and overwrites t
 - "Merge commit" was overloaded across: a merge method, an intermediate commit in PR history (`merge_commits` input), and the result of auto-merge. Resolved by always pairing with context; no coined term for the intermediate case.
 - "Author" was used for three concepts: PR author, commit author, commit committer. Resolved by always qualifying ("PR author" / "commit author" / "commit committer").
 - "Successful" / "failed" / "skipped" / "attempted" — intentionally *not* glossarised. The output `was_successful` is documented precisely in `README.md`; surrounding adjectives are plain English. The one exception is **skipped commit**, a named category of commit.
+- "Legacy" names a `comment_style` value that posts one comment per target branch, not a domain concept. It's slated for removal in v5, so it gets no glossary term.
+- Missing permissions are a **misconfiguration**, but today the action only notices them when a push or an API call fails partway through, and reports them as a **failed backport**. The intent is to detect them up front and fail fast. Users can't depend on the current behavior, because missing permissions never lead to a successful backport.
 - "Skipped" merge commits: `merge_commits: skip` leaves merge commits out of the **commits to backport**. They are *excluded*, not **skipped commits**. The input value `skip` is frozen API; in prose, say "excluded" or "ignored".
