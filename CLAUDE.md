@@ -25,14 +25,14 @@ This action has many users; maintainer burden compounds. When facing tradeoffs, 
 ## Code
 
 - Modern, idiomatic TypeScript
-- Two external boundaries: `GithubApi` (`src/github.ts`) and `GitApi` (`src/git.ts`) — see TESTING.md
+- Two external boundaries: `GithubApi` (`src/github.ts`) and `GitApi` (`src/git.ts`) — see docs/TESTING.md
 - `package-lock.json` is authoritative. Don't run `npm install` to "fix" things — investigate the root cause
 
 ## Working in this repo
 
 - Run `npm run all` before declaring a change done (format + build + package + test)
 - Tests: `npm test` (or `npm run test-verbose` for individual names)
-- **Never commit `dist/` in a PR** — the Publish workflow rebuilds it post-merge; including it breaks backporting (see CI.md)
+- **Never commit `dist/` in a PR** — the Publish workflow rebuilds it post-merge; including it breaks backporting (see docs/CI.md)
 - Merging goes through the Mergify queue (`@mergifyio queue`) — don't merge or push to `main` directly
 - Input docs live in two places: `README.md` (under `## Inputs`) and `action.yml` (`description:` field). Keep them in sync — any change to one must be mirrored in the other.
 - Inputs are sorted alphanumerically in both places. README examples show the default value. Docs say "pull request", not "PR".
@@ -46,8 +46,10 @@ This action has many users; maintainer burden compounds. When facing tradeoffs, 
 
 ## Pointers
 
+Entry points live at the root (README, CONTRIBUTING, CLAUDE, CONTEXT). Reference material they link to lives in `docs/`.
+
 - [CONTRIBUTING.md](CONTRIBUTING.md) — build, package, release flow
-- [TESTING.md](TESTING.md) — test architecture, where to add tests, E2E
+- [docs/TESTING.md](docs/TESTING.md) — test architecture, where to add tests, E2E
 - [CONTEXT.md](CONTEXT.md) — domain language; use its terms and respect its _Avoid_ lists
 - [docs/adr/](docs/adr/README.md) — product decisions: compatibility and releases, when to add an input, scope and safety, reporting and failure
-- [CI.md](CI.md) — CI workflows, the `dist/` rule, Publish concurrency
+- [docs/CI.md](docs/CI.md) — CI workflows, the `dist/` rule, Publish concurrency

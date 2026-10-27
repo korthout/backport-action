@@ -51,7 +51,7 @@ Run all tests with verbose reporter output (individual test names).
 npm run test-verbose
 ```
 
-For guidance on writing tests — where to add them, which helpers to use, and testing conventions — see [TESTING.md](TESTING.md).
+For guidance on writing tests — where to add them, which helpers to use, and testing conventions — see [TESTING.md](docs/TESTING.md).
 
 Shorthand for format, build, package and test.
 
@@ -63,7 +63,7 @@ This action can also be tested end-to-end using [korthout/backport-action-test](
 
 ### CI Design
 
-For details on why `dist/` is not committed in PRs and how the CI workflows interact, see [CI.md](CI.md).
+For details on why `dist/` is not committed in PRs and how the CI workflows interact, see [CI.md](docs/CI.md).
 
 ### Merging
 
@@ -75,7 +75,7 @@ Renovate patch updates are automatically queued when CI passes.
 
 PRs should not include changes to `dist/` — it is rebuilt automatically after merge by the Publish workflow.
 It's fine to temporarily commit `dist/` for testing purposes, but those changes should be removed before merging.
-See [CI.md](CI.md) for details.
+See [CI.md](docs/CI.md) for details.
 
 ### Releases
 
