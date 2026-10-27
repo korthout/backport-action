@@ -1,6 +1,6 @@
 ---
 name: decision-brief
-description: Prepares product-decision briefs for backport-action issues and pull requests, so the maintainer only has to make the call ("do we want this, and how does it fit the product?"). Also mines past maintainer decisions from closed issues/PRs into draft ADRs, and records a decision once made (ADR, labels, drafted reply). Use whenever the user wants to triage, decide on, or prepare a decision for an issue, feature request, or contribution; asks "should we do #N", "is this a fit", "prep this for me"; wants to work through the decision backlog; or wants to bootstrap or extend the ADRs from history.
+description: Use when deciding whether a backport-action issue, feature request or PR fits the product ("should we do #N?"), working through the decision backlog, recording a decision, or mining past decisions into ADRs.
 ---
 
 # Decision brief
