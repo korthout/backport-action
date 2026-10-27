@@ -145,6 +145,47 @@ describe("get mentioned issues", () => {
       ]);
     });
   });
+
+  describe("ignores references inside comments", () => {
+    it("for a multi-line comment in a pull request template", () => {
+      const body = dedent`
+        ## Related issues
+
+        <!--
+        - This PR fully resolves the issue: closes #1234
+        - One of several PRs for the issue: relates to #1234 or a bare #1234
+        -->
+
+        - [x] This PR does not need a linked issue
+      `;
+      expect(getMentionedIssueRefs(body)).toEqual([]);
+    });
+
+    it("while keeping references outside of the comment", () => {
+      expect(
+        getMentionedIssueRefs(
+          "relates to #28374\n<!-- closes #1234 -->\nfixes #54840",
+        ),
+      ).toEqual(["#28374", "#54840"]);
+    });
+
+    it("for a comment in the middle of a line", () => {
+      expect(getMentionedIssueRefs("see #1 <!-- not #2 --> and #3")).toEqual([
+        "#1",
+        "#3",
+      ]);
+    });
+
+    it("for an issue url", () => {
+      expect(
+        getMentionedIssueRefs("<!-- github.com/zeebe-io/zeebe/issues/123 -->"),
+      ).toEqual([]);
+    });
+
+    it("for an external issue reference", () => {
+      expect(getMentionedIssueRefs("<!-- zeebe-io/zeebe#123 -->")).toEqual([]);
+    });
+  });
 });
 
 describe("compose body/title", () => {
