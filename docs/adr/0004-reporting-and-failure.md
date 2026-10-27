@@ -8,7 +8,7 @@ The action can backport to several target branches in one run, and some may succ
 - [#705](https://github.com/korthout/backport-action/pull/705#pullrequestreview-5275079009): skipped commits are named in the summary comment and in a backport pull request comment.
 - #636 added the recommended filter to the README examples.
 
-**A misconfiguration fails the job before backporting starts.** No backport could succeed, so failing fast is the only useful outcome. Missing permissions count as a misconfiguration too. Today they only surface partway through, as a failed backport. Detecting them up front is a bug fix, not a breaking change (ADR-0001), because missing permissions never produce a successful backport.
+**A misconfiguration fails the job before backporting starts.** No backport could succeed, so failing fast is the only useful outcome. Missing permissions count as a misconfiguration too. Today they only surface partway through, as a failed backport. Detecting them up front isn't a breaking change (ADR-0001): the old behavior is unusable, because missing permissions never produce a successful backport.
 
 **A failed backport doesn't fail the job by default.** It is reported per target branch ([#343](https://github.com/korthout/backport-action/issues/343#issuecomment-1570782481)). An opt-in to fail the job on failed backports is acceptable ([#647](https://github.com/korthout/backport-action/issues/647)) under two conditions:
 

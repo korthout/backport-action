@@ -12,7 +12,7 @@ Preserve when making changes:
 
 ## Don't break user space
 
-Any behavioral change a user didn't explicitly configure is forbidden. This includes action `inputs`/`outputs`, the workflow events the action runs on, and assumptions about the environment (e.g. the checked-out git repository).
+The **contract** — everything observable through inputs, outputs, job status, triggering events, environment assumptions, and what the action writes to git and GitHub — changes only in a major release. Comments and logs are prose, not contract. A change may ship in a minor or patch only when the old behavior was unusable, unstable or unobservable, when it only adds to the contract, or when it only changes prose. Breaking pull requests get the `breaking` label and wait for the next major. See [ADR-0001](docs/adr/0001-compatibility-and-releases.md).
 
 ## Do one thing well
 

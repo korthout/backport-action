@@ -72,7 +72,7 @@ The option, and why, in 2–4 sentences.
 Why these rules matter:
 
 - **Decline, docs-only and "already possible" are always options.** Agents drift toward "add an input". An input doesn't cost "No inputs required", because it defaults to the existing behavior. It is permanent maintainer burden, though, so it has to pass ADR-0002. A good brief is often "decline, here's the workaround".
-- **Behavior changes users didn't configure need v5,** except the bug fixes and patch-release exceptions in ADR-0001. Mark them explicitly; an additive v4.x path is often hiding next to the breaking one (e.g. add a new input and deprecate the experimental key, flip the default later).
+- **Breaking changes need v5.** ADR-0001 decides what breaks the contract: it's a check on the old behavior (unusable, unstable, unobservable?), not a guess about who relies on it. Mark them explicitly; an additive v4.x path is often hiding next to the breaking one (e.g. add a new input and deprecate the experimental key, flip the default later).
 - **Security is a fit question.** Anything that runs user-supplied code or uses PR-head content under `pull_request_target` is a likely decline; say so plainly.
 - **Questions must be decisive.** Don't ask what the code or history can answer — answer it in the brief.
 
