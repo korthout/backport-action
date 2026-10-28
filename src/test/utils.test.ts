@@ -229,6 +229,18 @@ describe("get mentioned issues", () => {
         "#1",
       ]);
     });
+
+    it("for an unclosed comment, which hides the rest of the description", () => {
+      expect(getMentionedIssueRefs("Fixes #1\n<!-- closes #1234")).toEqual([
+        "#1",
+      ]);
+    });
+
+    it("for a closed comment followed by an unclosed comment", () => {
+      expect(
+        getMentionedIssueRefs("#1 and <!-- #2 --> #3 and\n<!-- #4"),
+      ).toEqual(["#1", "#3"]);
+    });
   });
 });
 
