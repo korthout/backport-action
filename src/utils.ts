@@ -26,7 +26,7 @@ export function replacePlaceholders(
  * @returns All found mentioned issues as GitHub issue references, each once in the order first found
  */
 export function getMentionedIssueRefs(body: string | null): string[] {
-  const text = body?.replace(patterns.comment, "");
+  const text = body?.replace(patterns.comment, " ");
   const issueUrls =
     text?.match(patterns.url.global)?.map((url) => toRef(url)) ?? [];
   const issueRefs = text?.match(patterns.ref) ?? [];
