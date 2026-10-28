@@ -219,6 +219,16 @@ describe("get mentioned issues", () => {
     it("for an external issue reference", () => {
       expect(getMentionedIssueRefs("<!-- zeebe-io/zeebe#123 -->")).toEqual([]);
     });
+
+    it("without joining the text before and after a comment into a reference", () => {
+      expect(getMentionedIssueRefs("a/b<!-- x -->#7")).toEqual(["#7"]);
+    });
+
+    it("without joining the text before and after a comment into a word", () => {
+      expect(getMentionedIssueRefs("fixes #1<!-- x -->and more")).toEqual([
+        "#1",
+      ]);
+    });
   });
 });
 
