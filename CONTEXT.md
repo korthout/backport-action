@@ -73,6 +73,10 @@ _Avoid_: failed target
 Everything a workflow or another tool can observe through the action's inputs, outputs, job status, triggering events, environment assumptions, and what it writes to git and GitHub: pushed branches, **cherry-picked commits**, and **backport pull requests** with their title, description, branches, draft state, labels, assignees, reviewers, milestone and auto-merge.
 _Avoid_: API, interface, user space (the rule that protects the contract, not the contract itself)
 
+**Contract element**:
+One distinct part of the **contract**: a single input, placeholder, output, or field of a **backport pull request**. **Breaking changes** that fix bugs in the same contract element form a group that can ship together in one major release.
+_Avoid_: area, component, module (those name code, not what users observe)
+
 **Prose**:
 Text the action writes for people: comments and logs, including whether a comment is posted. Not part of the **contract**.
 _Avoid_: messages, output (collides with the action's outputs)
