@@ -22,7 +22,7 @@ export function replacePlaceholders(
 }
 
 /**
- * @param body Text in which to search for mentioned issues, references inside comments (`<!-- ... -->`) are ignored
+ * @param body Text in which to search for mentioned issues, references inside comments (`<!-- ... -->`) are ignored, an unclosed comment hides the rest of the text
  * @returns All found mentioned issues as GitHub issue references, each once in the order first found
  */
 export function getMentionedIssueRefs(body: string | null): string[] {
@@ -35,8 +35,8 @@ export function getMentionedIssueRefs(body: string | null): string[] {
 }
 
 const patterns = {
-  // matches closed comments (`<!-- ... -->`), which GitHub does not render, including multi-line ones
-  comment: /<!--[\s\S]*?-->/g,
+  // matches comments (`<!-- ... -->`), which GitHub does not render, including multi-line ones and an unclosed one up to the end
+  comment: /<!--[\s\S]*?(?:-->|$)/g,
 
   // matches urls to github issues at start, middle, end of line as individual word
   // may be lead and trailed by whitespace which should be trimmed
