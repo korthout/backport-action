@@ -180,6 +180,36 @@ describe("get mentioned issues", () => {
     });
   });
 
+  describe("returns references in the order they appear", () => {
+    it("for an issue reference followed by an issue url", () => {
+      expect(getMentionedIssueRefs("#1 then github.com/a/b/issues/2")).toEqual([
+        "#1",
+        "a/b#2",
+      ]);
+    });
+
+    it("for an issue url followed by an issue reference", () => {
+      expect(getMentionedIssueRefs("github.com/a/b/issues/2 and #1")).toEqual([
+        "a/b#2",
+        "#1",
+      ]);
+    });
+
+    it("for a mix of issue references and urls with duplicates", () => {
+      expect(
+        getMentionedIssueRefs(
+          "#1 and github.com/a/b/issues/2 and a/b#2 and #1",
+        ),
+      ).toEqual(["#1", "a/b#2"]);
+    });
+
+    it("for an issue url after several issue references", () => {
+      expect(
+        getMentionedIssueRefs("#1 and a/b#3 and github.com/a/b/issues/2"),
+      ).toEqual(["#1", "a/b#3", "a/b#2"]);
+    });
+  });
+
   describe("ignores references inside comments", () => {
     it("for a multi-line comment in a pull request template", () => {
       const body = dedent`
