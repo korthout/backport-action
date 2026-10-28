@@ -73,6 +73,10 @@ _Avoid_: failed target
 Everything a workflow or another tool can observe through the action's inputs, outputs, job status, triggering events, environment assumptions, and what it writes to git and GitHub: pushed branches, **cherry-picked commits**, and **backport pull requests** with their title, description, branches, draft state, labels, assignees, reviewers, milestone and auto-merge.
 _Avoid_: API, interface, user space (the rule that protects the contract, not the contract itself)
 
+**Contract element**:
+One distinct part of the **contract**: a single input, placeholder, output, or field of a **backport pull request**. **Breaking changes** that fix bugs in the same contract element form a group that can ship together in one major release.
+_Avoid_: area, component, module (those name code, not what users observe)
+
 **Prose**:
 Text the action writes for people: comments and logs, including whether a comment is posted. Not part of the **contract**.
 _Avoid_: messages, output (collides with the action's outputs)
@@ -105,6 +109,6 @@ A change to the **contract** that alters or removes something users could observ
 - "Merge commit" was overloaded across: a merge method, an intermediate commit in PR history (`merge_commits` input), and the result of auto-merge. Resolved by always pairing with context; no coined term for the intermediate case.
 - "Author" was used for three concepts: PR author, commit author, commit committer. Resolved by always qualifying ("PR author" / "commit author" / "commit committer").
 - "Successful" / "failed" / "skipped" / "attempted" — intentionally *not* glossarised. The output `was_successful` is documented precisely in `README.md`; surrounding adjectives are plain English. The one exception is **skipped commit**, a named category of commit.
-- "Legacy" names a `comment_style` value that posts one comment per target branch, not a domain concept. It's slated for removal in v5, so it gets no glossary term.
+- "Legacy" names a `comment_style` value that posts one comment per target branch, not a domain concept. It's slated for removal in a future major release, so it gets no glossary term.
 - Missing permissions are a **misconfiguration**, but today the action only notices them when a push or an API call fails partway through, and reports them as a **failed backport**. The intent is to detect them up front and fail fast. Failing fast isn't a **breaking change**: the current behavior is unusable, because missing permissions never lead to a successful backport.
 - "Skipped" merge commits: `merge_commits: skip` leaves merge commits out of the **commits to backport**. They are *excluded*, not **skipped commits**. The input value `skip` is frozen API; in docs, say "excluded" or "ignored".
