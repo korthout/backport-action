@@ -15,4 +15,4 @@ The action can backport to several target branches in one run, and some may succ
 - Its documentation states that a failed job may still have created some backport pull requests.
 - It is an input rather than left to the action's outputs, because only the action can stop at the first failed backport. That matters most if workflow authors can also choose the order of target branches, which is not yet supported.
 
-**In v5, the summary comment replaces the `legacy` comment style (one comment per target branch).** The aim is to remove `legacy` entirely, to reduce code complexity. It returns as an option only if users show they need it (ADR-0002).
+**In a future major release, the summary comment replaces the `legacy` comment style (one comment per target branch).** The aim is to remove `legacy` entirely, to reduce code complexity. It returns as an option only if users show they need it (ADR-0002).
