@@ -145,6 +145,133 @@ describe("get mentioned issues", () => {
       ]);
     });
   });
+
+  describe("returns each reference once", () => {
+    it("for a text with a repeated issue reference", () => {
+      expect(getMentionedIssueRefs("Fixes #123 and see #123 again")).toEqual([
+        "#123",
+      ]);
+    });
+    it("for a text with a repeated external issue reference", () => {
+      expect(
+        getMentionedIssueRefs("zeebe-io/zeebe#123 and zeebe-io/zeebe#123"),
+      ).toEqual(["zeebe-io/zeebe#123"]);
+    });
+    it("for a text with a repeated issue url", () => {
+      expect(
+        getMentionedIssueRefs(
+          "github.com/zeebe-io/zeebe/issues/123 and github.com/zeebe-io/zeebe/issues/123",
+        ),
+      ).toEqual(["zeebe-io/zeebe#123"]);
+    });
+    it("for a text with an issue url and an external issue reference to the same issue", () => {
+      expect(
+        getMentionedIssueRefs(
+          "github.com/zeebe-io/zeebe/issues/123 and zeebe-io/zeebe#123",
+        ),
+      ).toEqual(["zeebe-io/zeebe#123"]);
+    });
+    it("in the order in which they were first found", () => {
+      expect(getMentionedIssueRefs("#1 and #2 and #1 and #3 and #2")).toEqual([
+        "#1",
+        "#2",
+        "#3",
+      ]);
+    });
+  });
+
+  describe("returns references in the order they appear", () => {
+    it("for an issue reference followed by an issue url", () => {
+      expect(getMentionedIssueRefs("#1 then github.com/a/b/issues/2")).toEqual([
+        "#1",
+        "a/b#2",
+      ]);
+    });
+
+    it("for an issue url followed by an issue reference", () => {
+      expect(getMentionedIssueRefs("github.com/a/b/issues/2 and #1")).toEqual([
+        "a/b#2",
+        "#1",
+      ]);
+    });
+
+    it("for a mix of issue references and urls with duplicates", () => {
+      expect(
+        getMentionedIssueRefs(
+          "#1 and github.com/a/b/issues/2 and a/b#2 and #1",
+        ),
+      ).toEqual(["#1", "a/b#2"]);
+    });
+
+    it("for an issue url after several issue references", () => {
+      expect(
+        getMentionedIssueRefs("#1 and a/b#3 and github.com/a/b/issues/2"),
+      ).toEqual(["#1", "a/b#3", "a/b#2"]);
+    });
+  });
+
+  describe("ignores references inside comments", () => {
+    it("for a multi-line comment in a pull request template", () => {
+      const body = dedent`
+        ## Related issues
+
+        <!--
+        - This PR fully resolves the issue: closes #1234
+        - One of several PRs for the issue: relates to #1234 or a bare #1234
+        -->
+
+        - [x] This PR does not need a linked issue
+      `;
+      expect(getMentionedIssueRefs(body)).toEqual([]);
+    });
+
+    it("while keeping references outside of the comment", () => {
+      expect(
+        getMentionedIssueRefs(
+          "relates to #28374\n<!-- closes #1234 -->\nfixes #54840",
+        ),
+      ).toEqual(["#28374", "#54840"]);
+    });
+
+    it("for a comment in the middle of a line", () => {
+      expect(getMentionedIssueRefs("see #1 <!-- not #2 --> and #3")).toEqual([
+        "#1",
+        "#3",
+      ]);
+    });
+
+    it("for an issue url", () => {
+      expect(
+        getMentionedIssueRefs("<!-- github.com/zeebe-io/zeebe/issues/123 -->"),
+      ).toEqual([]);
+    });
+
+    it("for an external issue reference", () => {
+      expect(getMentionedIssueRefs("<!-- zeebe-io/zeebe#123 -->")).toEqual([]);
+    });
+
+    it("without joining the text before and after a comment into a reference", () => {
+      expect(getMentionedIssueRefs("a/b<!-- x -->#7")).toEqual(["#7"]);
+    });
+
+    it("without joining the text before and after a comment into a word", () => {
+      expect(getMentionedIssueRefs("fixes #1<!-- x -->and more")).toEqual([
+        "#1",
+      ]);
+    });
+
+    it("for an unclosed comment, which hides the rest of the description", () => {
+      expect(getMentionedIssueRefs("Fixes #1\n<!-- closes #1234")).toEqual([
+        "#1",
+      ]);
+    });
+
+    it("for a closed comment followed by an unclosed comment", () => {
+      expect(
+        getMentionedIssueRefs("#1 and <!-- #2 --> #3 and\n<!-- #4"),
+      ).toEqual(["#1", "#3"]);
+    });
+  });
 });
 
 describe("compose body/title", () => {
@@ -219,6 +346,19 @@ describe("compose body/title", () => {
             {
               ...main_default,
               body: "Body mentions #123 and that's it.",
+            },
+            target,
+          ),
+        ).toEqual("Backport that refers to: #123");
+      });
+
+      it("and body refers to the same issue more than once", () => {
+        expect(
+          replacePlaceholders(
+            template,
+            {
+              ...main_default,
+              body: "Fixes #123 and see #123 again",
             },
             target,
           ),
