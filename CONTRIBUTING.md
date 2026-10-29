@@ -92,3 +92,5 @@ Simply build and package the distribution and commit the changes to publish a ne
 To release a version, run the [Release](https://github.com/korthout/backport-action/actions/workflows/release.yml) workflow from the branch that should be released. Releases of the current major run from `release-vN`, releases of the next major from `main`.
 This sets the release version and tags the release commit.
 It also creates/moves the major and minor tags (e.g. `v1` and `v1.2`) to the latest corresponding release as [officially recommended](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md).
+
+For a new major, see [Major releases](docs/MAJOR-RELEASE.md).
