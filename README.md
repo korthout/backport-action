@@ -6,6 +6,10 @@ This can be useful when you're supporting multiple versions of your product.
 After fixing a bug, you may want to apply that patch to the other versions.
 The manual labor of cherry-picking the individual commits can be automated using this action.
 
+> [!IMPORTANT]
+> This README describes the upcoming v5, which is not released yet.
+> If you use v4 (`@v4`), read the [v4 docs](https://github.com/korthout/backport-action/blob/release-v4/README.md) instead.
+
 ## Features
 
 - Works out of the box - No configuration required / Defaults for everything
