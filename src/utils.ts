@@ -11,14 +11,17 @@ export function replacePlaceholders(
   main: Pick<PullRequest, "body" | "user" | "number" | "title">,
   target: string,
 ): string {
-  const issues = getMentionedIssueRefs(main.body);
-  return template
-    .replace("${pull_author}", main.user.login)
-    .replace("${pull_number}", main.number.toString())
-    .replace("${pull_title}", main.title)
-    .replace("${pull_description}", main.body ?? "")
-    .replace("${target_branch}", target)
-    .replace("${issue_refs}", issues.join(" "));
+  const values: Record<string, string> = {
+    pull_author: main.user.login,
+    pull_number: main.number.toString(),
+    pull_title: main.title,
+    pull_description: main.body ?? "",
+    target_branch: target,
+    issue_refs: getMentionedIssueRefs(main.body).join(" "),
+  };
+  return template.replace(/\$\{(\w+)\}/g, (match, name) =>
+    Object.hasOwn(values, name) ? values[name] : match,
+  );
 }
 
 /**
