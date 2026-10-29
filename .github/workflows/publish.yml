@@ -38,5 +38,6 @@ jobs:
           push: true
       - name: Create and move next-preview tag
         run: |
-          git tag v3.next-preview --force
-          git push origin v3.next-preview --force
+          major=$(node -p "require('./package.json').version.split('.')[0]")
+          git tag "v$major.next-preview" --force
+          git push origin "v$major.next-preview" --force

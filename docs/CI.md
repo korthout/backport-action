@@ -3,7 +3,7 @@
 ## Workflows
 
 - **CI** (`ci.yml`) validates PRs (format-check, build, package, test).
-- **Publish** (`publish.yml`) commits built `dist/` artifacts after merges to `main` and `release-*` branches.
+- **Publish** (`publish.yml`) commits built `dist/` artifacts after merges to `main` and `release-*` branches, and moves the `vN.next-preview` tag to that commit, with N the major version in `package.json`.
 - **Release** (`release.yml`) stamps versions and creates tags (manual trigger). Does not build `dist/` itself -- Publish handles that when Release pushes to `main` or `release-*`.
 - **Backport** (`backport.yml`) cherry-picks merged PRs to release branches via the backport-action itself.
 
