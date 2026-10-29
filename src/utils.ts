@@ -25,27 +25,32 @@ export function replacePlaceholders(
 }
 
 /**
- * @param body Text in which to search for mentioned issues
- * @returns All found mentioned issues as GitHub issue references
+ * @param body Text in which to search for mentioned issues, references inside comments (`<!-- ... -->`) are ignored, an unclosed comment hides the rest of the text
+ * @returns All found mentioned issues as GitHub issue references, each once in the order first found
  */
 export function getMentionedIssueRefs(body: string | null): string[] {
-  const issueUrls =
-    body?.match(patterns.url.global)?.map((url) => toRef(url)) ?? [];
-  const issueRefs = body?.match(patterns.ref) ?? [];
-  return issueUrls.concat(issueRefs).map((ref) => ref.trim());
+  const text = body?.replace(patterns.comment, " ") ?? "";
+  const urls = [...text.matchAll(patterns.url)].map((match) => ({
+    index: match.index,
+    ref: `${match.groups?.org}/${match.groups?.repo}#${match.groups?.number}`,
+  }));
+  const refs = [...text.matchAll(patterns.ref)].map((match) => ({
+    index: match.index,
+    ref: match[0].trim(),
+  }));
+  const ordered = urls.concat(refs).sort((a, b) => a.index - b.index);
+  return [...new Set(ordered.map(({ ref }) => ref))];
 }
 
 const patterns = {
+  // matches comments (`<!-- ... -->`), which GitHub does not render, including multi-line ones and an unclosed one up to the end
+  comment: /<!--[\s\S]*?(?:-->|$)/g,
+
   // matches urls to github issues at start, middle, end of line as individual word
   // may be lead and trailed by whitespace which should be trimmed
   // captures the `org`, `repo` and `number` of the issue
   // https://regex101.com/r/XKRl8q/5
-  url: {
-    global:
-      /(?:^| )(?:(?:https:\/\/)?(?:www\.)?github\.com\/(?<org>[^ \/\n]+)\/(?<repo>[^ \/\n]+)\/issues\/(?<number>[1-9][0-9]*)(?:\/)?)(?: |$)/gm,
-    first:
-      /(?:^| )(?:(?:https:\/\/)?(?:www\.)?github\.com\/(?<org>[^ \/\n]+)\/(?<repo>[^ \/\n]+)\/issues\/(?<number>[1-9][0-9]*)(?:\/)?)(?: |$)/m,
-  },
+  url: /(?:^| )(?:(?:https:\/\/)?(?:www\.)?github\.com\/(?<org>[^ \/\n]+)\/(?<repo>[^ \/\n]+)\/issues\/(?<number>[1-9][0-9]*)(?:\/)?)(?: |$)/gm,
 
   // matches `#123` at start, middle, end of line as individual word
   // may be lead and trailed by whitespace which should be trimmed
@@ -63,20 +68,6 @@ export function coerceCherryPickingMergeMode(
   }
   return "invalid";
 }
-
-const toRef = (url: string) => {
-  // matchAll is not yet available to directly access the captured groups of all matches
-  // so this maps the urls to GitHub refs by matching again without the global flag
-  const result = patterns.url.first.exec(url);
-  if (!result) {
-    console.error(
-      `Expected to transform url (${url}) to GitHub reference, but it did not match pattern`,
-    );
-    return "";
-  }
-  const [, org, repo, number] = result;
-  return `${org}/${repo}#${number}`;
-};
 
 /**
  * Describes commits dropped from a cherry-pick because the target branch
