@@ -12,7 +12,7 @@ Preserve when making changes:
 
 ## Don't break user space
 
-The **contract** — everything observable through inputs, outputs, job status, triggering events, environment assumptions, and what the action writes to git and GitHub — changes only in a major release. Comments and logs are prose, not contract. A change may ship in a minor or patch only when the old behavior was unusable, unstable or unobservable, when it only adds to the contract, or when it only changes prose. Breaking pull requests get the `breaking` label and wait for the next major. See [ADR-0001](docs/adr/0001-compatibility-and-releases.md).
+The **contract** — everything observable through inputs, outputs, job status, triggering events, environment assumptions, and what the action writes to git and GitHub — changes only in a major release. Comments and logs are prose, not contract. A change may ship in a minor or patch only when the old behavior was unusable, unstable or unobservable, when it only adds to the contract, or when it only changes prose. Breaking pull requests get the `breaking` label and don't ship in the current major: they wait for the next major to be cut, or merge to `main` once `main` develops it. See [ADR-0001](docs/adr/0001-compatibility-and-releases.md).
 
 ## Do one thing well
 
@@ -33,6 +33,7 @@ This action has many users; maintainer burden compounds. When facing tradeoffs, 
 - Run `npm run all` before declaring a change done (format + build + package + test)
 - Tests: `npm test` (or `npm run test-verbose` for individual names)
 - **Never commit `dist/` in a PR** — the Publish workflow rebuilds it post-merge; including it breaks backporting (see docs/CI.md)
+- Once `release-vN` is cut, `main` develops the next major. A change that should also ship in the current major gets the `backport release-vN` label (today `backport release-v4`); breaking changes don't. See [CONTRIBUTING.md](CONTRIBUTING.md#branches-and-backports)
 - Merging goes through the Mergify queue (`@mergifyio queue`) — don't merge or push to `main` directly
 - Input docs live in two places: `README.md` (under `## Inputs`) and `action.yml` (`description:` field). Keep them in sync — any change to one must be mirrored in the other.
 - Inputs are sorted alphanumerically in both places. README examples show the default value. Docs say "pull request", not "PR".
