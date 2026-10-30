@@ -211,6 +211,10 @@ outputs:
       Whether or not the changes could be backported successfully to all targets - broken down by target.
       Follows the pattern '{{label}}=true|false'.
 runs:
+  # Bumping the Node.js runtime? Also update in the same pull request:
+  # - package.json: engines.node (CI and Publish run on this version)
+  # - package.json: @types/node
+  # - .github/renovate.json: allowedVersions for node and @types/node
   using: "node24"
   main: "dist/index.js"
 branding:
