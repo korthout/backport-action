@@ -55,3 +55,4 @@ Entry points live at the root (README, CONTRIBUTING, CLAUDE, CONTEXT). Reference
 - [CONTEXT.md](CONTEXT.md) — domain language; use its terms and respect its _Avoid_ lists
 - [docs/adr/](docs/adr/README.md) — product decisions: compatibility and releases, when to add an input, scope and safety, reporting and failure
 - [docs/CI.md](docs/CI.md) — CI workflows, the `dist/` rule, Publish concurrency
+- [docs/MAJOR-RELEASE.md](docs/MAJOR-RELEASE.md) — major releases: branches, starting and releasing the next major
