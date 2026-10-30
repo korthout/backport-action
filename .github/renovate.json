@@ -9,6 +9,10 @@
     {
       "matchUpdateTypes": ["patch", "pin", "digest", "lockFileMaintenance"],
       "addLabels": ["automerge"]
+    },
+    {
+      "matchPackageNames": ["node", "@types/node"],
+      "allowedVersions": "<25"
     }
   ]
 }
