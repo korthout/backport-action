@@ -129,6 +129,7 @@ function enterContainers(state: BlockState, line: string): string {
   return rest;
 }
 
+/** @returns The rest of the line inside the container: "" for a blank line, undefined if the line doesn't continue it */
 function continueContainer(
   container: Container,
   line: string,
@@ -254,6 +255,7 @@ function fenceAt(line: string): string | undefined {
   const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
   if (fence === null) return undefined;
   const [, marker, info] = fence;
+  // a backtick fence can't have a backtick in its info string, then the line is text
   return marker[0] === "`" && info.includes("`") ? undefined : marker;
 }
 
@@ -343,7 +345,7 @@ function escapedCharacter(text: string, start: number): Span | undefined {
 
 /** A code span ends at the next run of as many backticks; without one, the backticks are literal */
 function codeSpan(text: string, start: number, search: ForwardSearch): Span {
-  const [run] = matchAt(/`+/y, text, start)!;
+  const run = matchAt(/`+/y, text, start)!;
   const end = start + run.length;
   const closer = search.backtickRun(run.length, end);
   if (closer === undefined) return { end, visible: run };
@@ -356,7 +358,7 @@ function comment(
   start: number,
   search: ForwardSearch,
 ): Span | undefined {
-  const open = matchAt(/<!--(?:-?>)?/y, text, start)?.[0];
+  const open = matchAt(/<!--(?:-?>)?/y, text, start);
   if (open === undefined) return;
   if (open.endsWith(">")) return { end: start + open.length, visible: " " };
   const close = search.next(commentEnd, start + open.length);
@@ -367,7 +369,7 @@ const commentEnd = /-->/g;
 
 /** An autolink's text is its url */
 function autolink(text: string, start: number): Span | undefined {
-  const url = matchAt(/<([a-z][\w+.-]*:[^\s<>]*)>/iy, text, start)?.[0];
+  const url = matchAt(/<([a-z][\w+.-]*:[^\s<>]*)>/iy, text, start);
   if (url === undefined) return;
   return { end: start + url.length, visible: ` ${url.slice(1, -1)} ` };
 }
@@ -378,7 +380,7 @@ function htmlTag(
   start: number,
   search: ForwardSearch,
 ): Span | undefined {
-  const tag = matchAt(htmlTagPattern, text, start)?.[0];
+  const tag = matchAt(htmlTagPattern, text, start);
   if (tag === undefined) return;
   const end = start + tag.length;
   const element = /^<(code|pre|a)[\s\/>]/i.exec(tag)?.[1].toLowerCase();
@@ -402,8 +404,9 @@ function link(
   start: number,
   definitions: Set<string>,
 ): Span | undefined {
-  const match = matchAt(linkPattern, text, start);
-  if (match === undefined) return;
+  linkPattern.lastIndex = start;
+  const match = linkPattern.exec(text);
+  if (match === null) return;
   const [whole, linkText, inline, label] = match;
   const hide = (length: number) => ({ end: start + length, visible: " " });
   if (inline !== undefined) return hide(whole.length);
@@ -420,9 +423,14 @@ function link(
 const linkPattern =
   /!?\[([^\[\]]*)\](?:(\(\s*[^()\s]*(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?\s*\))|\[([^\[\]]*)\])?/y;
 
-function matchAt(pattern: RegExp, text: string, index: number) {
+/** @returns The match of the sticky `pattern` at `index`, if any */
+function matchAt(
+  pattern: RegExp,
+  text: string,
+  index: number,
+): string | undefined {
   pattern.lastIndex = index;
-  return pattern.exec(text) ?? undefined;
+  return pattern.exec(text)?.[0];
 }
 
 /**
