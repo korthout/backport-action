@@ -10,16 +10,17 @@ import type { Repo } from "./github.js";
 /**
  * @param body The description of the original pull request
  * @param repo The repository of the original pull request, to which a bare reference like `#123` refers
- * @returns Each issue and pull request that GitHub links in the description once, in the order first found: `#123` for
- *   one in `repo`, otherwise `owner/repo#123`
+ * @returns Each issue and pull request that GitHub links in the description once, in the order first found, as first
+ *   written: a url as `owner/repo#123`, any other reference as is
  */
 export function getMentionedIssueRefs(
   body: string | null,
   repo: Repo,
 ): string[] {
-  const ownRepo = `${repo.owner}/${repo.repo}`.toLowerCase();
   const refs = new Map<string, string>();
-  for (const { groups = {} } of visibleText(body ?? "").matchAll(reference)) {
+  for (const { 0: written, groups = {} } of visibleText(body ?? "").matchAll(
+    reference,
+  )) {
     const number =
       groups.urlNumber ??
       groups.pathNumber ??
@@ -27,13 +28,13 @@ export function getMentionedIssueRefs(
       groups.number ??
       groups.ghNumber;
     if (number === undefined) continue; // a link that isn't to an issue or pull request
-    const refRepo = groups.urlRepo ?? groups.pathRepo ?? groups.fullRepo;
-    const ref =
-      refRepo === undefined || refRepo.toLowerCase() === ownRepo
-        ? `#${number}`
-        : `${refRepo}#${number}`;
-    const key = ref.toLowerCase();
-    if (!refs.has(key)) refs.set(key, ref);
+    const urlRepo = groups.urlRepo ?? groups.pathRepo;
+    const issueRepo =
+      urlRepo ?? groups.fullRepo ?? `${repo.owner}/${repo.repo}`;
+    // the same issue can be written differently, also as a bare reference to `repo`
+    const key = `${issueRepo}#${number}`.toLowerCase();
+    if (refs.has(key)) continue;
+    refs.set(key, urlRepo ? `${urlRepo}#${number}` : written);
   }
   return [...refs.values()];
 }

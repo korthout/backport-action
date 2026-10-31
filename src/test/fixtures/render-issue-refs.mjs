@@ -1,5 +1,5 @@
 // Renders the markdown of each case in issue-refs.json with GitHub, and stores the issues and pull requests GitHub
-// links in it as the case's `github` value, in the format of `${issue_refs}`.
+// links in it as the case's `github` value: `#123` in the fixture's repository, otherwise `owner/repo#123`.
 //
 // Run it after adding a case, or to find out whether GitHub changed how it links references:
 //   node src/test/fixtures/render-issue-refs.mjs

@@ -13,16 +13,23 @@ const fixture: Fixture = JSON.parse(
 );
 const [owner, repo] = fixture.repository.split("/");
 
+/** @returns The reference as GitHub links it: `#123` in the fixture's repository, otherwise `owner/repo#123` */
+function asLinked(ref: string): string {
+  const [, refRepo = fixture.repository, number] =
+    /^(?:(.+)#|#|gh-)0*(\d+)$/i.exec(ref)!;
+  return refRepo.toLowerCase() === fixture.repository.toLowerCase()
+    ? `#${number}`
+    : `${refRepo.toLowerCase()}#${number}`;
+}
+
 describe("get mentioned issues", () => {
   describe("returns what GitHub links", () => {
     for (const { name, markdown, github, gap } of fixture.cases) {
       // a case with a gap documents where the scanner differs from GitHub
       (gap ? it.fails : it)(name, () => {
         const refs = getMentionedIssueRefs(markdown, { owner, repo });
-        // GitHub writes the repository as named, the scanner as written
-        expect(refs.map((ref) => ref.toLowerCase())).toEqual(
-          github.map((ref) => ref.toLowerCase()),
-        );
+        // the scanner keeps a reference as written, so this also checks that each issue is listed once
+        expect(refs.map(asLinked)).toEqual(github.map(asLinked));
       });
     }
   });
@@ -37,36 +44,42 @@ describe("get mentioned issues", () => {
     });
   });
 
-  describe("refers to the repository of the original pull request", () => {
+  describe("lists each issue once, as first written", () => {
     const other = { owner: "camunda", repo: "camunda" };
 
     it("with a bare reference", () => {
-      expect(getMentionedIssueRefs("#1 GH-2", other)).toEqual(["#1", "#2"]);
+      expect(getMentionedIssueRefs("#1 GH-2 #01", other)).toEqual([
+        "#1",
+        "GH-2",
+      ]);
     });
 
-    it("with a full reference to that repository", () => {
+    it("with a full reference to the original pull request's repository", () => {
       expect(
         getMentionedIssueRefs(
-          "camunda/camunda#1 Camunda/Camunda#2 https://github.com/camunda/camunda/pull/3",
+          "Camunda/Camunda#1 #1 camunda/camunda#1 #2 camunda/camunda#2",
           other,
         ),
-      ).toEqual(["#1", "#2", "#3"]);
+      ).toEqual(["Camunda/Camunda#1", "#2"]);
     });
 
-    it("but not with a full reference to another repository", () => {
+    it("with a full reference to another repository", () => {
       expect(
-        getMentionedIssueRefs("korthout/backport-action#1 #1", other),
-      ).toEqual(["korthout/backport-action#1", "#1"]);
+        getMentionedIssueRefs(
+          "Actions/Checkout#1 actions/checkout#1 #1",
+          other,
+        ),
+      ).toEqual(["Actions/Checkout#1", "#1"]);
     });
-  });
 
-  it("writes a reference to another repository as first written", () => {
-    expect(
-      getMentionedIssueRefs("Actions/Checkout#1 actions/checkout#1", {
-        owner,
-        repo,
-      }),
-    ).toEqual(["Actions/Checkout#1"]);
+    it("with a url as a full reference", () => {
+      expect(
+        getMentionedIssueRefs(
+          "https://github.com/Camunda/Camunda/pull/3 #3 github.com/actions/checkout/issues/4",
+          other,
+        ),
+      ).toEqual(["Camunda/Camunda#3", "actions/checkout#4"]);
+    });
   });
 
   describe("takes time linear in the length of the description", () => {
