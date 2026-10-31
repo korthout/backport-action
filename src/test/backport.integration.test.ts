@@ -494,7 +494,7 @@ describe("Backport.run() orchestration", () => {
       );
     });
 
-    it("issue_refs: lists the references GitHub links in the description", async () => {
+    it("issue_refs: lists references from body_html relative to the original repository", async () => {
       const github = new FakeGithub({
         sourcePr: {
           body: "Fixes #7",
