@@ -25,12 +25,13 @@
     "html": "<p dir=\"auto\"><a class=\"issue-link js-issue-link\" data-error-text=\"Failed to load title\" data-id=\"24428\" data-permission-text=\"Title is private\" data-url=\"https://github.com/community/community/discussions/1\" data-hovercard-type=\"discussion\" data-hovercard-url=\"/community/community/discussions/1/hovercard\" href=\"https://github.com/orgs/community/discussions/1\">community/community#1</a></p>"
   },
   "derives each reference from its link, not its text": {
-    "markdown": "GH-706 https://github.com/korthout/backport-action/pull/749",
+    "markdown": "GH-706 https://github.com/korthout/backport-action/pull/749 https://github.com/KORTHOUT/Backport-Action/issues/752/?x=1",
     "refs": [
       "#706",
-      "#749"
+      "#749",
+      "#752"
     ],
-    "html": "<p dir=\"auto\"><a class=\"issue-link js-issue-link\" data-error-text=\"Failed to load title\" data-id=\"5401077891\" data-permission-text=\"Title is private\" data-url=\"https://github.com/korthout/backport-action/issues/706\" data-hovercard-type=\"issue\" data-hovercard-url=\"/korthout/backport-action/issues/706/hovercard\" href=\"https://github.com/korthout/backport-action/issues/706\">GH-706</a> <a class=\"issue-link js-issue-link\" data-error-text=\"Failed to load title\" data-id=\"6056325759\" data-permission-text=\"Title is private\" data-url=\"https://github.com/korthout/backport-action/issues/749\" data-hovercard-type=\"pull_request\" data-hovercard-url=\"/korthout/backport-action/pull/749/hovercard\" href=\"https://github.com/korthout/backport-action/pull/749\">#749</a></p>"
+    "html": "<p dir=\"auto\"><a class=\"issue-link js-issue-link\" data-error-text=\"Failed to load title\" data-id=\"5401077891\" data-permission-text=\"Title is private\" data-url=\"https://github.com/korthout/backport-action/issues/706\" data-hovercard-type=\"issue\" data-hovercard-url=\"/korthout/backport-action/issues/706/hovercard\" href=\"https://github.com/korthout/backport-action/issues/706\">GH-706</a> <a class=\"issue-link js-issue-link\" data-error-text=\"Failed to load title\" data-id=\"6056325759\" data-permission-text=\"Title is private\" data-url=\"https://github.com/korthout/backport-action/issues/749\" data-hovercard-type=\"pull_request\" data-hovercard-url=\"/korthout/backport-action/pull/749/hovercard\" href=\"https://github.com/korthout/backport-action/pull/749\">#749</a> <a class=\"issue-link js-issue-link\" data-error-text=\"Failed to load title\" data-id=\"6074747663\" data-permission-text=\"Title is private\" data-url=\"https://github.com/korthout/backport-action/issues/752\" data-hovercard-type=\"issue\" data-hovercard-url=\"/korthout/backport-action/issues/752/hovercard\" href=\"https://github.com/korthout/backport-action/issues/752\">#752</a></p>"
   },
   "lists a link to a comment as the issue it's on": {
     "markdown": "https://github.com/korthout/backport-action/issues/706#issuecomment-1",

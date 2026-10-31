@@ -29,7 +29,7 @@ export function replacePlaceholders(
 
 /**
  * @param bodyHtml The original pull request's description as rendered by GitHub (`body_html`)
- * @param repo The original pull request's repository, whose references are listed as `#N`
+ * @param repo The original pull request's repository, whose references are listed as `#N`; as the API returns it, in the casing GitHub also writes in links
  * @returns The issues and pull requests that GitHub links as references in the description, each once in the order first found, as `#N` or `owner/repo#N`
  */
 export function getMentionedIssueRefs(
