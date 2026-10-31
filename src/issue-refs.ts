@@ -130,7 +130,6 @@ function enterContainers(state: BlockState, line: string): string {
   const lazy =
     matched < state.containers.length &&
     state.paragraph.length > 0 &&
-    state.hidden === undefined &&
     !isBlank(rest) &&
     !startsBlock(rest);
   if (!lazy) closeContainers(state, matched);
@@ -143,7 +142,7 @@ function continueContainer(
   line: string,
 ): string | undefined {
   if (container === "quote") {
-    const marker = /^ {0,3}> ?/.exec(line);
+    const marker = quoteMarker.exec(line);
     return marker ? line.slice(marker[0].length) : undefined;
   }
   if (isBlank(line)) return "";
@@ -176,9 +175,8 @@ function continueHiddenBlock(state: BlockState, line: string): boolean {
 function openContainers(state: BlockState, line: string): string {
   let rest = line;
   while (state.containers.length < maxContainers) {
-    const quote = /^ {0,3}> ?/.exec(rest);
-    const item = listItemAt(rest, state.paragraph.length > 0);
-    const marker = quote ?? item;
+    const quote = quoteMarker.exec(rest);
+    const marker = quote ?? listItemAt(rest, state.paragraph.length > 0);
     if (marker === null) break;
     closeParagraph(state);
     state.containers.push(quote ? "quote" : marker[0].length);
@@ -187,6 +185,7 @@ function openContainers(state: BlockState, line: string): string {
   return rest;
 }
 
+const quoteMarker = /^ {0,3}> ?/;
 // a list item's content starts after its marker and 1 to 4 spaces; with 5 or more, the content is indented code
 const listItem = /^ {0,3}(?:[-+*]|\d{1,9}[.)])(?: {1,4}(?! )| (?= {4})| *$)/;
 const thematicBreak = /^ {0,3}([-*_])(?: *\1){2,} *$/;
@@ -195,12 +194,12 @@ const thematicBreak = /^ {0,3}([-*_])(?: *\1){2,} *$/;
 function listItemAt(line: string, inParagraph: boolean) {
   if (thematicBreak.test(line)) return null;
   const item = listItem.exec(line);
+  if (item === null || !inParagraph) return item;
   // only an item with content, and an ordered item starting at 1, interrupts a paragraph
   const interrupts =
-    item !== null &&
     !isBlank(line.slice(item[0].length)) &&
     /^ {0,3}(?:[-+*]|0*1[.)])/.test(item[0]);
-  return inParagraph && !interrupts ? null : item;
+  return interrupts ? item : null;
 }
 
 /** Reads the line inside its containers: a blank line, the start of a block, or text of a paragraph */
@@ -220,8 +219,8 @@ function readBlock(state: BlockState, line: string) {
   if (heading.test(line) || thematicBreak.test(line)) {
     // a heading or thematic break ends the paragraph, and a heading is a paragraph of its own
     closeParagraph(state);
-    state.paragraph.push(line);
-    return closeParagraph(state);
+    state.paragraphs.push(line);
+    return;
   }
   state.paragraph.push(line);
 }
@@ -240,10 +239,10 @@ function normalizeLabel(label: string): string {
 /** @returns Whether the line opens a hidden block: a fenced code block, or an html block that hides its content */
 function openHiddenBlock(state: BlockState, line: string): boolean {
   const depth = state.containers.length;
-  const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
-  if (fence && !(fence[1][0] === "`" && fence[2].includes("`"))) {
+  const fence = fenceAt(line);
+  if (fence !== undefined) {
     closeParagraph(state);
-    state.hidden = { depth, end: (next) => closingFence(fence[1], next) };
+    state.hidden = { depth, end: (next) => closingFence(fence, next) };
     return true;
   }
   const html = hidingHtmlBlocks.find(({ start }) => start.test(line));
@@ -266,6 +265,14 @@ const hidingHtmlBlocks = [
   { start: /^ {0,3}<pre(?=[\s>]|$)/i, end: /<\/pre>/i },
 ];
 
+/** @returns The backticks or tildes of the fenced code block that the line opens, if any */
+function fenceAt(line: string): string | undefined {
+  const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+  if (fence === null) return undefined;
+  const [, marker, info] = fence;
+  return marker[0] === "`" && info.includes("`") ? undefined : marker;
+}
+
 /** @returns An empty rest of the line if it closes the fence, or undefined if it doesn't */
 function closingFence(fence: string, line: string): string | undefined {
   const close = /^ {0,3}(`{3,}|~{3,}) *$/.exec(line);
@@ -279,12 +286,12 @@ function closingFence(fence: string, line: string): string | undefined {
 /** @returns Whether the line starts a block that ends a paragraph, so it can't continue a paragraph lazily */
 function startsBlock(line: string): boolean {
   return (
-    [
-      /^ {0,3}(?:>|`{3,}|~{3,})/,
-      heading,
-      ...hidingHtmlBlocks.map(({ start }) => start),
-      thematicBreak,
-    ].some((block) => block.test(line)) || listItemAt(line, true) !== null
+    quoteMarker.test(line) ||
+    listItemAt(line, true) !== null ||
+    fenceAt(line) !== undefined ||
+    hidingHtmlBlocks.some(({ start }) => start.test(line)) ||
+    heading.test(line) ||
+    thematicBreak.test(line)
   );
 }
 
@@ -420,8 +427,10 @@ function link(
   // a reference link is only a link when its label is defined
   const isDefined = (l: string) => definitions.has(normalizeLabel(l));
   if (label && isDefined(label)) return hide(whole.length);
-  if (label === "" && isDefined(linkText)) return hide(whole.length);
-  if (isDefined(linkText)) return hide(whole.indexOf("]") + 1);
+  if (isDefined(linkText)) {
+    // [text][] takes up the whole match, [text] only up to its `]`
+    return hide(label === "" ? whole.length : whole.indexOf("]") + 1);
+  }
 }
 
 // [text](destination "title"), [text][label], [text][] or [text]
