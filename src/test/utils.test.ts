@@ -7,26 +7,30 @@ import {
 } from "../utils.js";
 
 describe("get mentioned issues", () => {
+  const origin = { owner: "korthout", repo: "backport-action" };
+
   describe("returns an empty list", () => {
     it("for an null text", () => {
-      expect(getMentionedIssueRefs(null)).toHaveLength(0);
+      expect(getMentionedIssueRefs(null, origin)).toHaveLength(0);
     });
 
     it("for an empty text", () => {
-      expect(getMentionedIssueRefs("")).toHaveLength(0);
+      expect(getMentionedIssueRefs("", origin)).toHaveLength(0);
     });
 
     it("for a text without mentioned issues", () => {
-      expect(getMentionedIssueRefs(text({}))).toHaveLength(0);
+      expect(getMentionedIssueRefs(text({}), origin)).toHaveLength(0);
     });
 
     it("for a text with an issue reference as part of a word", () => {
-      expect(getMentionedIssueRefs(text({ part: "#123" }))).toHaveLength(0);
+      expect(
+        getMentionedIssueRefs(text({ part: "#123" }), origin),
+      ).toHaveLength(0);
     });
 
     it("for a text with an external issue reference as part of a word", () => {
       expect(
-        getMentionedIssueRefs(text({ part: "zeebe-io/zeebe#123" })),
+        getMentionedIssueRefs(text({ part: "zeebe-io/zeebe#123" }), origin),
       ).toHaveLength(0);
     });
 
@@ -34,6 +38,7 @@ describe("get mentioned issues", () => {
       expect(
         getMentionedIssueRefs(
           text({ part: "github.com/zeebe-io/backport-action/issues/123" }),
+          origin,
         ),
       ).toHaveLength(0);
     });
@@ -41,28 +46,34 @@ describe("get mentioned issues", () => {
 
   describe("returns a single reference", () => {
     it("for a text with an issue reference at the start", () => {
-      expect(getMentionedIssueRefs(text({ start: "#123" }))).toEqual(["#123"]);
+      expect(getMentionedIssueRefs(text({ start: "#123" }), origin)).toEqual([
+        "#123",
+      ]);
     });
     it("for a text with an issue reference in the middle", () => {
-      expect(getMentionedIssueRefs(text({ middle: "#123" }))).toEqual(["#123"]);
+      expect(getMentionedIssueRefs(text({ middle: "#123" }), origin)).toEqual([
+        "#123",
+      ]);
     });
     it("for a text with an issue reference at the end", () => {
-      expect(getMentionedIssueRefs(text({ end: "#123" }))).toEqual(["#123"]);
+      expect(getMentionedIssueRefs(text({ end: "#123" }), origin)).toEqual([
+        "#123",
+      ]);
     });
 
     it("for a text with an external issue reference at the start", () => {
       expect(
-        getMentionedIssueRefs(text({ start: "zeebe-io/zeebe#123" })),
+        getMentionedIssueRefs(text({ start: "zeebe-io/zeebe#123" }), origin),
       ).toEqual(["zeebe-io/zeebe#123"]);
     });
     it("for a text with an external issue reference in the middle", () => {
       expect(
-        getMentionedIssueRefs(text({ middle: "zeebe-io/zeebe#123" })),
+        getMentionedIssueRefs(text({ middle: "zeebe-io/zeebe#123" }), origin),
       ).toEqual(["zeebe-io/zeebe#123"]);
     });
     it("for a text with an external issue reference at the end", () => {
       expect(
-        getMentionedIssueRefs(text({ end: "zeebe-io/zeebe#123" })),
+        getMentionedIssueRefs(text({ end: "zeebe-io/zeebe#123" }), origin),
       ).toEqual(["zeebe-io/zeebe#123"]);
     });
 
@@ -70,6 +81,7 @@ describe("get mentioned issues", () => {
       expect(
         getMentionedIssueRefs(
           text({ start: "github.com/zeebe-io/backport-action/issues/123/" }),
+          origin,
         ),
       ).toEqual(["zeebe-io/backport-action#123"]);
     });
@@ -77,6 +89,7 @@ describe("get mentioned issues", () => {
       expect(
         getMentionedIssueRefs(
           text({ middle: "github.com/zeebe-io/backport-action/issues/123" }),
+          origin,
         ),
       ).toEqual(["zeebe-io/backport-action#123"]);
     });
@@ -84,6 +97,7 @@ describe("get mentioned issues", () => {
       expect(
         getMentionedIssueRefs(
           text({ end: "github.com/zeebe-io/backport-action/issues/123" }),
+          origin,
         ),
       ).toEqual(["zeebe-io/backport-action#123"]);
     });
@@ -94,6 +108,7 @@ describe("get mentioned issues", () => {
       expect(
         getMentionedIssueRefs(
           text({ start: "#123", middle: "#234", end: "#345" }),
+          origin,
         ),
       ).toEqual(["#123", "#234", "#345"]);
     });
@@ -105,6 +120,7 @@ describe("get mentioned issues", () => {
             middle: "zeebe-io/zeebe#234",
             end: "zeebe-io/zeebe#345",
           }),
+          origin,
         ),
       ).toEqual([
         "zeebe-io/zeebe#123",
@@ -121,6 +137,7 @@ describe("get mentioned issues", () => {
             middle: `${base}234`,
             end: `${base}345`,
           }),
+          origin,
         ),
       ).toEqual([
         "zeebe-io/backport-action#123",
@@ -137,6 +154,7 @@ describe("get mentioned issues", () => {
             middle: `${base}234`,
             end: `${base}345`,
           }),
+          origin,
         ),
       ).toEqual([
         "zeebe-io/zeebe#123",
@@ -148,19 +166,23 @@ describe("get mentioned issues", () => {
 
   describe("returns each reference once", () => {
     it("for a text with a repeated issue reference", () => {
-      expect(getMentionedIssueRefs("Fixes #123 and see #123 again")).toEqual([
-        "#123",
-      ]);
+      expect(
+        getMentionedIssueRefs("Fixes #123 and see #123 again", origin),
+      ).toEqual(["#123"]);
     });
     it("for a text with a repeated external issue reference", () => {
       expect(
-        getMentionedIssueRefs("zeebe-io/zeebe#123 and zeebe-io/zeebe#123"),
+        getMentionedIssueRefs(
+          "zeebe-io/zeebe#123 and zeebe-io/zeebe#123",
+          origin,
+        ),
       ).toEqual(["zeebe-io/zeebe#123"]);
     });
     it("for a text with a repeated issue url", () => {
       expect(
         getMentionedIssueRefs(
           "github.com/zeebe-io/zeebe/issues/123 and github.com/zeebe-io/zeebe/issues/123",
+          origin,
         ),
       ).toEqual(["zeebe-io/zeebe#123"]);
     });
@@ -168,44 +190,45 @@ describe("get mentioned issues", () => {
       expect(
         getMentionedIssueRefs(
           "github.com/zeebe-io/zeebe/issues/123 and zeebe-io/zeebe#123",
+          origin,
         ),
       ).toEqual(["zeebe-io/zeebe#123"]);
     });
     it("in the order in which they were first found", () => {
-      expect(getMentionedIssueRefs("#1 and #2 and #1 and #3 and #2")).toEqual([
-        "#1",
-        "#2",
-        "#3",
-      ]);
+      expect(
+        getMentionedIssueRefs("#1 and #2 and #1 and #3 and #2", origin),
+      ).toEqual(["#1", "#2", "#3"]);
     });
   });
 
   describe("returns references in the order they appear", () => {
     it("for an issue reference followed by an issue url", () => {
-      expect(getMentionedIssueRefs("#1 then github.com/a/b/issues/2")).toEqual([
-        "#1",
-        "a/b#2",
-      ]);
+      expect(
+        getMentionedIssueRefs("#1 then github.com/a/b/issues/2", origin),
+      ).toEqual(["#1", "a/b#2"]);
     });
 
     it("for an issue url followed by an issue reference", () => {
-      expect(getMentionedIssueRefs("github.com/a/b/issues/2 and #1")).toEqual([
-        "a/b#2",
-        "#1",
-      ]);
+      expect(
+        getMentionedIssueRefs("github.com/a/b/issues/2 and #1", origin),
+      ).toEqual(["a/b#2", "#1"]);
     });
 
     it("for a mix of issue references and urls with duplicates", () => {
       expect(
         getMentionedIssueRefs(
           "#1 and github.com/a/b/issues/2 and a/b#2 and #1",
+          origin,
         ),
       ).toEqual(["#1", "a/b#2"]);
     });
 
     it("for an issue url after several issue references", () => {
       expect(
-        getMentionedIssueRefs("#1 and a/b#3 and github.com/a/b/issues/2"),
+        getMentionedIssueRefs(
+          "#1 and a/b#3 and github.com/a/b/issues/2",
+          origin,
+        ),
       ).toEqual(["#1", "a/b#3", "a/b#2"]);
     });
   });
@@ -222,54 +245,446 @@ describe("get mentioned issues", () => {
 
         - [x] This PR does not need a linked issue
       `;
-      expect(getMentionedIssueRefs(body)).toEqual([]);
+      expect(getMentionedIssueRefs(body, origin)).toEqual([]);
     });
 
     it("while keeping references outside of the comment", () => {
       expect(
         getMentionedIssueRefs(
           "relates to #28374\n<!-- closes #1234 -->\nfixes #54840",
+          origin,
         ),
       ).toEqual(["#28374", "#54840"]);
     });
 
     it("for a comment in the middle of a line", () => {
-      expect(getMentionedIssueRefs("see #1 <!-- not #2 --> and #3")).toEqual([
-        "#1",
-        "#3",
-      ]);
+      expect(
+        getMentionedIssueRefs("see #1 <!-- not #2 --> and #3", origin),
+      ).toEqual(["#1", "#3"]);
     });
 
     it("for an issue url", () => {
       expect(
-        getMentionedIssueRefs("<!-- github.com/zeebe-io/zeebe/issues/123 -->"),
+        getMentionedIssueRefs(
+          "<!-- github.com/zeebe-io/zeebe/issues/123 -->",
+          origin,
+        ),
       ).toEqual([]);
     });
 
     it("for an external issue reference", () => {
-      expect(getMentionedIssueRefs("<!-- zeebe-io/zeebe#123 -->")).toEqual([]);
+      expect(
+        getMentionedIssueRefs("<!-- zeebe-io/zeebe#123 -->", origin),
+      ).toEqual([]);
     });
 
     it("without joining the text before and after a comment into a reference", () => {
-      expect(getMentionedIssueRefs("a/b<!-- x -->#7")).toEqual(["#7"]);
+      expect(getMentionedIssueRefs("a/b<!-- x -->#7", origin)).toEqual(["#7"]);
     });
 
     it("without joining the text before and after a comment into a word", () => {
-      expect(getMentionedIssueRefs("fixes #1<!-- x -->and more")).toEqual([
-        "#1",
-      ]);
+      expect(
+        getMentionedIssueRefs("fixes #1<!-- x -->and more", origin),
+      ).toEqual(["#1"]);
     });
 
     it("for an unclosed comment, which hides the rest of the description", () => {
-      expect(getMentionedIssueRefs("Fixes #1\n<!-- closes #1234")).toEqual([
-        "#1",
-      ]);
+      expect(
+        getMentionedIssueRefs("Fixes #1\n<!-- closes #1234", origin),
+      ).toEqual(["#1"]);
     });
 
     it("for a closed comment followed by an unclosed comment", () => {
       expect(
-        getMentionedIssueRefs("#1 and <!-- #2 --> #3 and\n<!-- #4"),
+        getMentionedIssueRefs("#1 and <!-- #2 --> #3 and\n<!-- #4", origin),
       ).toEqual(["#1", "#3"]);
+    });
+  });
+
+  describe("ignores references inside code", () => {
+    it("for a fenced code block", () => {
+      const body = dedent`
+        \`\`\`
+        #7
+        \`\`\`
+        fixes #1
+      `;
+      expect(getMentionedIssueRefs(body, origin)).toEqual(["#1"]);
+    });
+
+    it("for a fenced code block with an info string", () => {
+      const body = dedent`
+        \`\`\`ts
+        // see #7
+        \`\`\`
+        fixes #1
+      `;
+      expect(getMentionedIssueRefs(body, origin)).toEqual(["#1"]);
+    });
+
+    it("for a fenced code block with tildes", () => {
+      expect(getMentionedIssueRefs("~~~\n#7\n~~~\nfixes #1", origin)).toEqual([
+        "#1",
+      ]);
+    });
+
+    it("for a fenced code block indented by up to three spaces", () => {
+      expect(
+        getMentionedIssueRefs("   ```\n#7\n   ```\nfixes #1", origin),
+      ).toEqual(["#1"]);
+    });
+
+    it("for a fenced code block closed by a longer fence", () => {
+      expect(getMentionedIssueRefs("```\n#7\n````\nfixes #1", origin)).toEqual([
+        "#1",
+      ]);
+    });
+
+    it("for a fenced code block that a shorter fence doesn't close", () => {
+      expect(getMentionedIssueRefs("````\n#7\n```\n#8", origin)).toEqual([]);
+    });
+
+    it("for an unclosed fenced code block, which hides the rest of the description", () => {
+      expect(getMentionedIssueRefs("fixes #1\n```\n#7", origin)).toEqual([
+        "#1",
+      ]);
+    });
+
+    it("for an indented code block", () => {
+      expect(
+        getMentionedIssueRefs("para\n\n    #7\n\nfixes #1", origin),
+      ).toEqual(["#1"]);
+    });
+
+    it("but not for an indented line that continues a paragraph", () => {
+      expect(getMentionedIssueRefs("para\n    #1", origin)).toEqual(["#1"]);
+    });
+
+    it("but not for an indented line that continues a list item", () => {
+      expect(getMentionedIssueRefs("- item\n\n    #1", origin)).toEqual(["#1"]);
+    });
+
+    it("but not for an indented line that continues a list item of several lines", () => {
+      expect(getMentionedIssueRefs("- item\n  more\n\n    #1", origin)).toEqual(
+        ["#1"],
+      );
+    });
+
+    it("but not for a list item's later indented paragraphs", () => {
+      expect(
+        getMentionedIssueRefs("- a\n\n    more\n\n    see #1", origin),
+      ).toEqual(["#1"]);
+    });
+
+    it("for a description with Windows line endings", () => {
+      expect(
+        getMentionedIssueRefs("para\r\n\r\n    #7\r\n\r\nfixes #1", origin),
+      ).toEqual(["#1"]);
+    });
+
+    it("for inline code", () => {
+      expect(getMentionedIssueRefs("see `#8` and #1", origin)).toEqual(["#1"]);
+    });
+
+    it("for inline code containing other words", () => {
+      expect(getMentionedIssueRefs("and `see #8 now`", origin)).toEqual([]);
+    });
+
+    it("for inline code delimited by multiple backticks", () => {
+      expect(getMentionedIssueRefs("``a ` #5`` #6", origin)).toEqual(["#6"]);
+    });
+
+    it("but not for unmatched backticks", () => {
+      expect(getMentionedIssueRefs("a `` b #1", origin)).toEqual(["#1"]);
+    });
+
+    it("but not for backticks in separate paragraphs", () => {
+      expect(
+        getMentionedIssueRefs("a ` b\n\nfixes #1 and ` c", origin),
+      ).toEqual(["#1"]);
+    });
+
+    it("but not for escaped backticks", () => {
+      expect(getMentionedIssueRefs("\\`#1\\` #2", origin)).toEqual([
+        "#1",
+        "#2",
+      ]);
+    });
+  });
+
+  describe("handles code and comments in the order they open", () => {
+    it("for a comment start inside inline code", () => {
+      expect(
+        getMentionedIssueRefs(
+          "Use `<!--` to start a comment. Fixes #12",
+          origin,
+        ),
+      ).toEqual(["#12"]);
+    });
+
+    it("for a comment start inside a fenced code block", () => {
+      const body = dedent`
+        \`\`\`html
+        <!-- a comment
+        \`\`\`
+        Fixes #12
+      `;
+      expect(getMentionedIssueRefs(body, origin)).toEqual(["#12"]);
+    });
+
+    it("for a comment start and end in separate inline code", () => {
+      expect(
+        getMentionedIssueRefs(
+          "Escape `<!--` in templates, fixes #12 and close with `-->`",
+          origin,
+        ),
+      ).toEqual(["#12"]);
+    });
+
+    it("for inline code inside a comment", () => {
+      expect(
+        getMentionedIssueRefs("<!-- use `foo` #1 --> visible #2", origin),
+      ).toEqual(["#2"]);
+    });
+
+    it("for a backtick inside a comment", () => {
+      expect(getMentionedIssueRefs("<!-- a ` #1 --> b ` #3", origin)).toEqual([
+        "#3",
+      ]);
+    });
+
+    it("for a comment end inside inline code", () => {
+      expect(getMentionedIssueRefs("``a ` <!-- `` #5 -->", origin)).toEqual([
+        "#5",
+      ]);
+    });
+  });
+
+  describe("ignores references inside links and HTML", () => {
+    it("for a link's text and destination", () => {
+      expect(
+        getMentionedIssueRefs(
+          "[#7](https://example.com) [see](https://github.com/a/b/issues/8) #1",
+          origin,
+        ),
+      ).toEqual(["#1"]);
+    });
+
+    it("for a link reference definition", () => {
+      expect(
+        getMentionedIssueRefs(
+          "[x]: https://github.com/a/b/issues/7\n\n#1",
+          origin,
+        ),
+      ).toEqual(["#1"]);
+    });
+
+    it("but not for a footnote", () => {
+      expect(getMentionedIssueRefs("x[^1]\n\n[^1]: #1", origin)).toEqual([
+        "#1",
+      ]);
+    });
+
+    it("for a url to another site", () => {
+      expect(
+        getMentionedIssueRefs("https://example.com/#7 #1", origin),
+      ).toEqual(["#1"]);
+    });
+
+    it("for a github.com url other than an issue or pull request", () => {
+      expect(
+        getMentionedIssueRefs(
+          "https://github.com/a/b/issues?q=is:open+#7 https://github.com/a/b/wiki/Page/#8 #1",
+          origin,
+        ),
+      ).toEqual(["#1"]);
+    });
+
+    it("for an unclosed <code> or <pre> element, which hides the rest of the description", () => {
+      expect(getMentionedIssueRefs("#1 <code>#7\n\n<pre>#8", origin)).toEqual([
+        "#1",
+      ]);
+    });
+
+    it("for <a>, <code> and <pre> elements, and attributes", () => {
+      expect(
+        getMentionedIssueRefs(
+          '<a href="x">#7</a> <code>#8</code> <pre>#9</pre> <img alt="#10"> #1',
+          origin,
+        ),
+      ).toEqual(["#1"]);
+    });
+
+    it("but not for text that only looks like an HTML tag", () => {
+      expect(getMentionedIssueRefs("x <y #1> z", origin)).toEqual(["#1"]);
+    });
+
+    it("but not for the content of other HTML elements", () => {
+      expect(
+        getMentionedIssueRefs(
+          "<details><summary>x</summary>\n\n#1\n\n</details>",
+          origin,
+        ),
+      ).toEqual(["#1"]);
+    });
+  });
+
+  describe("finds references next to punctuation", () => {
+    it("for references separated by single spaces", () => {
+      expect(getMentionedIssueRefs("relates to #1 #2 #3", origin)).toEqual([
+        "#1",
+        "#2",
+        "#3",
+      ]);
+    });
+
+    it("for references between punctuation", () => {
+      expect(
+        getMentionedIssueRefs("Fixes #1. (#2) #3, [#4] #5's #6: #7!", origin),
+      ).toEqual(["#1", "#2", "#3", "#4", "#5", "#6", "#7"]);
+    });
+
+    it("for references after a slash", () => {
+      expect(
+        getMentionedIssueRefs(
+          "foo/#1 foo/zeebe-io/zeebe#2 foo/github.com/zeebe-io/zeebe/issues/3",
+          origin,
+        ),
+      ).toEqual(["#1", "zeebe-io/zeebe#2", "zeebe-io/zeebe#3"]);
+    });
+
+    it("but not for a reference followed by a word or another reference", () => {
+      expect(getMentionedIssueRefs("#1abc #2_ #3#4", origin)).toEqual(["#3"]);
+    });
+
+    it("for a full reference with an underscore in the owner", () => {
+      expect(getMentionedIssueRefs("octocat_acme/tools#1", origin)).toEqual([
+        "octocat_acme/tools#1",
+      ]);
+    });
+
+    it("but not for a reference after an underscore", () => {
+      expect(getMentionedIssueRefs("foo_#1 _#2", origin)).toEqual([]);
+    });
+
+    it("for references between underscores, which are emphasis", () => {
+      expect(getMentionedIssueRefs("_#1_ __#2__", origin)).toEqual([
+        "#1",
+        "#2",
+      ]);
+    });
+
+    it("but not for an HTML entity", () => {
+      expect(getMentionedIssueRefs("&#1;", origin)).toEqual([]);
+    });
+  });
+
+  describe("finds urls of issues and pull requests", () => {
+    it("for a pull request url", () => {
+      expect(
+        getMentionedIssueRefs(
+          "https://github.com/zeebe-io/zeebe/pull/1",
+          origin,
+        ),
+      ).toEqual(["zeebe-io/zeebe#1"]);
+    });
+
+    it("for urls with a trailing slash, fragment or query", () => {
+      expect(
+        getMentionedIssueRefs(
+          "https://github.com/a/b/pull/1/ https://github.com/a/b/issues/2#issuecomment-3 https://github.com/a/b/pull/4?x=1",
+          origin,
+        ),
+      ).toEqual(["a/b#1", "a/b#2", "a/b#4"]);
+    });
+
+    it("for urls between punctuation", () => {
+      expect(
+        getMentionedIssueRefs(
+          "(https://github.com/a/b/issues/1). https://github.com/a/b/pull/2, <https://github.com/a/b/pull/3>",
+          origin,
+        ),
+      ).toEqual(["a/b#1", "a/b#2", "a/b#3"]);
+    });
+
+    it("but not for a url of a pull request's tab", () => {
+      expect(
+        getMentionedIssueRefs("https://github.com/a/b/pull/1/files", origin),
+      ).toEqual([]);
+    });
+
+    it("but not for an http or www url", () => {
+      expect(
+        getMentionedIssueRefs(
+          "http://github.com/a/b/issues/1 https://www.github.com/a/b/issues/2",
+          origin,
+        ),
+      ).toEqual([]);
+    });
+  });
+
+  describe("finds GH-N references", () => {
+    it("in any casing", () => {
+      expect(getMentionedIssueRefs("GH-1 gh-2", origin)).toEqual(["#1", "#2"]);
+    });
+
+    it("after punctuation", () => {
+      expect(
+        getMentionedIssueRefs("(GH-1) -GH-2 /GH-3 zeebe-io/zeebe#GH-4", origin),
+      ).toEqual(["#1", "#2", "#3", "#4"]);
+    });
+
+    it("but not inside a word", () => {
+      expect(
+        getMentionedIssueRefs("xGH-1 _GH-2 GH-3abc GH-4_", origin),
+      ).toEqual([]);
+    });
+  });
+
+  describe("writes references as GitHub renders them", () => {
+    it("for a full reference to the original repository", () => {
+      expect(
+        getMentionedIssueRefs("korthout/backport-action#1", origin),
+      ).toEqual(["#1"]);
+    });
+
+    it("for a url of the original repository", () => {
+      expect(
+        getMentionedIssueRefs(
+          "https://github.com/korthout/backport-action/pull/1",
+          origin,
+        ),
+      ).toEqual(["#1"]);
+    });
+
+    it("once for the same issue written in different forms", () => {
+      expect(
+        getMentionedIssueRefs(
+          "#1 GH-1 korthout/backport-action#1 https://github.com/korthout/backport-action/issues/1",
+          origin,
+        ),
+      ).toEqual(["#1"]);
+    });
+
+    it("once for the same issue written in different casing", () => {
+      expect(
+        getMentionedIssueRefs(
+          "Korthout/Backport-Action#1 https://github.com/KORTHOUT/backport-action/issues/1",
+          origin,
+        ),
+      ).toEqual(["#1"]);
+    });
+
+    it("once for another repository written in different casing, as first written", () => {
+      expect(
+        getMentionedIssueRefs("Zeebe-io/Zeebe#1 zeebe-io/zeebe#1", origin),
+      ).toEqual(["Zeebe-io/Zeebe#1"]);
+    });
+
+    it("without leading zeros", () => {
+      expect(
+        getMentionedIssueRefs("#01 korthout/backport-action#001 #0", origin),
+      ).toEqual(["#1"]);
     });
   });
 });
@@ -280,6 +695,10 @@ describe("compose body/title", () => {
     body: "foo-body",
     user: { login: "foo-author" },
     title: "some pr title",
+    base: {
+      sha: "base-sha",
+      repo: { name: "backport-action", owner: { login: "korthout" } },
+    },
   };
   const target = "foo-target";
 
@@ -527,7 +946,7 @@ function text({
     `${start} foo bar`,
     `bar bar ${middle} bar`,
     "",
-    `foo/${part} foo${part}foo ${part}foo`,
+    `foo${part}foo ${part}foo`,
     "",
     `foo bar bar foo ${end}`,
   ].join("\n");

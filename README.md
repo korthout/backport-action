@@ -509,7 +509,7 @@ The following placeholders are available and are replaced with:
 
 Placeholder | Replaced with
 ------------|------------
-`issue_refs` | GitHub issue references to all issues mentioned in the original pull request description (excluding HTML comments `<!-- ... -->`), each listed once and seperated by a space, e.g. `#123 #456 korthout/backport-action#789`
+`issue_refs` | The issues and pull requests referenced in the original pull request description, the way GitHub links them: written as `#123`, `GH-123`, `owner/repo#123`, or as the URL of an issue or pull request, but not inside code, comments (`<!-- ... -->`) or links. Each is listed once, in the order first found, separated by a space, and written as GitHub shows it: `#123` in the original pull request's repository (also when backporting to another repository) and `owner/repo#123` in another, e.g. `#123 #456 octo-org/octo-repo#789`. Unlike GitHub, it doesn't check whether an issue exists, and it can differ for code nested in lists or block quotes
 `pull_author` | The username of the original pull request's author, e.g. `korthout`
 `pull_description`| The description (i.e. body) of the original pull request that is backported, e.g. `Summary: This patch was created to..`
 `pull_number` | The number of the original pull request that is backported, e.g. `123`
