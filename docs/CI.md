@@ -6,6 +6,7 @@
 - **Publish** (`publish.yml`) commits built `dist/` artifacts after merges to `main` and `release-*` branches, and moves the `vN.next-preview` tag to that commit, with N the major version in `package.json`.
 - **Release** (`release.yml`) stamps versions and creates tags (manual trigger). Does not build `dist/` itself -- Publish handles that when Release pushes to `main` or `release-*`.
 - **Backport** (`backport.yml`) cherry-picks merged PRs to release branches via the backport-action itself.
+- **Issue refs markup** (`issue-refs-markup.yml`) runs weekly. It re-renders the descriptions in the `${issue_refs}` test fixtures through GitHub and runs their tests, so it fails when GitHub changes the undocumented markup that `${issue_refs}` relies on. GitHub notifies the user who last changed its schedule. To fix a failure, adapt `getMentionedIssueRefs` in `src/utils.ts` and commit the re-rendered fixtures.
 
 ## Why dist/ is committed post-merge, not in PRs
 

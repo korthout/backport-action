@@ -51,7 +51,7 @@ export function getMentionedIssueRefs(
 }
 
 // GitHub doesn't document this markup. If it changes, `${issue_refs}` turns
-// empty without failing the run.
+// empty without failing the run; the Issue refs markup workflow notices it.
 const patterns = {
   anchor: /<a\s[^>]*>/g,
 

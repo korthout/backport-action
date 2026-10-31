@@ -1,0 +1,32 @@
+name: Issue refs markup
+
+# `${issue_refs}` relies on GitHub's undocumented markup for references.
+# Re-rendering the test fixtures and running their tests fails this workflow
+# when that markup changes, instead of `${issue_refs}` silently turning empty.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read # so GitHub links issue references for the token
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: 'package.json'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Re-render the descriptions in the test fixtures
+        run: node src/test/fixtures/render-issue-refs.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Run the issue refs tests on the re-rendered descriptions
+        run: npx vitest run --reporter=verbose src/test/utils.test.ts
