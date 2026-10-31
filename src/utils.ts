@@ -26,7 +26,7 @@ export function replacePlaceholders(
 }
 
 /**
- * @param body Text in which to search for references to issues and pull requests, ignoring those inside code, comments (`<!-- ... -->`) and links, like GitHub does
+ * @param body Text in which to search for references to issues and pull requests as written, ignoring those inside code, comments (`<!-- ... -->`) and links
  * @param origin The repository (`owner/repo`) of the pull request the body belongs to, which `#N` and `GH-N` refer to
  * @returns Each referenced issue or pull request once, in the order first found, written as first found,
  *   but preferring a full reference over a bare `#N` or `GH-N`; a URL is written as `owner/repo#N`
@@ -54,7 +54,7 @@ export function getMentionedIssueRefs(
   return [...refs.values()];
 }
 
-// What GitHub doesn't link references in: code, comments and links.
+// Text that isn't a reference, even if it looks like one: code, comments and links.
 // It's one regex, so whichever construct opens first wins: a `<!--` inside code doesn't start a comment,
 // and a backtick inside a comment doesn't start code.
 // Each piece mirrors a CommonMark rule (https://spec.commonmark.org). Regexes can't measure the indentation
@@ -108,8 +108,8 @@ const anchorElement = String.raw`<a(?=[\s>])[^<>]*>${charUnless(String.raw`<a[\s
 // outside quotes, a `#` means it's text, not a tag
 const htmlTag = String.raw`<\/?[a-z][a-z\d-]*(?=[\s/>])(?:[^<>"'#]|"[^"]*"|'[^']*')*>`;
 
-// a URL that's linked as a whole, like https://example.com/#1, unless it's the URL of an issue or pull request
-const otherUrl = String.raw`(?:https?:\/\/|www\.)(?!github\.com\/[\w.-]+\/[\w.-]+\/(?:issues|pull)\/)[^\s<]*`;
+// a `#` inside a URL, like https://example.com/#1, isn't a reference, unless it's the URL of an issue or pull request
+const otherUrl = String.raw`(?:https?:\/\/|www\.)(?!(?:www\.)?github\.com\/[\w.-]+\/[\w.-]+\/(?:issues|pull)\/)[^\s<]*`;
 
 const hidden = new RegExp(
   [
@@ -145,9 +145,8 @@ const originRef = String.raw`(?:(?<![\w&])#|(?<!\w)GH-)${number("originNumber")}
 // underscores around a reference are emphasis, not part of a word
 const emphasizedRef = String.raw`(?<=(?<!\w)_+)#${number("emphasizedNumber")}(?=_+(?!\w))`;
 const fullRef = String.raw`(?<![\w-])(?<refOwner>${owner})\/(?<refRepo>${repo})#${number("refNumber")}${refEnd}`;
-// with or without `https://`, but not `http://` or `www.`, which otherUrl leaves visible; a trailing `/`, `#fragment`
-// or `?query` is fine, a subpage like `/pull/N/files` isn't
-const url = String.raw`(?<![\w.-]|http:\/\/)(?:https:\/\/)?github\.com\/(?<urlOwner>${owner})\/(?<urlRepo>${repo})\/(?:issues|pull)\/${number("urlNumber")}\/?(?![\w/-])`;
+// a trailing `/`, `#fragment` or `?query` is fine, a subpage like `/pull/N/files` isn't
+const url = String.raw`(?<![\w.-])(?:https?:\/\/)?(?:www\.)?github\.com\/(?<urlOwner>${owner})\/(?<urlRepo>${repo})\/(?:issues|pull)\/${number("urlNumber")}\/?(?![\w/-])`;
 
 const reference = new RegExp(
   [url, fullRef, originRef, emphasizedRef].join("|"),

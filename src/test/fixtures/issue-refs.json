@@ -95,8 +95,8 @@
       ]
     },
     {
-      "name": "url: not http, www, or a pull request's tab",
-      "markdown": "http://github.com/korthout/backport-action/issues/706 www.github.com/korthout/backport-action/issues/752 https://github.com/korthout/backport-action/pull/753/files",
+      "name": "url: not a pull request's tab",
+      "markdown": "https://github.com/korthout/backport-action/pull/753/files",
       "github": []
     },
     {
@@ -242,18 +242,29 @@
       ]
     },
     {
-      "name": "gap needs the API: GitHub doesn't link what doesn't exist (nor private or renamed repositories)",
+      "name": "as written: http:// and www. URLs of issues",
+      "markdown": "http://github.com/korthout/backport-action/issues/706 www.github.com/korthout/backport-action/issues/752 https://www.github.com/korthout/backport-action/pull/753",
+      "differs": "issue_refs lists references as written, and recognized www. URLs before; GitHub doesn't link either",
+      "found": [
+        "#706",
+        "#752",
+        "#753"
+      ],
+      "github": []
+    },
+    {
+      "name": "as written: an issue that doesn't exist (or is private, or in a renamed repository)",
       "markdown": "#999999",
-      "gap": "GitHub checks whether the issue exists and can be seen, which needs an API call",
+      "differs": "issue_refs lists references as written; GitHub only links what it can find, which needs an API call",
       "found": [
         "#999999"
       ],
       "github": []
     },
     {
-      "name": "gap list items and block quotes: indented code in a list item",
+      "name": "gap: list items and block quotes: indented code in a list item",
       "markdown": "- item\n\n      #706\n\n#752",
-      "gap": "regexes can't measure the indentation of list items and block quotes",
+      "differs": "regexes can't measure the indentation of list items and block quotes",
       "found": [
         "#706",
         "#752"
@@ -263,9 +274,9 @@
       ]
     },
     {
-      "name": "gap unhandled construct: HTML entities",
+      "name": "gap: unhandled construct: HTML entities",
       "markdown": "&#35;706",
-      "gap": "HTML entities aren't decoded",
+      "differs": "HTML entities aren't decoded",
       "found": [],
       "github": [
         "#706"

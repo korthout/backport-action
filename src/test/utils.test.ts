@@ -14,7 +14,7 @@ const fixture: {
     name: string;
     markdown: string;
     github: string[];
-    gap?: string;
+    differs?: string;
     found?: string[];
   }[];
 } = JSON.parse(
@@ -440,7 +440,7 @@ describe("get mentioned issues", () => {
     });
   });
 
-  describe("finds the references GitHub links when it renders the description", () => {
+  describe("reads the markdown the way GitHub renders it", () => {
     // GitHub writes a reference to the origin as `#N`, without leading zeros; issue_refs keeps the spelling
     const asGitHubWrites = (refs: string[]) =>
       refs.map((ref) => {
@@ -450,11 +450,11 @@ describe("get mentioned issues", () => {
         return inOrigin ? `#${number}` : `${name}#${number}`;
       });
 
-    for (const { name, markdown, github, gap, found } of fixture.cases) {
+    for (const { name, markdown, github, differs, found } of fixture.cases) {
       it(name, () => {
         const refs = asGitHubWrites(getMentionedIssueRefs(markdown, origin));
-        if (gap) {
-          // a gap documents where issue_refs differs from GitHub, and what it finds instead
+        if (differs) {
+          // where issue_refs differs from GitHub, on purpose or by a limit of regexes, and what it finds instead
           expect(refs).toEqual(found);
           expect(refs).not.toEqual(github);
         } else {
