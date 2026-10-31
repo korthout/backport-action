@@ -6,6 +6,8 @@ import type { Repo } from "./github.js";
 // description is first reduced to the text GitHub renders (`visibleText`), and then references are matched in it. The
 // markdown rules below follow GitHub's renderer only as far as they change which text is rendered. The cases in
 // src/test/fixtures/issue-refs.json are rendered by GitHub; cases marked `gap` show where these rules differ from it.
+// Which references count deliberately differs from GitHub's links: `www.github.com` urls and references to issues that
+// don't exist are listed, though GitHub doesn't link them. The unit tests cover these differences.
 
 /**
  * @param body The description of the original pull request
@@ -43,8 +45,8 @@ const reference = new RegExp(
   [
     // github.com/owner/repo/issues/123 or /pull/123, optionally with https:// or www. and followed by `/`, a query or a
     // fragment
-    String.raw`(?<![\w-])(?:https:\/\/)?(?:www\.)?github\.com\/(?<urlRepo>[\w-]+\/[\w.-]+)\/(?:issues|pull)\/0*(?<urlNumber>[1-9]\d*)\/?(?![\w\/])`,
-    // any other url is a plain link, references inside it aren't linked
+    String.raw`(?<![\w.\/-])(?:https:\/\/)?(?:www\.)?github\.com\/(?<urlRepo>[\w-]+\/[\w.-]+)\/(?:issues|pull)\/0*(?<urlNumber>[1-9]\d*)\/?(?![\w\/])`,
+    // any other url is a plain link, references inside it aren't references
     String.raw`https?:\/\/[^\s<>]*|www\.[^\s<>]*`,
     String.raw`(?<![\w-])(?<fullRepo>[\w-]+\/[\w.-]+)#0*(?<fullNumber>[1-9]\d*)(?!\w)`,
     String.raw`(?<![\w#&])#0*(?<number>[1-9]\d*)(?!\w)`,
@@ -54,7 +56,7 @@ const reference = new RegExp(
 );
 
 // -------------------------------------------------------------------------------------------------------------------
-// Block structure: line by line, find the paragraphs, and skip the blocks that GitHub doesn't link references in.
+// Block structure: line by line, find the paragraphs, and skip the blocks that GitHub doesn't render as text.
 
 type BlockState = {
   /** Open block quotes and list items, outermost first */
@@ -245,7 +247,7 @@ function openHiddenBlock(state: BlockState, line: string): boolean {
   return false;
 }
 
-// html blocks that hide their content up to the line with their end; the rest of that line is raw html, which is linked
+// html blocks that hide their content up to the line with their end; the rest of that line is raw html, which is rendered as text
 const hidingHtmlBlocks = [
   { start: /^ {0,3}<!--/, end: /-->/ },
   { start: /^ {0,3}<pre(?=[\s>]|$)/i, end: /<\/pre>/i },
@@ -374,7 +376,7 @@ function autolink(text: string, start: number): Span | undefined {
   return { end: start + url.length, visible: ` ${url.slice(1, -1)} ` };
 }
 
-/** An html tag's attributes aren't text, and references inside a `code`, `pre` or `a` element aren't linked */
+/** An html tag's attributes aren't text, and a `code`, `pre` or `a` element hides its content */
 function htmlTag(
   text: string,
   start: number,

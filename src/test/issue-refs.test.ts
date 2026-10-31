@@ -23,7 +23,7 @@ function asLinked(ref: string): string {
 }
 
 describe("get mentioned issues", () => {
-  describe("skips what GitHub doesn't render as a reference", () => {
+  describe("finds the references in the text GitHub renders", () => {
     for (const { name, markdown, github, gap } of fixture.cases) {
       // a case with a gap documents where the scanner differs from GitHub
       (gap ? it.fails : it)(name, () => {
