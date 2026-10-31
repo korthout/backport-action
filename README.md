@@ -509,7 +509,7 @@ The following placeholders are available and are replaced with:
 
 Placeholder | Replaced with
 ------------|------------
-`issue_refs` | GitHub issue references to all issues and pull requests that GitHub links in the original pull request description (not inside code, links or HTML comments `<!-- ... -->`), each listed once as first written and separated by a space, e.g. `#123 #456 korthout/backport-action#789`. It finds references written as `#123`, `GH-123`, `owner/repo#123` or a `https://github.com/owner/repo/issues/123` or `/pull/123` URL, which is listed as `owner/repo#123`. An issue written both as `#123` and in full is listed in full. Unlike GitHub, it doesn't check that the issue exists.
+`issue_refs` | GitHub issue references to all issues and pull requests mentioned in the original pull request description (not inside code, links or HTML comments `<!-- ... -->`), each listed once as first written and separated by a space, e.g. `#123 #456 korthout/backport-action#789`. It finds references written as `#123`, `GH-123`, `owner/repo#123` or a `github.com/owner/repo/issues/123` or `/pull/123` URL (also with `https://` or `www.`), which is listed as `owner/repo#123`. An issue written both as `#123` and in full is listed in full. It doesn't check that the issue exists.
 `pull_author` | The username of the original pull request's author, e.g. `korthout`
 `pull_description`| The description (i.e. body) of the original pull request that is backported, e.g. `Summary: This patch was created to..`
 `pull_number` | The number of the original pull request that is backported, e.g. `123`

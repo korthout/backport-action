@@ -23,7 +23,7 @@ function asLinked(ref: string): string {
 }
 
 describe("get mentioned issues", () => {
-  describe("returns what GitHub links", () => {
+  describe("skips what GitHub doesn't render as a reference", () => {
     for (const { name, markdown, github, gap } of fixture.cases) {
       // a case with a gap documents where the scanner differs from GitHub
       (gap ? it.fails : it)(name, () => {
@@ -70,6 +70,22 @@ describe("get mentioned issues", () => {
           other,
         ),
       ).toEqual(["Actions/Checkout#1", "#1"]);
+    });
+
+    it("with a www.github.com url, which GitHub doesn't link", () => {
+      expect(
+        getMentionedIssueRefs(
+          "https://www.github.com/actions/checkout/issues/1 www.github.com/actions/checkout/pull/2",
+          other,
+        ),
+      ).toEqual(["actions/checkout#1", "actions/checkout#2"]);
+    });
+
+    it("with a reference to an issue that doesn't exist, which GitHub doesn't link", () => {
+      expect(getMentionedIssueRefs("#999999 nope/nope#1", other)).toEqual([
+        "#999999",
+        "nope/nope#1",
+      ]);
     });
 
     it("with a url as a full reference", () => {

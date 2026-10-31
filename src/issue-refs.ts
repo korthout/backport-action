@@ -1,17 +1,17 @@
 import type { Repo } from "./github.js";
 
-// Finds the issues and pull requests that GitHub links in a pull request description.
+// Finds the references to issues and pull requests in a pull request description, as written there.
 //
-// GitHub only links references in rendered text, not inside code, comments, links or html tags. So the description is
-// first reduced to that text (`visibleText`), and then references are matched in it. The markdown rules below follow
-// GitHub's renderer only as far as they change which references are linked. The cases in
+// References inside code, comments, links or html tags aren't references in the rendered description. So the
+// description is first reduced to the text GitHub renders (`visibleText`), and then references are matched in it. The
+// markdown rules below follow GitHub's renderer only as far as they change which text is rendered. The cases in
 // src/test/fixtures/issue-refs.json are rendered by GitHub; cases marked `gap` show where these rules differ from it.
 
 /**
  * @param body The description of the original pull request
  * @param repo The repository of the original pull request, to which a bare reference like `#123` refers
- * @returns Each issue and pull request that GitHub links in the description once, in the order first found, as first
- *   written in full: a url as `owner/repo#123`, any other reference as is
+ * @returns Each issue and pull request referred to in the description once, in the order first found, as first written
+ *   in full: a url as `owner/repo#123`, any other reference as is
  */
 export function getMentionedIssueRefs(
   body: string | null,
@@ -41,9 +41,9 @@ export function getMentionedIssueRefs(
 // Each form has its own group names: duplicate named groups aren't needed, and not every Node.js version supports them.
 const reference = new RegExp(
   [
-    // https://github.com/owner/repo/issues/123 or /pull/123, optionally followed by `/`, a query or a fragment, and
-    // owner/repo/issues/123, which is also how github.com/owner/repo/issues/123 without a scheme is linked
-    String.raw`(?:https:\/\/github\.com\/|(?<![\w-]))(?<urlRepo>[\w-]+\/[\w.-]+)\/(?:issues|pull)\/0*(?<urlNumber>[1-9]\d*)\/?(?![\w\/])`,
+    // github.com/owner/repo/issues/123 or /pull/123, optionally with https:// or www. and followed by `/`, a query or a
+    // fragment
+    String.raw`(?<![\w-])(?:https:\/\/)?(?:www\.)?github\.com\/(?<urlRepo>[\w-]+\/[\w.-]+)\/(?:issues|pull)\/0*(?<urlNumber>[1-9]\d*)\/?(?![\w\/])`,
     // any other url is a plain link, references inside it aren't linked
     String.raw`https?:\/\/[^\s<>]*|www\.[^\s<>]*`,
     String.raw`(?<![\w-])(?<fullRepo>[\w-]+\/[\w.-]+)#0*(?<fullNumber>[1-9]\d*)(?!\w)`,
@@ -80,7 +80,7 @@ type HiddenBlock = {
 const maxContainers = 100;
 
 /**
- * @returns The text of the paragraphs, which GitHub links references in, as far as it isn't hidden by inline markup.
+ * @returns The text of the paragraphs, as far as it isn't hidden by inline markup.
  *   Hidden parts are replaced by a space, so the text around them isn't joined into a reference.
  */
 function visibleText(body: string): string {

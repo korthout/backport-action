@@ -57,7 +57,7 @@
     },
     {
       "name": "url: other urls are plain links",
-      "markdown": "https://www.github.com/korthout/backport-action/issues/706 http://github.com/korthout/backport-action/issues/752 https://github.com/korthout/backport-action/pull/749/files https://example.com/#753",
+      "markdown": "http://github.com/korthout/backport-action/issues/752 https://github.com/korthout/backport-action/pull/749/files https://example.com/#753",
       "github": []
     },
     {
@@ -347,12 +347,6 @@
         "#753",
         "#749"
       ]
-    },
-    {
-      "name": "gap: needs an API call, for a nonexistent issue or repository",
-      "markdown": "#999999 nonexistent-org-xyz/nope#1",
-      "github": [],
-      "gap": "GitHub only links existing issues, which needs an API call"
     },
     {
       "name": "gap: emphasis with underscores",
