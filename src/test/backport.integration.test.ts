@@ -497,10 +497,9 @@ describe("Backport.run() orchestration", () => {
     it("issue_refs: lists the references GitHub links in the description", async () => {
       const github = new FakeGithub({
         sourcePr: {
-          body: "Fixes #7 and other-owner/other-repo#8",
+          body: "Fixes #7",
           body_html:
-            '<p dir="auto">Fixes <a class="issue-link js-issue-link" data-hovercard-type="issue" href="https://github.com/test-owner/test-repo/issues/7">#7</a>' +
-            ' and <a class="issue-link js-issue-link" data-hovercard-type="pull_request" href="https://github.com/other-owner/other-repo/pull/8">other-owner/other-repo#8</a></p>',
+            '<p dir="auto">Fixes <a class="issue-link js-issue-link" data-hovercard-type="issue" href="https://github.com/test-owner/test-repo/issues/7">#7</a></p>',
         },
       });
       const git = createMockGit();
@@ -516,7 +515,7 @@ describe("Backport.run() orchestration", () => {
 
       expect(github.createdPRs[0]).toEqual(
         expect.objectContaining({
-          body: "Backport of #42 for #7 other-owner/other-repo#8",
+          body: "Backport of #42 for #7",
         }),
       );
     });

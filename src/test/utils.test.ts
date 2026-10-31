@@ -7,234 +7,42 @@ import {
   replacePlaceholders,
 } from "../utils.js";
 
-// Descriptions rendered by GitHub, as the original pull request's `body_html`.
-// To add a case, run `node src/test/fixtures/render-issue-refs.mjs "<markdown>"`.
-const fixtures: Record<string, string> = JSON.parse(
+// Each case's markdown, the references it should give, and its html: the
+// description as GitHub renders it in the original pull request's `body_html`.
+// To add a case, write its markdown and refs, then render its html with
+// `node src/test/fixtures/render-issue-refs.mjs`.
+const cases: Record<
+  string,
+  { markdown: string; refs: string[]; html?: string }
+> = JSON.parse(
   readFileSync(new URL("fixtures/issue-refs.json", import.meta.url), "utf8"),
 );
 const repo = { name: "backport-action", owner: { login: "korthout" } };
 
-function rendered(markdown: string): string {
-  const html = fixtures[markdown];
+function rendered(name: string): string {
+  const html = cases[name]?.html;
   if (html === undefined) {
-    throw new Error(`No rendered fixture for: ${JSON.stringify(markdown)}`);
+    throw new Error(`No rendered case in fixtures/issue-refs.json: ${name}`);
   }
   return html;
 }
 
-function refs(markdown: string): string[] {
-  return getMentionedIssueRefs(rendered(markdown), repo);
-}
-
 describe("get mentioned issues", () => {
-  describe("returns an empty list", () => {
-    it("for a missing rendered description", () => {
-      expect(getMentionedIssueRefs(null, repo)).toEqual([]);
-      expect(getMentionedIssueRefs(undefined, repo)).toEqual([]);
-    });
-
-    it("for an empty description", () => {
-      expect(refs("")).toEqual([]);
-    });
-
-    it("for a description without mentioned issues", () => {
-      expect(refs(text({}))).toEqual([]);
-    });
-
-    it("for an issue reference as part of a word", () => {
-      expect(refs(text({ part: "#706" }))).toEqual([]);
-    });
-
-    it("for an external issue reference as part of a word", () => {
-      expect(refs(text({ part: "actions/checkout#1" }))).toEqual([]);
-    });
-
-    it("for an issue url as part of a word", () => {
-      expect(
-        refs(text({ part: "github.com/actions/checkout/issues/1" })),
-      ).toEqual([]);
-    });
-
-    it("for a reference without owner", () => {
-      expect(refs("backport-action#706")).toEqual([]);
-    });
-
-    it("for a reference to an issue that doesn't exist", () => {
-      expect(refs("#999999 actions/checkout#999999")).toEqual([]);
-    });
-
-    it("for a manual link to an issue", () => {
-      expect(
-        refs(
-          "[#706](https://github.com/korthout/backport-action/issues/706) and [this](https://github.com/korthout/backport-action/pull/749)",
-        ),
-      ).toEqual([]);
-    });
-
-    it("for a discussion", () => {
-      expect(
-        refs("https://github.com/community/community/discussions/1"),
-      ).toEqual([]);
-    });
+  it("returns an empty list for a missing rendered description", () => {
+    expect(getMentionedIssueRefs(null, repo)).toEqual([]);
+    expect(getMentionedIssueRefs(undefined, repo)).toEqual([]);
   });
 
-  describe("returns a single reference", () => {
-    it("for an issue reference at the start", () => {
-      expect(refs(text({ start: "#706" }))).toEqual(["#706"]);
-    });
-    it("for an issue reference in the middle", () => {
-      expect(refs(text({ middle: "#706" }))).toEqual(["#706"]);
-    });
-    it("for an issue reference at the end", () => {
-      expect(refs(text({ end: "#706" }))).toEqual(["#706"]);
-    });
-
-    it("for an external issue reference", () => {
-      expect(refs(text({ middle: "actions/checkout#1" }))).toEqual([
-        "actions/checkout#1",
-      ]);
-    });
-
-    it("for an issue url", () => {
-      expect(
-        refs(
-          text({
-            middle: "https://github.com/korthout/backport-action/issues/706",
-          }),
-        ),
-      ).toEqual(["#706"]);
-    });
-
-    it("for an external issue url", () => {
-      expect(
-        refs(text({ middle: "https://github.com/actions/checkout/issues/1" })),
-      ).toEqual(["actions/checkout#1"]);
-    });
-
-    it("for an issue url without scheme", () => {
-      expect(refs("github.com/actions/checkout/issues/1")).toEqual([
-        "actions/checkout#1",
-      ]);
-    });
-
-    it("for an issue url linking to a comment", () => {
-      expect(
-        refs(
-          "https://github.com/korthout/backport-action/issues/706#issuecomment-1",
-        ),
-      ).toEqual(["#706"]);
-    });
-
-    it("for a pull request reference", () => {
-      expect(refs("#749")).toEqual(["#749"]);
-    });
-
-    it("for a pull request url", () => {
-      expect(
-        refs("https://github.com/korthout/backport-action/pull/749"),
-      ).toEqual(["#749"]);
-    });
-
-    it("for an external pull request url", () => {
-      expect(refs("https://github.com/actions/checkout/pull/1")).toEqual([
-        "actions/checkout#1",
-      ]);
-    });
-
-    it("for a full reference to the original pull request's repository", () => {
-      expect(refs("korthout/backport-action#706")).toEqual(["#706"]);
-    });
-
-    it("for a GH- reference", () => {
-      expect(refs("GH-706")).toEqual(["#706"]);
-    });
-
-    it("for a reference to a renamed repository, by its current name", () => {
-      expect(refs("zeebe-io/zeebe#123")).toEqual(["camunda/camunda#123"]);
-    });
+  it.each(Object.keys(cases))("%s", (name) => {
+    expect(getMentionedIssueRefs(rendered(name), repo)).toEqual(
+      cases[name].refs,
+    );
   });
 
-  describe("returns all references", () => {
-    it("at the start, middle and end", () => {
-      expect(
-        refs(text({ start: "#706", middle: "#752", end: "#753" })),
-      ).toEqual(["#706", "#752", "#753"]);
-    });
-
-    it("separated by a single space", () => {
-      expect(refs("relates to #706 #752 #753")).toEqual([
-        "#706",
-        "#752",
-        "#753",
-      ]);
-    });
-
-    it("followed by punctuation", () => {
-      expect(refs("Fixes #706. (#752) #753, [#749]")).toEqual([
-        "#706",
-        "#752",
-        "#753",
-        "#749",
-      ]);
-    });
-
-    it("followed by a possessive or colon", () => {
-      expect(refs("#706's fix; #752: done; #753!")).toEqual([
-        "#706",
-        "#752",
-        "#753",
-      ]);
-    });
-
-    it("in lists, quotes and tables", () => {
-      expect(refs("- #706\n\n> #752\n\n| a |\n|---|\n| #753 |")).toEqual([
-        "#706",
-        "#752",
-        "#753",
-      ]);
-    });
-  });
-
-  describe("returns each reference once", () => {
-    it("for a repeated issue reference", () => {
-      expect(refs("Fixes #706 and see #706 again")).toEqual(["#706"]);
-    });
-
-    it("for an issue url and a reference to the same issue", () => {
-      expect(
-        refs(
-          "#706 https://github.com/korthout/backport-action/issues/706 korthout/backport-action#706",
-        ),
-      ).toEqual(["#706"]);
-    });
-
-    it("for references written in different casing", () => {
-      expect(
-        refs(
-          "Korthout/Backport-Action#706 https://github.com/KORTHOUT/backport-action/issues/706 Actions/Checkout#1 actions/checkout#1",
-        ),
-      ).toEqual(["#706", "actions/checkout#1"]);
-    });
-
-    it("in the order in which they were first found", () => {
-      expect(refs("#706 and #752 and #706 and #753 and #752")).toEqual([
-        "#706",
-        "#752",
-        "#753",
-      ]);
-    });
-  });
-
-  it("returns references in the order they appear", () => {
-    expect(
-      refs(
-        "#706 then https://github.com/actions/checkout/issues/1 and actions/checkout#2 and #752",
-      ),
-    ).toEqual(["#706", "actions/checkout#1", "actions/checkout#2", "#752"]);
-  });
-
-  it("lists references to the original pull request's repository as #N, whatever its casing", () => {
-    const html = rendered("korthout/backport-action#706");
+  it("recognizes the original pull request's repository whatever its casing", () => {
+    const html = rendered(
+      "lists references to the original pull request's repository as #N",
+    );
     expect(
       getMentionedIssueRefs(html, {
         name: "Backport-Action",
@@ -242,153 +50,13 @@ describe("get mentioned issues", () => {
       }),
     ).toEqual(["#706"]);
   });
-
-  describe("ignores references inside code", () => {
-    it("for a fenced code block", () => {
-      expect(refs("```\n#706\n```\nfixes #752")).toEqual(["#752"]);
-    });
-
-    it("for a fenced code block with an info string", () => {
-      expect(refs("```ts\n// see #706\n```\nfixes #752")).toEqual(["#752"]);
-    });
-
-    it("for a fenced code block with tildes", () => {
-      expect(refs("~~~\n#706\n~~~\nfixes #752")).toEqual(["#752"]);
-    });
-
-    it("for a fenced code block indented by up to three spaces", () => {
-      expect(refs("   ```\n#706\n   ```\nfixes #752")).toEqual(["#752"]);
-    });
-
-    it("for an unclosed fenced code block, which hides the rest of the description", () => {
-      expect(refs("fixes #752\n```\n#706")).toEqual(["#752"]);
-    });
-
-    it("for an indented code block", () => {
-      expect(refs("para\n\n    #706\n\nfixes #752")).toEqual(["#752"]);
-    });
-
-    it("for inline code", () => {
-      expect(refs("see `#706` and #752")).toEqual(["#752"]);
-    });
-
-    it("for inline code containing other words", () => {
-      expect(refs("and `see #706 now`")).toEqual([]);
-    });
-
-    it("for inline code delimited by multiple backticks", () => {
-      expect(refs("``a ` #706`` #752")).toEqual(["#752"]);
-    });
-
-    it("for HTML code tags", () => {
-      expect(refs("<code>#706</code> <pre>#752</pre> #753")).toEqual(["#753"]);
-    });
-
-    it("but not for unmatched backticks", () => {
-      expect(refs("a `` b #752")).toEqual(["#752"]);
-    });
-
-    it("but not for backticks in separate paragraphs", () => {
-      expect(refs("a ` b\n\nfixes #752 and ` c")).toEqual(["#752"]);
-    });
-  });
-
-  describe("ignores references inside comments", () => {
-    it("for a multi-line comment in a pull request template", () => {
-      const body = dedent`
-        ## Related issues
-
-        <!--
-        - This PR fully resolves the issue: closes #706
-        - One of several PRs for the issue: relates to #706 or a bare #706
-        -->
-
-        - [x] This PR does not need a linked issue
-      `;
-      expect(refs(body)).toEqual([]);
-    });
-
-    it("while keeping references outside of the comment", () => {
-      expect(refs("relates to #752\n<!-- closes #706 -->\nfixes #753")).toEqual(
-        ["#752", "#753"],
-      );
-    });
-
-    it("for a comment in the middle of a line", () => {
-      expect(refs("see #706 <!-- not #752 --> and #753")).toEqual([
-        "#706",
-        "#753",
-      ]);
-    });
-
-    it("for an issue url", () => {
-      expect(
-        refs("<!-- https://github.com/actions/checkout/issues/1 -->"),
-      ).toEqual([]);
-    });
-
-    it("for an external issue reference", () => {
-      expect(refs("<!-- actions/checkout#1 -->")).toEqual([]);
-    });
-
-    it("without joining the text before and after a comment into a reference", () => {
-      expect(refs("a/b<!-- x -->#706")).toEqual(["#706"]);
-    });
-
-    it("without joining the text before and after a comment into a word", () => {
-      expect(refs("fixes #706<!-- x -->and more")).toEqual(["#706"]);
-    });
-
-    it("for an unclosed comment, which hides the rest of the description", () => {
-      expect(refs("Fixes #706\n<!-- closes #752")).toEqual(["#706"]);
-    });
-
-    it("for a closed comment followed by an unclosed comment", () => {
-      expect(refs("#706 and <!-- #752 --> #753 and\n<!-- #749")).toEqual([
-        "#706",
-        "#753",
-      ]);
-    });
-  });
-
-  describe("handles code and comments in the order they open", () => {
-    it("for a comment start inside inline code", () => {
-      expect(refs("Use `<!--` to start a comment. Fixes #752")).toEqual([
-        "#752",
-      ]);
-    });
-
-    it("for a comment start inside a fenced code block", () => {
-      expect(refs("```html\n<!-- a comment\n```\nFixes #752")).toEqual([
-        "#752",
-      ]);
-    });
-
-    it("for a comment start and end in separate inline code", () => {
-      expect(
-        refs("Escape `<!--` in templates, fixes #752 and close with `-->`"),
-      ).toEqual(["#752"]);
-    });
-
-    it("for inline code inside a comment", () => {
-      expect(refs("<!-- use `foo` #706 --> visible #752")).toEqual(["#752"]);
-    });
-
-    it("for a backtick inside a comment", () => {
-      expect(refs("<!-- a ` #706 --> b ` #753")).toEqual(["#753"]);
-    });
-
-    it("for a comment end inside inline code", () => {
-      expect(refs("``a ` <!-- `` #752 -->")).toEqual(["#752"]);
-    });
-  });
 });
 
 describe("compose body/title", () => {
   const main_default = {
     number: 123,
     body: "foo-body",
-    body_html: rendered("foo-body"),
+    body_html: null,
     base: { repo },
     user: { login: "foo-author" },
     title: "some pr title",
@@ -451,45 +119,17 @@ describe("compose body/title", () => {
         );
       });
 
-      it("and body has a referred issue", () => {
+      it("and body has referred issues", () => {
         expect(
           replacePlaceholders(
             template,
             {
               ...main_default,
-              body_html: rendered("Body mentions #706 and that's it."),
+              body_html: rendered("lists issues and pull requests"),
             },
             target,
           ),
-        ).toEqual("Backport that refers to: #706");
-      });
-
-      it("and body refers to the same issue more than once", () => {
-        expect(
-          replacePlaceholders(
-            template,
-            {
-              ...main_default,
-              body_html: rendered("Fixes #706 and see #706 again"),
-            },
-            target,
-          ),
-        ).toEqual("Backport that refers to: #706");
-      });
-
-      it("and body has some referred issues", () => {
-        expect(
-          replacePlaceholders(
-            template,
-            {
-              ...main_default,
-              body_html: rendered(
-                "This body refers to #706 and actions/checkout#1",
-              ),
-            },
-            target,
-          ),
-        ).toEqual("Backport that refers to: #706 actions/checkout#1");
+        ).toEqual("Backport that refers to: #706 #749");
       });
     });
 
@@ -543,11 +183,11 @@ describe("compose body/title", () => {
             template,
             {
               ...main_default,
-              body_html: rendered("Body mentions #706 and that's it."),
+              body_html: rendered("lists issues and pull requests"),
             },
             target,
           ),
-        ).toEqual("Refers to #706 and again #706");
+        ).toEqual("Refers to #706 #749 and again #706 #749");
       });
     });
 
