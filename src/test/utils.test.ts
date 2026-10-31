@@ -1,14 +1,22 @@
 import { describe, it, expect } from "vitest";
 import dedent from "dedent";
+import { readFileSync } from "node:fs";
 import {
   coerceCherryPickingMergeMode,
   getMentionedIssueRefs,
   replacePlaceholders,
 } from "../utils.js";
-import { rendered } from "./issue-refs.rendered.js";
+
+// Rendered by GitHub, see render-issue-refs.mjs
+const fixture: {
+  repository: string;
+  cases: { name: string; markdown: string; github: string[]; gap?: string }[];
+} = JSON.parse(
+  readFileSync(new URL("fixtures/issue-refs.json", import.meta.url), "utf8"),
+);
 
 describe("get mentioned issues", () => {
-  const origin = "korthout/backport-action";
+  const origin = fixture.repository;
 
   describe("returns an empty list", () => {
     it("for an null text", () => {
@@ -761,20 +769,14 @@ describe("get mentioned issues", () => {
         return inOrigin ? `#${number}` : `${name}#${number}`;
       });
 
-    it.each(rendered.filter((c) => !c.differs))("for $name", (c) => {
-      expect(asGitHubWrites(getMentionedIssueRefs(c.body, origin))).toEqual(
-        c.github,
-      );
-    });
-
-    it.each(rendered.filter((c) => c.differs))(
-      "except for $name, $differs.why",
-      (c) => {
-        expect(asGitHubWrites(getMentionedIssueRefs(c.body, origin))).toEqual(
-          c.differs!.refs,
+    for (const { name, markdown, github, gap } of fixture.cases) {
+      // a case with a gap documents where issue_refs differs from GitHub
+      (gap ? it.fails : it)(name, () => {
+        expect(asGitHubWrites(getMentionedIssueRefs(markdown, origin))).toEqual(
+          github,
         );
-      },
-    );
+      });
+    }
   });
 });
 

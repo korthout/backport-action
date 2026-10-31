@@ -1,0 +1,272 @@
+{
+  "repository": "korthout/backport-action",
+  "cases": [
+    {
+      "name": "originRef: #N, also separated by single spaces",
+      "markdown": "relates to #706 #752 #753",
+      "github": [
+        "#706",
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "originRef: GH-N, in any casing",
+      "markdown": "GH-706 gh-752",
+      "github": [
+        "#706",
+        "#752"
+      ]
+    },
+    {
+      "name": "originRef: not inside a word",
+      "markdown": "foo#706 #752foo xGH-753",
+      "github": []
+    },
+    {
+      "name": "originRef: after a slash or other punctuation",
+      "markdown": "foo/#706 (#752 x-GH-753",
+      "github": [
+        "#706",
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "originRef: not in an HTML entity",
+      "markdown": "&#706; and &#752;",
+      "github": []
+    },
+    {
+      "name": "refEnd: a reference ends at punctuation",
+      "markdown": "Fixes #706. See (#752), #753's #754-fix",
+      "github": [
+        "#706",
+        "#752",
+        "#753",
+        "#754"
+      ]
+    },
+    {
+      "name": "number: leading zeros are ignored",
+      "markdown": "#0706",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "emphasizedRef: between underscores, but not after a single one",
+      "markdown": "_#706_ __#752__ _#753",
+      "github": [
+        "#706",
+        "#752"
+      ]
+    },
+    {
+      "name": "fullRef: owner/repo#N",
+      "markdown": "camunda/camunda#1, (camunda/camunda#2)",
+      "github": [
+        "camunda/camunda#1",
+        "camunda/camunda#2"
+      ]
+    },
+    {
+      "name": "url: of an issue or a pull request, with or without the scheme",
+      "markdown": "https://github.com/korthout/backport-action/issues/706 github.com/korthout/backport-action/pull/752",
+      "github": [
+        "#706",
+        "#752"
+      ]
+    },
+    {
+      "name": "url: with a trailing slash, fragment or query",
+      "markdown": "https://github.com/korthout/backport-action/issues/706/ https://github.com/korthout/backport-action/pull/752#issuecomment-1 https://github.com/korthout/backport-action/pull/753?x=1",
+      "github": [
+        "#706",
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "url: between punctuation",
+      "markdown": "(https://github.com/korthout/backport-action/issues/706). https://github.com/korthout/backport-action/pull/752,",
+      "github": [
+        "#706",
+        "#752"
+      ]
+    },
+    {
+      "name": "url: not http or www",
+      "markdown": "http://github.com/korthout/backport-action/issues/706 www.github.com/korthout/backport-action/issues/752",
+      "github": []
+    },
+    {
+      "name": "backtickFence: hides its content",
+      "markdown": "```js\n#706\n```\n#752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "backtickFence: closed by a fence at least as long, indented up to 3 spaces",
+      "markdown": "````\n#706\n```\n   `````\n#752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "backtickFence: unclosed, hides the rest",
+      "markdown": "#752\n```\n#706",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "tildeFence: hides its content",
+      "markdown": "~~~\n#706\n~~~\n#752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "indentedCode: after a blank line",
+      "markdown": "para\n\n    #706\n\n#752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "indentedCode: not right after a paragraph line",
+      "markdown": "para\n    #706",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "listItemParagraph: an indented paragraph continues a list item",
+      "markdown": "- item\n\n    #706",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "blockComment: spans paragraphs, unclosed hides the rest",
+      "markdown": "<!--\n#706\n\n#752\n-->\n#753\n<!-- #754",
+      "github": [
+        "#753"
+      ]
+    },
+    {
+      "name": "inlineComment: closed within its paragraph",
+      "markdown": "see <!-- #706 --> #752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "inlineComment: unclosed mid-line, it's text",
+      "markdown": "see <!-- #706",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "codeSpan: hides its content, delimited by any number of backticks",
+      "markdown": "`#706` ``#752 ` x`` #753",
+      "github": [
+        "#753"
+      ]
+    },
+    {
+      "name": "codeSpan: unmatched, escaped or across paragraphs, the backticks are text",
+      "markdown": "`#706\n\n#752` \\`#753`",
+      "github": [
+        "#706",
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "hidden: whichever of code and comments opens first wins",
+      "markdown": "`<!--` #706 `-->` and <!-- ` --> #752 `",
+      "github": [
+        "#706",
+        "#752"
+      ]
+    },
+    {
+      "name": "inlineLink: hides its text and destination",
+      "markdown": "[#706](https://example.com) [x](#752) ![#753](a.png)",
+      "github": []
+    },
+    {
+      "name": "linkReferenceDefinition: hides the definition, but not a footnote's text",
+      "markdown": "a[^1]\n\n[a]: #706\n[^1]: #752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "codeElement: hides <code> and <pre>, unclosed hides the rest",
+      "markdown": "<code>#706</code> <pre>#752</pre> #753 <code>#754",
+      "github": [
+        "#753"
+      ]
+    },
+    {
+      "name": "anchorElement: hides <a> and its content",
+      "markdown": "<a href=\"x\">#706</a> #752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "htmlTag: hides attributes, but not content",
+      "markdown": "<img alt=\"#706\" title='#752'> <b>#753</b>",
+      "github": [
+        "#753"
+      ]
+    },
+    {
+      "name": "htmlTag: a # outside quotes means it's text",
+      "markdown": "<b #706>",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "otherUrl: hides urls other than issues and pull requests",
+      "markdown": "https://example.com/#706 https://github.com/korthout/backport-action/tree/main#752",
+      "github": []
+    },
+    {
+      "name": "CRLF line endings",
+      "markdown": "```\r\n#706\r\n```\r\n#752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "gap needs the API: GitHub doesn't link what doesn't exist (nor private or renamed repositories)",
+      "markdown": "#999999",
+      "gap": "GitHub checks whether the issue exists and can be seen, which needs an API call",
+      "github": []
+    },
+    {
+      "name": "gap list items and block quotes: indented code in a list item",
+      "markdown": "- item\n\n      #706\n\n#752",
+      "gap": "regexes can't measure the indentation of list items and block quotes",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "gap unhandled construct: HTML entities",
+      "markdown": "&#35;706",
+      "gap": "HTML entities aren't decoded",
+      "github": [
+        "#706"
+      ]
+    }
+  ]
+}
