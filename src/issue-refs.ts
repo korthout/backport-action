@@ -32,7 +32,7 @@ export function getMentionedIssueRefs(
     // a full reference keeps referring to `repo` when the backport pull request is in another repository
     const first = refs.get(key);
     if (first === undefined || (!first.includes("/") && ref.includes("/"))) {
-      refs.set(key, ref); // keeps the place of the first
+      refs.set(key, ref);
     }
   }
   return [...refs.values()];
@@ -46,11 +46,8 @@ const reference = new RegExp(
     String.raw`(?:https:\/\/github\.com\/|(?<![\w-]))(?<urlRepo>[\w-]+\/[\w.-]+)\/(?:issues|pull)\/0*(?<urlNumber>[1-9]\d*)\/?(?![\w\/])`,
     // any other url is a plain link, references inside it aren't linked
     String.raw`https?:\/\/[^\s<>]*|www\.[^\s<>]*`,
-    // owner/repo#123
     String.raw`(?<![\w-])(?<fullRepo>[\w-]+\/[\w.-]+)#0*(?<fullNumber>[1-9]\d*)(?!\w)`,
-    // #123
     String.raw`(?<![\w#&])#0*(?<number>[1-9]\d*)(?!\w)`,
-    // GH-123
     String.raw`(?<!\w)[Gg][Hh]-0*(?<ghNumber>[1-9]\d*)(?![\w#])`,
   ].join("|"),
   "g",
@@ -62,13 +59,10 @@ const reference = new RegExp(
 type BlockState = {
   /** Open block quotes and list items, outermost first */
   containers: Container[];
-  /** Lines of the open paragraph */
   paragraph: string[];
   /** Open block whose lines are hidden, like a fenced code block */
   hidden?: HiddenBlock;
-  /** Text of the paragraphs found so far */
   paragraphs: string[];
-  /** Labels of the link reference definitions found so far, which links can refer to */
   definitions: Set<string>;
 };
 
@@ -135,7 +129,6 @@ function enterContainers(state: BlockState, line: string): string {
   return rest;
 }
 
-/** @returns The rest of the line inside the container, or undefined if the line doesn't continue the container */
 function continueContainer(
   container: Container,
   line: string,
@@ -167,10 +160,6 @@ function continueHiddenBlock(state: BlockState, line: string): boolean {
   return true;
 }
 
-/**
- * Opens the block quotes and list items that the line starts with.
- * @returns The rest of the line, inside the new containers
- */
 function openContainers(state: BlockState, line: string): string {
   let rest = line;
   while (state.containers.length < maxContainers) {
@@ -189,7 +178,6 @@ const quoteMarker = /^ {0,3}> ?/;
 const listItem = /^ {0,3}(?:[-+*]|\d{1,9}[.)])(?: {1,4}(?! )| (?= {4})| *$)/;
 const thematicBreak = /^ {0,3}([-*_])(?: *\1){2,} *$/;
 
-/** @returns The list item marker that the line starts with, if any */
 function listItemAt(line: string, inParagraph: boolean) {
   if (thematicBreak.test(line)) return null;
   const item = listItem.exec(line);
@@ -201,7 +189,6 @@ function listItemAt(line: string, inParagraph: boolean) {
   return interrupts ? item : null;
 }
 
-/** Reads the line inside its containers: a blank line, the start of a block, or text of a paragraph */
 function readBlock(state: BlockState, line: string) {
   if (isBlank(line)) return closeParagraph(state);
   if (state.paragraph.length === 0) {
@@ -235,7 +222,6 @@ function normalizeLabel(label: string): string {
   return label.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-/** @returns Whether the line opens a hidden block: a fenced code block, or an html block that hides its content */
 function openHiddenBlock(state: BlockState, line: string): boolean {
   const depth = state.containers.length;
   const fence = fenceAt(line);
@@ -264,7 +250,6 @@ const hidingHtmlBlocks = [
   { start: /^ {0,3}<pre(?=[\s>]|$)/i, end: /<\/pre>/i },
 ];
 
-/** @returns The backticks or tildes of the fenced code block that the line opens, if any */
 function fenceAt(line: string): string | undefined {
   const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
   if (fence === null) return undefined;
@@ -358,7 +343,7 @@ function escapedCharacter(text: string, start: number): Span | undefined {
 
 /** A code span ends at the next run of as many backticks; without one, the backticks are literal */
 function codeSpan(text: string, start: number, search: ForwardSearch): Span {
-  const run = matchAt(/`+/y, text, start)!;
+  const [run] = matchAt(/`+/y, text, start)!;
   const end = start + run.length;
   const closer = search.backtickRun(run.length, end);
   if (closer === undefined) return { end, visible: run };
@@ -371,7 +356,7 @@ function comment(
   start: number,
   search: ForwardSearch,
 ): Span | undefined {
-  const open = matchAt(/<!--(?:-?>)?/y, text, start);
+  const open = matchAt(/<!--(?:-?>)?/y, text, start)?.[0];
   if (open === undefined) return;
   if (open.endsWith(">")) return { end: start + open.length, visible: " " };
   const close = search.next(commentEnd, start + open.length);
@@ -382,7 +367,7 @@ const commentEnd = /-->/g;
 
 /** An autolink's text is its url */
 function autolink(text: string, start: number): Span | undefined {
-  const url = matchAt(/<([a-z][\w+.-]*:[^\s<>]*)>/iy, text, start);
+  const url = matchAt(/<([a-z][\w+.-]*:[^\s<>]*)>/iy, text, start)?.[0];
   if (url === undefined) return;
   return { end: start + url.length, visible: ` ${url.slice(1, -1)} ` };
 }
@@ -393,7 +378,7 @@ function htmlTag(
   start: number,
   search: ForwardSearch,
 ): Span | undefined {
-  const tag = matchAt(htmlTagPattern, text, start);
+  const tag = matchAt(htmlTagPattern, text, start)?.[0];
   if (tag === undefined) return;
   const end = start + tag.length;
   const element = /^<(code|pre|a)[\s\/>]/i.exec(tag)?.[1].toLowerCase();
@@ -417,9 +402,8 @@ function link(
   start: number,
   definitions: Set<string>,
 ): Span | undefined {
-  linkPattern.lastIndex = start;
-  const match = linkPattern.exec(text);
-  if (match === null) return;
+  const match = matchAt(linkPattern, text, start);
+  if (match === undefined) return;
   const [whole, linkText, inline, label] = match;
   const hide = (length: number) => ({ end: start + length, visible: " " });
   if (inline !== undefined) return hide(whole.length);
@@ -436,14 +420,9 @@ function link(
 const linkPattern =
   /!?\[([^\[\]]*)\](?:(\(\s*[^()\s]*(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?\s*\))|\[([^\[\]]*)\])?/y;
 
-/** @returns The match of the sticky `pattern` at `index`, if any */
-function matchAt(
-  pattern: RegExp,
-  text: string,
-  index: number,
-): string | undefined {
+function matchAt(pattern: RegExp, text: string, index: number) {
   pattern.lastIndex = index;
-  return pattern.exec(text)?.[0];
+  return pattern.exec(text) ?? undefined;
 }
 
 /**
