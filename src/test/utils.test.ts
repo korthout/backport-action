@@ -5,6 +5,7 @@ import {
   getMentionedIssueRefs,
   replacePlaceholders,
 } from "../utils.js";
+import { rendered } from "./issue-refs.rendered.js";
 
 describe("get mentioned issues", () => {
   const origin = { owner: "korthout", repo: "backport-action" };
@@ -735,6 +736,19 @@ describe("get mentioned issues", () => {
       getMentionedIssueRefs(body, origin);
       expect(performance.now() - start).toBeLessThan(250);
     });
+  });
+
+  describe("finds the references GitHub links when it renders the description", () => {
+    it.each(rendered.filter((c) => !c.differs))("for $name", (c) => {
+      expect(getMentionedIssueRefs(c.body, origin)).toEqual(c.github);
+    });
+
+    it.each(rendered.filter((c) => c.differs))(
+      "except for $name, $differs.why",
+      (c) => {
+        expect(getMentionedIssueRefs(c.body, origin)).toEqual(c.differs!.refs);
+      },
+    );
   });
 });
 
