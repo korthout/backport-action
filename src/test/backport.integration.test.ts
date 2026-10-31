@@ -493,6 +493,33 @@ describe("Backport.run() orchestration", () => {
         }),
       );
     });
+    it("issue_refs placeholder: resolves #N against the original pull request's repository", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          body: "See #7 and test-owner/test-repo#8, fixes korthout/backport-action#7",
+          base: {
+            sha: "def456",
+            repo: { name: "backport-action", owner: { login: "korthout" } },
+          },
+        },
+      });
+      const git = createMockGit();
+      const config = makeConfig({
+        pull: {
+          title: "[Backport ${target_branch}] ${pull_title}",
+          description: "Refers to ${issue_refs}",
+          branch_name: "backport-${pull_number}-to-${target_branch}",
+        },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs[0]).toEqual(
+        expect.objectContaining({
+          body: "Refers to korthout/backport-action#7 test-owner/test-repo#8",
+        }),
+      );
+    });
   });
 
   describe("assignees", () => {
