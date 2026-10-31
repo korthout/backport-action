@@ -1,0 +1,401 @@
+{
+  "repository": "korthout/backport-action",
+  "cases": [
+    {
+      "name": "#N: separated by spaces, or preceded or followed by punctuation",
+      "markdown": "relates to #706 #752. (#753) [#749]: x -#755 a/#756",
+      "github": [
+        "#706",
+        "#752",
+        "#753",
+        "#749",
+        "#755",
+        "#756"
+      ]
+    },
+    {
+      "name": "#N: not glued to a word, another reference or an entity",
+      "markdown": "foo#706 #752abc #753#749 &#755;",
+      "github": [
+        "#753"
+      ]
+    },
+    {
+      "name": "leading zeros: in references and urls",
+      "markdown": "#0 #0706 camunda/camunda#01 https://github.com/korthout/backport-action/issues/0752",
+      "github": [
+        "#706",
+        "camunda/camunda#1",
+        "#752"
+      ]
+    },
+    {
+      "name": "GH-N: in any case, not glued to a word or a reference",
+      "markdown": "GH-706 gh-752 fooGH-753 GH-749abc GH-755#1",
+      "github": [
+        "#706",
+        "#752"
+      ]
+    },
+    {
+      "name": "owner/repo#N: not glued to a word, and the repository needs an owner",
+      "markdown": "actions/checkout#1. x.camunda/camunda#1 backport-action#706 korthout/backport-action#752abc",
+      "github": [
+        "actions/checkout#1",
+        "camunda/camunda#1"
+      ]
+    },
+    {
+      "name": "url: to an issue or pull request, with or without scheme",
+      "markdown": "https://github.com/camunda/camunda/issues/1 github.com/actions/checkout/pull/1 https://github.com/korthout/backport-action/pull/749/ https://github.com/korthout/backport-action/issues/706#issuecomment-1",
+      "github": [
+        "camunda/camunda#1",
+        "actions/checkout#1",
+        "#749",
+        "#706"
+      ]
+    },
+    {
+      "name": "url: other urls are plain links",
+      "markdown": "http://github.com/korthout/backport-action/issues/752 https://github.com/korthout/backport-action/pull/749/files https://example.com/#753",
+      "github": []
+    },
+    {
+      "name": "paragraph text: headings, emphasis and tables don't hide references",
+      "markdown": "## Fixes #706\n\n*#752* \"#753\"\n\n| a |\n|---|\n| #749 |",
+      "github": [
+        "#706",
+        "#752",
+        "#753",
+        "#749"
+      ]
+    },
+    {
+      "name": "setext heading: its text is linked",
+      "markdown": "#706\n---",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "thematic break: isn't a list item",
+      "markdown": "* * *\n#706\n\n- - -\n    #752",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "fenced code block: backticks or tildes, with an info string",
+      "markdown": "```ts\n#706\n```\n~~~\n#752\n~~~\nfixes #753",
+      "github": [
+        "#753"
+      ]
+    },
+    {
+      "name": "fenced code block: interrupts a paragraph",
+      "markdown": "para\n```\n#706\n```\n#752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "fenced code block: closes with a fence of the same character, at least as long, without text",
+      "markdown": "~~~~\n#706\n```\n~~~\n~~~~ x\n    ~~~~\n~~~~\n#752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "fenced code block: unclosed, hides the rest",
+      "markdown": "fixes #752\n```\n#706",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "fenced code block: only a tilde fence can have a backtick in its info string",
+      "markdown": "~~~ a`b\n#752\n~~~\n``` a`b\n#706\n```\n#753",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "indented code block: four spaces or a tab",
+      "markdown": "para\n\n    #706\n\n\t#752\n\n#753",
+      "github": [
+        "#753"
+      ]
+    },
+    {
+      "name": "indented code block: can't interrupt a paragraph",
+      "markdown": "para\n    #706",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "html block: a comment hides up to the line of its end, the rest of that line is visible",
+      "markdown": "<!-- a\n\n#706\n\n--> #752\n#753",
+      "github": [
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "html block: an unclosed comment hides the rest",
+      "markdown": "Fixes #706\n<!-- closes #752",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "html block: pre hides its lines, also when unclosed",
+      "markdown": "<pre>\n#706\n</pre>\n\n#752\n\n<pre>\n#753",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "html block: other blocks like div and script don't hide",
+      "markdown": "<div>\n#706\n</div>\n\n<script>\n#752\n</script>",
+      "github": [
+        "#706",
+        "#752"
+      ]
+    },
+    {
+      "name": "list item: its content column decides what is indented code",
+      "markdown": "- item\n\n      #706\n\n- item\n\n    #752\n\n#753",
+      "github": [
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "list item: a fenced code block ends with the item",
+      "markdown": "- ```\n  #706\n\n#752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "list item: nested",
+      "markdown": "- a\n  - b\n\n        #706\n\n#752\n\n1. a\n   1. b\n\n          #706\n\n#753",
+      "github": [
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "list item: interrupts a paragraph",
+      "markdown": "para\n- #706\n* #752",
+      "github": [
+        "#706",
+        "#752"
+      ]
+    },
+    {
+      "name": "list item: one numbered other than 1 can't interrupt a paragraph",
+      "markdown": "run `make\n2. #706` now\n\nsee [docs\n2. #752](https://x)\n\ntext `a\n-\n#753` b",
+      "github": [
+        "#753"
+      ]
+    },
+    {
+      "name": "block quote: a fenced code block ends with the quote",
+      "markdown": "> ```\n> #706\n\n#752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "block quote: indented code",
+      "markdown": ">     #706\n\n#752",
+      "github": [
+        "#752"
+      ]
+    },
+    {
+      "name": "block quote: lazy continuation",
+      "markdown": "> a\n> > b\n#706",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "block quote: in a list item",
+      "markdown": "- a\n  > - b\n  >   ```\n  >   #706\n\n#752\n\n- a\n\n  > ```\n  > #706\n- #753",
+      "github": [
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "code span: ends at a run of as many backticks",
+      "markdown": "`#706` ``a ` #752`` ```#753``` #749",
+      "github": [
+        "#749"
+      ]
+    },
+    {
+      "name": "code span: across lines, but not across paragraphs",
+      "markdown": "`a\n#706` #752\n\na ` b\n\nfixes #753 and ` c",
+      "github": [
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "code span: unmatched backticks are literal",
+      "markdown": "a `` b #706\n\n`#752 #753",
+      "github": [
+        "#706",
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "escape: a backslash makes the next character literal",
+      "markdown": "\\`#706\\` \\#752 \\``#753` #749",
+      "github": [
+        "#706",
+        "#752",
+        "#749"
+      ]
+    },
+    {
+      "name": "comment: inline, also the short forms, hidden as a space",
+      "markdown": "see #706 <!-- not #752 --> and #753 a/b<!-- x -->#756\n\n<!--> #749\n\na <!---> #755 -->",
+      "github": [
+        "#706",
+        "#753",
+        "#756",
+        "#749",
+        "#755"
+      ]
+    },
+    {
+      "name": "comment: unclosed in a paragraph is literal",
+      "markdown": "a <!-- #706\nb #752\n\n#753",
+      "github": [
+        "#706",
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "comment: whichever opens first wins over a code span",
+      "markdown": "Use `<!--` here #752\n\n<!-- `x` #706 --> #753",
+      "github": [
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "html tag: hidden as a space with its attributes, and code, pre and a hide their content",
+      "markdown": "<code>#706</code> <pre>#752</pre> <a href=\"https://example.com\">#753</a> <kbd>#749</kbd><br>#755 <span\ntitle=\"#756\">x</span>",
+      "github": [
+        "#749",
+        "#755"
+      ]
+    },
+    {
+      "name": "html tag: text in angle brackets that isn't a tag is visible",
+      "markdown": "x <b and #706 > z\n\n<a x #752 >\n\nx </b #753>",
+      "github": [
+        "#706",
+        "#752",
+        "#753"
+      ]
+    },
+    {
+      "name": "autolink: its url is visible",
+      "markdown": "<https://github.com/korthout/backport-action/issues/706>",
+      "github": [
+        "#706"
+      ]
+    },
+    {
+      "name": "link: text, destination and title are hidden, also of an image",
+      "markdown": "[#706](https://github.com/korthout/backport-action/issues/752) ![#753](x.png) [see #749](https://x 'title') [see #755]( https://x (t) ) #756",
+      "github": [
+        "#756"
+      ]
+    },
+    {
+      "name": "reference link: hidden only when its label is defined",
+      "markdown": "[#706][y] [#752] [#753][] [#749][nope] [#755]\n\n[y]: https://example.com\n[#752]: https://example.com",
+      "github": [
+        "#753",
+        "#749",
+        "#755"
+      ]
+    },
+    {
+      "name": "link reference definition: hidden, also in a container",
+      "markdown": "> [#706]: https://example.com\n\n- [#752]: https://example.com\n\n[#706] [#752] #753",
+      "github": [
+        "#753"
+      ]
+    },
+    {
+      "name": "link reference definition: not after a paragraph, in code, when invalid, or for a footnote",
+      "markdown": "foo\n[#706]: https://example.com\n\n```\n[#752]: https://example.com\n```\n\n[#706] [#752]\n\n[note]: see #753\n\nx[^1]\n\n[^1]: #749",
+      "github": [
+        "#706",
+        "#752",
+        "#753",
+        "#749"
+      ]
+    },
+    {
+      "name": "gap: emphasis with underscores",
+      "markdown": "_#752_",
+      "github": [
+        "#752"
+      ],
+      "gap": "GitHub resolves emphasis first, the scanner doesn't implement emphasis"
+    },
+    {
+      "name": "gap: html entities",
+      "markdown": "&#35;706 &num;752",
+      "github": [
+        "#706",
+        "#752"
+      ],
+      "gap": "GitHub decodes html entities, the scanner doesn't"
+    },
+    {
+      "name": "gap: unclosed code element",
+      "markdown": "<code>#706 and #752\n\nx <code>#753\n\n#749",
+      "github": [],
+      "gap": "an unclosed code element hides the rest of the description, the scanner only hides the tag"
+    },
+    {
+      "name": "gap: link syntax like nested brackets",
+      "markdown": "[a [b] #706](https://example.com)",
+      "github": [],
+      "gap": "the scanner doesn't implement nested brackets in link text"
+    },
+    {
+      "name": "gap: link reference definition across lines",
+      "markdown": "[y]: https://example.com\n  \"title #753\"",
+      "github": [],
+      "gap": "the scanner doesn't implement link reference definitions across lines"
+    },
+    {
+      "name": "gap: code span in an html block",
+      "markdown": "<div>\n`#706`\n</div>",
+      "github": [
+        "#706"
+      ],
+      "gap": "markdown isn't rendered in an html block, which the scanner doesn't implement"
+    },
+    {
+      "name": "gap: tab after a block quote marker",
+      "markdown": ">\t\t#706\n\n> \t\t#752",
+      "github": [],
+      "gap": "the scanner only expands tabs at the start of a line, not at CommonMark's tab stops after a container marker"
+    }
+  ]
+}
