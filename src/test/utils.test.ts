@@ -10,7 +10,13 @@ import {
 // Rendered by GitHub, see render-issue-refs.mjs
 const fixture: {
   repository: string;
-  cases: { name: string; markdown: string; github: string[]; gap?: string }[];
+  cases: {
+    name: string;
+    markdown: string;
+    github: string[];
+    gap?: string;
+    found?: string[];
+  }[];
 } = JSON.parse(
   readFileSync(new URL("fixtures/issue-refs.json", import.meta.url), "utf8"),
 );
@@ -439,16 +445,21 @@ describe("get mentioned issues", () => {
     const asGitHubWrites = (refs: string[]) =>
       refs.map((ref) => {
         const [, name, number] = ref.match(/^(.*?)(?:#|GH-)0*(\d+)$/i)!;
-        const inOrigin = name === "" || name.toLowerCase() === origin;
+        const inOrigin =
+          name === "" || name.toLowerCase() === origin.toLowerCase();
         return inOrigin ? `#${number}` : `${name}#${number}`;
       });
 
-    for (const { name, markdown, github, gap } of fixture.cases) {
-      // a case with a gap documents where issue_refs differs from GitHub
-      (gap ? it.fails : it)(name, () => {
-        expect(asGitHubWrites(getMentionedIssueRefs(markdown, origin))).toEqual(
-          github,
-        );
+    for (const { name, markdown, github, gap, found } of fixture.cases) {
+      it(name, () => {
+        const refs = asGitHubWrites(getMentionedIssueRefs(markdown, origin));
+        if (gap) {
+          // a gap documents where issue_refs differs from GitHub, and what it finds instead
+          expect(refs).toEqual(found);
+          expect(refs).not.toEqual(github);
+        } else {
+          expect(refs).toEqual(github);
+        }
       });
     }
   });

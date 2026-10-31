@@ -43,12 +43,15 @@
     },
     {
       "name": "refEnd: a reference ends at punctuation",
-      "markdown": "Fixes #706. See (#752), #753's #754-fix",
+      "markdown": "Fixes #706. See (#752), [#753] #754's #755-fix #756: #757!",
       "github": [
         "#706",
         "#752",
         "#753",
-        "#754"
+        "#754",
+        "#755",
+        "#756",
+        "#757"
       ]
     },
     {
@@ -105,7 +108,7 @@
     },
     {
       "name": "backtickFence: closed by a fence at least as long, indented up to 3 spaces",
-      "markdown": "````\n#706\n```\n   `````\n#752",
+      "markdown": "  ````\n#706\n```\n   `````\n#752",
       "github": [
         "#752"
       ]
@@ -188,12 +191,12 @@
     },
     {
       "name": "inlineLink: hides its text and destination",
-      "markdown": "[#706](https://example.com) [x](#752) ![#753](a.png)",
+      "markdown": "[#706](https://example.com) [x](#752) ![#753](a.png) [see](https://github.com/korthout/backport-action/issues/754)",
       "github": []
     },
     {
       "name": "linkReferenceDefinition: hides the definition, but not a footnote's text",
-      "markdown": "a[^1]\n\n[a]: #706\n[^1]: #752",
+      "markdown": "a[^1]\n\n[a]: #706\n[b]: https://github.com/korthout/backport-action/issues/753\n[^1]: #752",
       "github": [
         "#752"
       ]
@@ -228,7 +231,7 @@
     },
     {
       "name": "otherUrl: hides urls other than issues and pull requests",
-      "markdown": "https://example.com/#706 https://github.com/korthout/backport-action/tree/main#752",
+      "markdown": "https://example.com/#706 https://github.com/korthout/backport-action/tree/main#752 https://github.com/korthout/backport-action/issues?q=is:open+#753",
       "github": []
     },
     {
@@ -242,12 +245,19 @@
       "name": "gap needs the API: GitHub doesn't link what doesn't exist (nor private or renamed repositories)",
       "markdown": "#999999",
       "gap": "GitHub checks whether the issue exists and can be seen, which needs an API call",
+      "found": [
+        "#999999"
+      ],
       "github": []
     },
     {
       "name": "gap list items and block quotes: indented code in a list item",
       "markdown": "- item\n\n      #706\n\n#752",
       "gap": "regexes can't measure the indentation of list items and block quotes",
+      "found": [
+        "#706",
+        "#752"
+      ],
       "github": [
         "#752"
       ]
@@ -256,6 +266,7 @@
       "name": "gap unhandled construct: HTML entities",
       "markdown": "&#35;706",
       "gap": "HTML entities aren't decoded",
+      "found": [],
       "github": [
         "#706"
       ]
