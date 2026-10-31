@@ -2,7 +2,7 @@
   "repository": "korthout/backport-action",
   "cases": [
     {
-      "name": "originRef: #N, also separated by single spaces",
+      "name": "originRef: #N, separated by single spaces",
       "markdown": "relates to #706 #752 #753",
       "github": [
         "#706",
@@ -19,17 +19,21 @@
       ]
     },
     {
-      "name": "originRef: not inside a word",
-      "markdown": "foo#706 #752foo xGH-753",
-      "github": []
+      "name": "originRef: not inside a word, also with GH- or underscores",
+      "markdown": "xGH-753 #754_ #755#756 foo_#757",
+      "github": [
+        "#755"
+      ]
     },
     {
       "name": "originRef: after a slash or other punctuation",
-      "markdown": "foo/#706 (#752 x-GH-753",
+      "markdown": "foo/#706 (#752 x-GH-753 foo/camunda/camunda#1 foo/github.com/korthout/backport-action/issues/754",
       "github": [
         "#706",
         "#752",
-        "#753"
+        "#753",
+        "camunda/camunda#1",
+        "#754"
       ]
     },
     {
@@ -63,18 +67,9 @@
       ]
     },
     {
-      "name": "fullRef: owner/repo#N",
-      "markdown": "camunda/camunda#1, (camunda/camunda#2)",
+      "name": "url: of a pull request",
+      "markdown": "https://github.com/korthout/backport-action/pull/752",
       "github": [
-        "camunda/camunda#1",
-        "camunda/camunda#2"
-      ]
-    },
-    {
-      "name": "url: of an issue or a pull request, with or without the scheme",
-      "markdown": "https://github.com/korthout/backport-action/issues/706 github.com/korthout/backport-action/pull/752",
-      "github": [
-        "#706",
         "#752"
       ]
     },
@@ -89,15 +84,16 @@
     },
     {
       "name": "url: between punctuation",
-      "markdown": "(https://github.com/korthout/backport-action/issues/706). https://github.com/korthout/backport-action/pull/752,",
+      "markdown": "(https://github.com/korthout/backport-action/issues/706). https://github.com/korthout/backport-action/pull/752, <https://github.com/korthout/backport-action/pull/753>",
       "github": [
         "#706",
-        "#752"
+        "#752",
+        "#753"
       ]
     },
     {
-      "name": "url: not http or www",
-      "markdown": "http://github.com/korthout/backport-action/issues/706 www.github.com/korthout/backport-action/issues/752",
+      "name": "url: not http, www, or a pull request's tab",
+      "markdown": "http://github.com/korthout/backport-action/issues/706 www.github.com/korthout/backport-action/issues/752 https://github.com/korthout/backport-action/pull/753/files",
       "github": []
     },
     {
@@ -143,31 +139,26 @@
       ]
     },
     {
-      "name": "listItemParagraph: an indented paragraph continues a list item",
-      "markdown": "- item\n\n    #706",
+      "name": "listItemParagraph: indented paragraphs continue a list item of several lines",
+      "markdown": "- item\n  more\n\n    #706\n\n    #752",
       "github": [
-        "#706"
+        "#706",
+        "#752"
       ]
     },
     {
-      "name": "blockComment: spans paragraphs, unclosed hides the rest",
-      "markdown": "<!--\n#706\n\n#752\n-->\n#753\n<!-- #754",
+      "name": "blockComment: at the start of a line, spans paragraphs",
+      "markdown": "<!--\n#706\n\n#752\n-->\n#753",
       "github": [
         "#753"
       ]
     },
     {
-      "name": "inlineComment: closed within its paragraph",
-      "markdown": "see <!-- #706 --> #752",
+      "name": "inlineComment: elsewhere, must close within its paragraph",
+      "markdown": "see <!-- #706\n\n#752 -->",
       "github": [
+        "#706",
         "#752"
-      ]
-    },
-    {
-      "name": "inlineComment: unclosed mid-line, it's text",
-      "markdown": "see <!-- #706",
-      "github": [
-        "#706"
       ]
     },
     {
@@ -188,10 +179,11 @@
     },
     {
       "name": "hidden: whichever of code and comments opens first wins",
-      "markdown": "`<!--` #706 `-->` and <!-- ` --> #752 `",
+      "markdown": "`<!--` #706 `-->` and <!-- ` --> #752 `\n\n```\n<!--\n```\n#753",
       "github": [
         "#706",
-        "#752"
+        "#752",
+        "#753"
       ]
     },
     {
