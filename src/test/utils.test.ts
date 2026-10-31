@@ -687,6 +687,55 @@ describe("get mentioned issues", () => {
       ).toEqual(["#1"]);
     });
   });
+
+  // A regex piece that scans ahead for a closer can take quadratic time, or worse, when the closer is missing.
+  // When adding a piece, add the description that makes it scan furthest. At GitHub's maximum description length,
+  // the quadratic pieces found so far took 0.4 to 2.4 seconds. These take a few milliseconds, apart from unclosed
+  // backtick strings of growing length, which take about 50 ms.
+  describe("takes little time for the longest descriptions", () => {
+    const maxLength = 65_536;
+    const repeat = (unit: string) =>
+      unit.repeat(Math.ceil(maxLength / unit.length)).slice(0, maxLength);
+    const growingBacktickStrings = () => {
+      let body = "";
+      for (let n = 1; body.length < maxLength; n++)
+        body += "`".repeat(n) + " a ";
+      return body.slice(0, maxLength);
+    };
+
+    it.each([
+      ["references", repeat("#1 a/b#2 https://github.com/a/b/pull/3 GH-4 ")],
+      ["unclosed backtick strings of growing length", growingBacktickStrings()],
+      ["an unclosed backtick", "`" + repeat("a #1 ")],
+      ["escaped backticks", repeat("\\`")],
+      ["backslashes", repeat("\\")],
+      ["unclosed fences", repeat("```\n")],
+      ["fences too short to close", "````\n" + repeat("```\n")],
+      ["indented lines", repeat("\n    a")],
+      ["blank lines", repeat("\n \n")],
+      ["list items", repeat("- a\n\n")],
+      ["a long paragraph before indented code", repeat("a b\n") + "\n\n    c"],
+      ["unclosed comments", repeat("a <!-- ")],
+      ["unclosed links", repeat("[a](")],
+      ["unclosed links with a space", repeat("[a](x ")],
+      ["unclosed brackets", repeat("[a")],
+      ["unclosed <a> elements", repeat("<a> x ")],
+      ["unclosed <code> elements", repeat("<code> x ")],
+      ["unclosed HTML tags", repeat("<b x ")],
+      ["unclosed quotes in HTML tags", repeat('<b x="')],
+      ["urls", repeat("https://")],
+      ["incomplete issue urls", repeat("github.com/a/")],
+      ["owners", repeat("a/")],
+      ["hashes", repeat("#")],
+      ["underscores", repeat("_#1")],
+      ["leading zeros", "#" + repeat("0")],
+      ["GH- prefixes", repeat("GH-")],
+    ])("for %s", (_, body) => {
+      const start = performance.now();
+      getMentionedIssueRefs(body, origin);
+      expect(performance.now() - start).toBeLessThan(250);
+    });
+  });
 });
 
 describe("compose body/title", () => {
