@@ -95,9 +95,11 @@
       ]
     },
     {
-      "name": "url: not a pull request's tab",
-      "markdown": "https://github.com/korthout/backport-action/pull/753/files",
-      "github": []
+      "name": "url: not a subpage or a reference in its fragment, also with www.; after any scheme",
+      "markdown": "https://github.com/korthout/backport-action/pull/753/files#5 www.github.com/korthout/backport-action/pull/754/files#6 ftp://github.com/korthout/backport-action/issues/755",
+      "github": [
+        "#755"
+      ]
     },
     {
       "name": "backtickFence: hides its content",
@@ -244,7 +246,7 @@
     {
       "name": "as written: http:// and www. URLs of issues",
       "markdown": "http://github.com/korthout/backport-action/issues/706 www.github.com/korthout/backport-action/issues/752 https://www.github.com/korthout/backport-action/pull/753",
-      "differs": "issue_refs lists references as written, and recognized www. URLs before; GitHub doesn't link either",
+      "differs": "issue_refs lists references as written, and main (v4) already listed www. URLs; GitHub doesn't link either",
       "found": [
         "#706",
         "#752",

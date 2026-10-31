@@ -108,8 +108,9 @@ const anchorElement = String.raw`<a(?=[\s>])[^<>]*>${charUnless(String.raw`<a[\s
 // outside quotes, a `#` means it's text, not a tag
 const htmlTag = String.raw`<\/?[a-z][a-z\d-]*(?=[\s/>])(?:[^<>"'#]|"[^"]*"|'[^']*')*>`;
 
-// a `#` inside a URL, like https://example.com/#1, isn't a reference, unless it's the URL of an issue or pull request
-const otherUrl = String.raw`(?:https?:\/\/|www\.)(?!(?:www\.)?github\.com\/[\w.-]+\/[\w.-]+\/(?:issues|pull)\/)[^\s<]*`;
+// a URL, like https://example.com/#1, so a `#N` in it isn't a reference; but not the URL of an issue or pull
+// request itself (only what `url` matches, so a subpage like `/pull/1/files#2` is hidden too)
+const otherUrl = String.raw`(?:https?:\/\/|www\.)(?!(?:www\.)?github\.com\/[\w.-]+\/[\w.-]+\/(?:issues|pull)\/\d+\/?(?![\w/-]))[^\s<]*`;
 
 const hidden = new RegExp(
   [
@@ -145,7 +146,7 @@ const originRef = String.raw`(?:(?<![\w&])#|(?<!\w)GH-)${number("originNumber")}
 // underscores around a reference are emphasis, not part of a word
 const emphasizedRef = String.raw`(?<=(?<!\w)_+)#${number("emphasizedNumber")}(?=_+(?!\w))`;
 const fullRef = String.raw`(?<![\w-])(?<refOwner>${owner})\/(?<refRepo>${repo})#${number("refNumber")}${refEnd}`;
-// a trailing `/`, `#fragment` or `?query` is fine, a subpage like `/pull/N/files` isn't
+// after any scheme; a trailing `/`, `#fragment` or `?query` is fine, a subpage like `/pull/N/files` isn't
 const url = String.raw`(?<![\w.-])(?:https?:\/\/)?(?:www\.)?github\.com\/(?<urlOwner>${owner})\/(?<urlRepo>${repo})\/(?:issues|pull)\/${number("urlNumber")}\/?(?![\w/-])`;
 
 const reference = new RegExp(
