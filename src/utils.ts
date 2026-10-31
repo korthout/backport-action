@@ -1,4 +1,4 @@
-import { PullRequest, Repo } from "./github.js";
+import { PullRequest } from "./github.js";
 
 /**
  * @param template The template potentially containing placeholders
@@ -11,10 +11,7 @@ export function replacePlaceholders(
   main: Pick<PullRequest, "body" | "user" | "number" | "title" | "base">,
   target: string,
 ): string {
-  const origin = {
-    owner: main.base.repo.owner.login,
-    repo: main.base.repo.name,
-  };
+  const origin = `${main.base.repo.owner.login}/${main.base.repo.name}`;
   const values: Record<string, string> = {
     pull_author: main.user.login,
     pull_number: main.number.toString(),
@@ -30,16 +27,16 @@ export function replacePlaceholders(
 
 /**
  * @param body Text in which to search for references to issues and pull requests, ignoring those inside code, comments (`<!-- ... -->`) and links, like GitHub does
- * @param origin The repository of the pull request the body belongs to, which `#N` and `GH-N` refer to
+ * @param origin The repository (`owner/repo`) of the pull request the body belongs to, which `#N` and `GH-N` refer to
  * @returns Each referenced issue or pull request once, in the order first found, written as GitHub renders it:
  *   `#N` in the origin repository, `owner/repo#N` (cased as first written) in another repository
  */
 export function getMentionedIssueRefs(
   body: string | null,
-  origin: Repo,
+  origin: string,
 ): string[] {
   const visible = (body ?? "").replace(/\r\n?/g, "\n").replace(hidden, " ");
-  const originName = `${origin.owner}/${origin.repo}`.toLowerCase();
+  const originName = origin.toLowerCase();
   const refs = new Map<string, string>();
   for (const { groups } of visible.matchAll(reference)) {
     const g = groups!;
@@ -48,10 +45,13 @@ export function getMentionedIssueRefs(
     const number =
       g.urlNumber ?? g.refNumber ?? g.originNumber ?? g.emphasizedNumber;
     const name = owner ? `${owner}/${repo}` : originName;
-    const isOrigin = name.toLowerCase() === originName;
-    const key = `${name.toLowerCase()}#${number}`;
+    const lowerName = name.toLowerCase();
+    const key = `${lowerName}#${number}`;
     if (!refs.has(key)) {
-      refs.set(key, isOrigin ? `#${number}` : `${name}#${number}`);
+      refs.set(
+        key,
+        lowerName === originName ? `#${number}` : `${name}#${number}`,
+      );
     }
   }
   return [...refs.values()];

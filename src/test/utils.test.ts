@@ -8,7 +8,7 @@ import {
 import { rendered } from "./issue-refs.rendered.js";
 
 describe("get mentioned issues", () => {
-  const origin = { owner: "korthout", repo: "backport-action" };
+  const origin = "korthout/backport-action";
 
   describe("returns an empty list", () => {
     it("for an null text", () => {
