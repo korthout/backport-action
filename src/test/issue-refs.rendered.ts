@@ -1,7 +1,7 @@
 // Pull request descriptions rendered by GitHub, with the issues and pull requests GitHub linked in each.
 // Rendered with: gh api -X POST /markdown -f mode=gfm -f context=korthout/backport-action -f text=<body>
-// `github` lists the links as `${issue_refs}` writes them. Where getMentionedIssueRefs differs, `differs` says
-// what it finds instead, and why.
+// `github` lists the links as GitHub writes them: `#N` in korthout/backport-action, `owner/repo#N` elsewhere.
+// Where getMentionedIssueRefs differs, `differs` says what it finds instead, and why.
 
 export const rendered: {
   name: string;

@@ -626,13 +626,16 @@ describe("get mentioned issues", () => {
 
   describe("finds GH-N references", () => {
     it("in any casing", () => {
-      expect(getMentionedIssueRefs("GH-1 gh-2", origin)).toEqual(["#1", "#2"]);
+      expect(getMentionedIssueRefs("GH-1 gh-2", origin)).toEqual([
+        "GH-1",
+        "gh-2",
+      ]);
     });
 
     it("after punctuation", () => {
       expect(
         getMentionedIssueRefs("(GH-1) -GH-2 /GH-3 zeebe-io/zeebe#GH-4", origin),
-      ).toEqual(["#1", "#2", "#3", "#4"]);
+      ).toEqual(["GH-1", "GH-2", "GH-3", "GH-4"]);
     });
 
     it("but not inside a word", () => {
@@ -642,50 +645,50 @@ describe("get mentioned issues", () => {
     });
   });
 
-  describe("writes references as GitHub renders them", () => {
+  describe("writes references as first written", () => {
     it("for a full reference to the original repository", () => {
       expect(
-        getMentionedIssueRefs("korthout/backport-action#1", origin),
-      ).toEqual(["#1"]);
+        getMentionedIssueRefs("Korthout/Backport-Action#1", origin),
+      ).toEqual(["Korthout/Backport-Action#1"]);
     });
 
-    it("for a url of the original repository", () => {
+    it("for a url, as owner/repo#N", () => {
       expect(
         getMentionedIssueRefs(
-          "https://github.com/korthout/backport-action/pull/1",
+          "https://github.com/Korthout/backport-action/pull/01",
           origin,
         ),
-      ).toEqual(["#1"]);
+      ).toEqual(["Korthout/backport-action#1"]);
     });
 
     it("once for the same issue written in different forms", () => {
       expect(
         getMentionedIssueRefs(
-          "#1 GH-1 korthout/backport-action#1 https://github.com/korthout/backport-action/issues/1",
+          "GH-1 #1 korthout/backport-action#1 https://github.com/korthout/backport-action/issues/1",
           origin,
         ),
-      ).toEqual(["#1"]);
+      ).toEqual(["GH-1"]);
     });
 
     it("once for the same issue written in different casing", () => {
       expect(
         getMentionedIssueRefs(
-          "Korthout/Backport-Action#1 https://github.com/KORTHOUT/backport-action/issues/1",
+          "https://github.com/KORTHOUT/backport-action/issues/1 Korthout/Backport-Action#1 #1",
           origin,
         ),
-      ).toEqual(["#1"]);
+      ).toEqual(["KORTHOUT/backport-action#1"]);
     });
 
-    it("once for another repository written in different casing, as first written", () => {
+    it("once for another repository written in different casing", () => {
       expect(
         getMentionedIssueRefs("Zeebe-io/Zeebe#1 zeebe-io/zeebe#1", origin),
       ).toEqual(["Zeebe-io/Zeebe#1"]);
     });
 
-    it("without leading zeros", () => {
+    it("once for the same number written with leading zeros", () => {
       expect(
         getMentionedIssueRefs("#01 korthout/backport-action#001 #0", origin),
-      ).toEqual(["#1"]);
+      ).toEqual(["#01"]);
     });
   });
 
@@ -739,14 +742,26 @@ describe("get mentioned issues", () => {
   });
 
   describe("finds the references GitHub links when it renders the description", () => {
+    // GitHub writes a reference to the origin as `#N`, without leading zeros; issue_refs keeps the spelling
+    const asGitHubWrites = (refs: string[]) =>
+      refs.map((ref) => {
+        const [, name, number] = ref.match(/^(.*?)(?:#|GH-)0*(\d+)$/i)!;
+        const inOrigin = name === "" || name.toLowerCase() === origin;
+        return inOrigin ? `#${number}` : `${name}#${number}`;
+      });
+
     it.each(rendered.filter((c) => !c.differs))("for $name", (c) => {
-      expect(getMentionedIssueRefs(c.body, origin)).toEqual(c.github);
+      expect(asGitHubWrites(getMentionedIssueRefs(c.body, origin))).toEqual(
+        c.github,
+      );
     });
 
     it.each(rendered.filter((c) => c.differs))(
       "except for $name, $differs.why",
       (c) => {
-        expect(getMentionedIssueRefs(c.body, origin)).toEqual(c.differs!.refs);
+        expect(asGitHubWrites(getMentionedIssueRefs(c.body, origin))).toEqual(
+          c.differs!.refs,
+        );
       },
     );
   });

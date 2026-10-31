@@ -493,7 +493,7 @@ describe("Backport.run() orchestration", () => {
         }),
       );
     });
-    it("issue_refs placeholder: refers to the original pull request's repository as #N", async () => {
+    it("issue_refs placeholder: resolves #N against the original pull request's repository", async () => {
       const github = new FakeGithub({
         sourcePr: {
           body: "Fixes korthout/backport-action#7, see #7 and test-owner/test-repo#8",
@@ -516,7 +516,7 @@ describe("Backport.run() orchestration", () => {
 
       expect(github.createdPRs[0]).toEqual(
         expect.objectContaining({
-          body: "Refers to #7 test-owner/test-repo#8",
+          body: "Refers to korthout/backport-action#7 test-owner/test-repo#8",
         }),
       );
     });
