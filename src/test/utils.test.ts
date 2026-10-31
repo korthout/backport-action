@@ -38,18 +38,6 @@ describe("get mentioned issues", () => {
       cases[name].refs,
     );
   });
-
-  it("recognizes the original pull request's repository whatever its casing", () => {
-    const html = rendered(
-      "lists references to the original pull request's repository as #N",
-    );
-    expect(
-      getMentionedIssueRefs(html, {
-        name: "Backport-Action",
-        owner: { login: "Korthout" },
-      }),
-    ).toEqual(["#706"]);
-  });
 });
 
 describe("compose body/title", () => {

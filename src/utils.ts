@@ -42,9 +42,7 @@ export function getMentionedIssueRefs(
     if (!patterns.issueOrPullRequest.test(anchor)) continue;
     const [, owner, name, number] = patterns.href.exec(anchor) ?? [];
     if (number === undefined) continue;
-    const isSameRepo =
-      owner.toLowerCase() === repo.owner.login.toLowerCase() &&
-      name.toLowerCase() === repo.name.toLowerCase();
+    const isSameRepo = owner === repo.owner.login && name === repo.name;
     refs.add(isSameRepo ? `#${number}` : `${owner}/${name}#${number}`);
   }
   return [...refs];
@@ -62,8 +60,8 @@ const patterns = {
   // excludes discussions, which GitHub also links with the class above
   issueOrPullRequest: /\sdata-hovercard-type="(?:issue|pull_request)"/,
 
-  // captures `owner`, `repo` and `number` from the canonical url, on any host
-  href: /\shref="https?:\/\/[^/"]+\/([^/"]+)\/([^/"]+)\/(?:issues|pull)\/(\d+)\/?(?:[?#][^"]*)?"/,
+  // captures `owner`, `repo` and `number`, on any host for GitHub Enterprise
+  href: /\shref="https?:\/\/[^/"]+\/([^/"]+)\/([^/"]+)\/(?:issues|pull)\/(\d+)(?:#[^"]*)?"/,
 };
 
 export function coerceCherryPickingMergeMode(
