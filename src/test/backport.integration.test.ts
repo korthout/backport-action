@@ -517,7 +517,7 @@ describe("Backport.run() orchestration", () => {
 
       expect(github.createdPRs[0]).toEqual(
         expect.objectContaining({
-          body: "Refers to #1 korthout/backport-action#1",
+          body: "Refers to camunda/camunda#1 korthout/backport-action#1",
         }),
       );
     });

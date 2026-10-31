@@ -11,7 +11,7 @@ import type { Repo } from "./github.js";
  * @param body The description of the original pull request
  * @param repo The repository of the original pull request, to which a bare reference like `#123` refers
  * @returns Each issue and pull request that GitHub links in the description once, in the order first found, as first
- *   written: a url as `owner/repo#123`, any other reference as is
+ *   written in full: a url as `owner/repo#123`, any other reference as is
  */
 export function getMentionedIssueRefs(
   body: string | null,
@@ -28,8 +28,12 @@ export function getMentionedIssueRefs(
       groups.urlRepo ?? groups.fullRepo ?? `${repo.owner}/${repo.repo}`;
     // the same issue can be written differently, also as a bare reference to `repo`
     const key = `${issueRepo}#${number}`.toLowerCase();
-    if (refs.has(key)) continue;
-    refs.set(key, groups.urlRepo ? `${groups.urlRepo}#${number}` : written);
+    const ref = groups.urlRepo ? `${groups.urlRepo}#${number}` : written;
+    // a full reference keeps referring to `repo` when the backport pull request is in another repository
+    const first = refs.get(key);
+    if (first === undefined || (!first.includes("/") && ref.includes("/"))) {
+      refs.set(key, ref); // keeps the place of the first
+    }
   }
   return [...refs.values()];
 }

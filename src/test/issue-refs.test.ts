@@ -44,7 +44,7 @@ describe("get mentioned issues", () => {
     });
   });
 
-  describe("lists each issue once, as first written", () => {
+  describe("lists each issue once, as first written in full", () => {
     const other = { owner: "camunda", repo: "camunda" };
 
     it("with a bare reference", () => {
@@ -57,10 +57,10 @@ describe("get mentioned issues", () => {
     it("with a full reference to the original pull request's repository", () => {
       expect(
         getMentionedIssueRefs(
-          "Camunda/Camunda#1 #1 camunda/camunda#1 #2 camunda/camunda#2",
+          "Camunda/Camunda#1 #1 camunda/camunda#1 #2 GH-3 camunda/camunda#2 #4",
           other,
         ),
-      ).toEqual(["Camunda/Camunda#1", "#2"]);
+      ).toEqual(["Camunda/Camunda#1", "camunda/camunda#2", "GH-3", "#4"]);
     });
 
     it("with a full reference to another repository", () => {
