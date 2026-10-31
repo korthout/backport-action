@@ -664,10 +664,23 @@ describe("get mentioned issues", () => {
     it("once for the same issue written in different forms", () => {
       expect(
         getMentionedIssueRefs(
-          "GH-1 #1 korthout/backport-action#1 https://github.com/korthout/backport-action/issues/1",
+          "GH-1 #1 https://github.com/korthout/backport-action/issues/1 korthout/backport-action#1",
           origin,
         ),
-      ).toEqual(["GH-1"]);
+      ).toEqual(["korthout/backport-action#1"]);
+    });
+
+    it("preferring a full reference over a bare one, in the bare one's position", () => {
+      expect(
+        getMentionedIssueRefs(
+          "#1 #2 GH-3 korthout/backport-action#1 #3 Korthout/backport-action#3",
+          origin,
+        ),
+      ).toEqual([
+        "korthout/backport-action#1",
+        "#2",
+        "Korthout/backport-action#3",
+      ]);
     });
 
     it("once for the same issue written in different casing", () => {
@@ -686,9 +699,7 @@ describe("get mentioned issues", () => {
     });
 
     it("once for the same number written with leading zeros", () => {
-      expect(
-        getMentionedIssueRefs("#01 korthout/backport-action#001 #0", origin),
-      ).toEqual(["#01"]);
+      expect(getMentionedIssueRefs("#01 #001 #0", origin)).toEqual(["#01"]);
     });
   });
 

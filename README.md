@@ -21,11 +21,13 @@ The manual labor of cherry-picking the individual commits can be automated using
 ## How it works
 
 You can select the branches to backport merged pull requests in two ways:
+
 - using labels on the merged pull request.
   The action looks for labels on your merged pull request matching the [`label_pattern`](#label_pattern) input
 - using the [`target_branches`](#target_branches) input
 
 For each selected branch, the backport action takes the following steps:
+
 1. fetch and checkout a new branch from the target branch
 2. cherry-pick commits containing the merged pull request's changes, using the [`cherry_picking`](#cherry_picking) input
 3. create a pull request to merge the new branch into the target branch
@@ -167,13 +169,14 @@ You may want the cherry-picked commits to be signed, for example to satisfy a pr
 <details><summary>Sign cherry-picked commits with GPG</summary>
  <p>
 
-By default, cherry-picked commits are committed by `github-actions[bot]` and are not signed. The original author remains the *author*; only the *committer* changes.
+By default, cherry-picked commits are committed by `github-actions[bot]` and are not signed. The original author remains the _author_; only the _committer_ changes.
 
 To sign them, add a step before the backport that configures git to sign commits (for example by importing a GPG key that enables `git_commit_gpgsign`), then pass the matching committer name and email to the action so the signature lines up with the committer.
 
 Pin any third‑party action you use for this by commit SHA for supply‑chain security.
 
 ```yaml
+
 ...
 - name: Import GPG key
   id: import-gpg
@@ -274,8 +277,9 @@ Default: `merge`
 The merge method to use when auto-merge is enabled on backport PRs.
 
 Valid options are:
+
 - `merge` - Create a merge commit (combines all commits with a merge commit)
-- `squash` - Squash and merge (combines all commits into a single commit)  
+- `squash` - Squash and merge (combines all commits into a single commit)
 - `rebase` - Rebase and merge (replays commits individually without a merge commit)
 
 **Important**: The specified method must be enabled in your repository's merge settings, otherwise auto-merge will fail.
@@ -286,7 +290,7 @@ By default, the backport PR is merged using a merge commit if auto-merge is enab
 
 Default: `backport-${pull_number}-to-${target_branch}`
 
-Template used as the name for branches created by this action. 
+Template used as the name for branches created by this action.
 
 Placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
@@ -299,6 +303,7 @@ Default: `auto`
 Determines which commits are cherry-picked.
 
 When set to `auto`, the action cherry-picks the commits based on the method used to merge the pull request.
+
 - For "Squash and merge", the action cherry-picks the squashed commit.
 - For "Rebase and merge", the action cherry-picks the rebased commits.
 - For "Merged as a merge commit", the action cherry-picks the commits from the pull request.
@@ -386,10 +391,11 @@ The following properties can be specified:
 
 Default: `fail`
 
-Specifies how the action will handle a conflict occuring during the cherry-pick. 
+Specifies how the action will handle a conflict occuring during the cherry-pick.
 In all cases, the action will stop the cherry-pick at the first conflict encountered.
 
 Behavior is defined by the option selected.
+
 - When set to `fail` the backport fails when the cherry-pick encounters a conflict.
 - When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed.
 
@@ -460,6 +466,7 @@ Specifies how the action should deal with merge commits on the merged pull reque
 ### `pull_description`
 
 Default:
+
 ```
 # Description
 Backport of #${pull_number} to `${target_branch}`.
@@ -503,25 +510,26 @@ By default, only backport labels are used to specify the target branches.
 See also [Determine target branches dynamically](#determine-target-branches-dynamically) for computing this input at workflow runtime.
 
 ## Placeholders
+
 In the `pull_description` and `pull_title` inputs, placeholders can be used to define variable values.
 These are indicated by a dollar sign and curly braces (`${placeholder}`).
 The following placeholders are available and are replaced with:
 
-Placeholder | Replaced with
-------------|------------
-`issue_refs` | The issues and pull requests referenced in the original pull request description, the way GitHub links them: written as `#123`, `GH-123`, `owner/repo#123`, or as the URL of an issue or pull request, but not inside code, comments (`<!-- ... -->`) or links. Each issue or pull request is listed once, as first written, in the order first found, separated by a space; a URL is written as `owner/repo#123`, e.g. `#123 GH-456 octo-org/octo-repo#789`. Unlike GitHub, it doesn't check whether an issue exists, and it can differ for code nested in lists or block quotes
-`pull_author` | The username of the original pull request's author, e.g. `korthout`
-`pull_description`| The description (i.e. body) of the original pull request that is backported, e.g. `Summary: This patch was created to..`
-`pull_number` | The number of the original pull request that is backported, e.g. `123`
-`pull_title` | The title of the original pull request that is backported, e.g. `fix: some error`
-`target_branch`| The branchname to which the pull request is backported, e.g. `release-0.23`
+| Placeholder        | Replaced with                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `issue_refs`       | The issues and pull requests referenced in the original pull request description, the way GitHub links them: written as `#123`, `GH-123`, `owner/repo#123`, or as the URL of an issue or pull request, but not inside code, comments (`<!-- ... -->`) or links. Each issue or pull request is listed once, as first written, in the order first found, separated by a space; a URL is written as `owner/repo#123`, e.g. `#123 GH-456 octo-org/octo-repo#789`. `#123` and `GH-123` are copied as written, so in a backport pull request in another repository (`downstream_repo`) they refer to that repository; when the description also has a full reference or URL to the same issue, that one is listed instead Unlike GitHub, it doesn't check whether an issue exists, and it can differ for code nested in lists or block quotes |
+| `pull_author`      | The username of the original pull request's author, e.g. `korthout`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `pull_description` | The description (i.e. body) of the original pull request that is backported, e.g. `Summary: This patch was created to..`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `pull_number`      | The number of the original pull request that is backported, e.g. `123`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `pull_title`       | The title of the original pull request that is backported, e.g. `fix: some error`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `target_branch`    | The branchname to which the pull request is backported, e.g. `release-0.23`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 ## Outputs
 
 The action provides the following [outputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idoutputs):
 
-Output | Description
--------|------------
-`created_pull_numbers` | Space-separated list containing the identifying number of each created pull request. Or empty when the action created no pull requests. For example, `123` or `123 124 125`.
-`was_successful` | Whether or not the changes could be backported successfully to all targets. Either `true` or `false`.
-`was_successful_by_target` | Whether or not the changes could be backported successfully to all targets - broken down by target. Follows the pattern `{{label}}=true\|false`.
+| Output                     | Description                                                                                                                                                                  |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `created_pull_numbers`     | Space-separated list containing the identifying number of each created pull request. Or empty when the action created no pull requests. For example, `123` or `123 124 125`. |
+| `was_successful`           | Whether or not the changes could be backported successfully to all targets. Either `true` or `false`.                                                                        |
+| `was_successful_by_target` | Whether or not the changes could be backported successfully to all targets - broken down by target. Follows the pattern `{{label}}=true\|false`.                             |

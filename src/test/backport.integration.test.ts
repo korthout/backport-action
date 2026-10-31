@@ -496,7 +496,7 @@ describe("Backport.run() orchestration", () => {
     it("issue_refs placeholder: resolves #N against the original pull request's repository", async () => {
       const github = new FakeGithub({
         sourcePr: {
-          body: "Fixes korthout/backport-action#7, see #7 and test-owner/test-repo#8",
+          body: "See #7 and test-owner/test-repo#8, fixes korthout/backport-action#7",
           base: {
             sha: "def456",
             repo: { name: "backport-action", owner: { login: "korthout" } },

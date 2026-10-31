@@ -28,8 +28,8 @@ export function replacePlaceholders(
 /**
  * @param body Text in which to search for references to issues and pull requests, ignoring those inside code, comments (`<!-- ... -->`) and links, like GitHub does
  * @param origin The repository (`owner/repo`) of the pull request the body belongs to, which `#N` and `GH-N` refer to
- * @returns Each referenced issue or pull request once, in the order first found, written as first found;
- *   a URL is written as `owner/repo#N`
+ * @returns Each referenced issue or pull request once, in the order first found, written as first found,
+ *   but preferring a full reference over a bare `#N` or `GH-N`; a URL is written as `owner/repo#N`
  */
 export function getMentionedIssueRefs(
   body: string | null,
@@ -45,7 +45,9 @@ export function getMentionedIssueRefs(
       g.urlNumber ?? g.refNumber ?? g.originNumber ?? g.emphasizedNumber;
     const key =
       `${owner ? `${owner}/${repo}` : origin}#${number}`.toLowerCase();
-    if (!refs.has(key)) {
+    // a full reference replaces a bare one (which has no `/`), because only the full one still refers to the
+    // original repository in a backport pull request in another repository; it keeps the bare one's position
+    if (!refs.has(key) || (owner && !refs.get(key)!.includes("/"))) {
       refs.set(key, g.urlNumber ? `${owner}/${repo}#${number}` : match[0]);
     }
   }
