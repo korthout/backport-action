@@ -46,7 +46,7 @@ export function getMentionedIssueRefs(
     const key =
       `${owner ? `${owner}/${repo}` : origin}#${number}`.toLowerCase();
     // only a full reference still refers to the original repository from a backport in another repository,
-    // so it replaces a bare one (which has no `/`)
+    // so it replaces a bare one (which has no `/`), keeping the bare one's position
     if (!refs.has(key) || (owner && !refs.get(key)!.includes("/"))) {
       refs.set(key, g.urlNumber ? `${owner}/${repo}#${number}` : match[0]);
     }
@@ -73,14 +73,16 @@ const backtickFence = String.raw`^ {0,3}(?<ticks>\`{3,})[^\`\n]*$[\s\S]*?(?:^ {0
 const tildeFence = String.raw`^ {0,3}(?<tildes>~{3,})[^\n]*$[\s\S]*?(?:^ {0,3}\k<tildes>~*[ \t]*$|${textEnd})`;
 
 const indent = String.raw`(?: {4}| {0,3}\t)`;
+const listItemLine = String.raw`^ {0,3}(?:[-+*]|\d{1,9}[.)])[ \t][^\n]*`;
 // a list item's paragraph, or an indented paragraph after a blank line, which can only continue a list item here
 // because an indented code block would already be hidden
-const listItemParagraph = String.raw`(?:^ {0,3}(?:[-+*]|\d{1,9}[.)])[ \t][^\n]*|(?<=${blankLine})${indent}[^\n]*)(?:\n[^\n]+)*`;
+const listItemParagraph = String.raw`(?:${listItemLine}|(?<=${blankLine})${indent}[^\n]*)(?:\n[^\n]+)*`;
 // indented code can't interrupt a paragraph, so it starts the text or follows a blank line;
 // after a list item's paragraph, the indentation continues the item instead
 const indentedCode = String.raw`(?<=${textStart}|${blankLine})(?<!${listItemParagraph}${blankLine})${indent}[ \t]*\S[^\n]*(?:\n(?:${indent}[^\n]*|[ \t]*(?=\n)))*`;
 
-// up to the next string of the same number of backticks in the same paragraph; without one, it's just text
+// a string of backticks, not escaped and not inside a longer string, up to the next string of the same length
+// in the same paragraph; without one, it's just text
 const codeSpan = String.raw`${unescaped}(?<!${unescaped}\`)(?<span>\`+)(?!\`)${charUnless(blankLine)}*?(?<!\`)\k<span>(?!\`)`;
 
 // a comment at the start of a line is an HTML block: it may span paragraphs, and an unclosed one runs to the end
@@ -98,9 +100,10 @@ const inlineLink = String.raw`${unescaped}!?${linkText}\(${linkDestination}(?:\s
 // not a footnote `[^label]: text`, whose text is linked
 const linkReferenceDefinition = String.raw`^ {0,3}\[(?!\^)[^\]\n]+\]:[^\n]*`;
 
-// a tag name is followed by a space, `/` or `>`, so an autolink like <https://...> isn't a tag
+// In HTML, a tag name is followed by a space, `/` or `>`, so an autolink like <https://...> isn't a tag.
+// An unclosed <code> or <pre> runs to the end, but an unclosed <a> is just text
 const codeElement = String.raw`<(?<code>code|pre)(?=[\s>])[^<>]*>[\s\S]*?(?:<\/\k<code>\s*>|${textEnd})`;
-// (stopping at the next <a> keeps many unclosed ones from taking quadratic time)
+// stopping at the next <a> keeps many unclosed ones from taking quadratic time
 const anchorElement = String.raw`<a(?=[\s>])[^<>]*>${charUnless(String.raw`<a[\s>]`)}*?<\/a\s*>`;
 // outside quotes, a `#` means it's text, not a tag
 const htmlTag = String.raw`<\/?[a-z][a-z\d-]*(?=[\s/>])(?:[^<>"'#]|"[^"]*"|'[^']*')*>`;
@@ -126,21 +129,24 @@ const hidden = new RegExp(
   "gmi",
 );
 
-// Each form names its own groups, because duplicate group names are new in ES2025, after the TypeScript target.
+// `#N`, `GH-N`, `owner/repo#N` and URLs each name their own groups, because duplicate group names are new in
+// ES2025, after the TypeScript target.
 
 // with `_` for Enterprise Managed Users like `octocat_acme`
 const owner = String.raw`[a-z\d][\w-]*`;
 const repo = String.raw`[\w.-]+`;
+// the zeros are outside the group, so `#0706` and `#706` are the same issue
 const number = (group: string) => String.raw`0*(?<${group}>[1-9]\d*)`;
 // a reference ends at anything but a word character, so `#1-fix` and `#1's` are references
 const refEnd = String.raw`(?!\w)`;
 
-// `&#1;` is an HTML entity, not a reference
+// a `#` after `&` starts an HTML entity like `&#1;`, not a reference
 const originRef = String.raw`(?:(?<![\w&])#|(?<!\w)GH-)${number("originNumber")}${refEnd}`;
 // underscores around a reference are emphasis, not part of a word
 const emphasizedRef = String.raw`(?<=(?<!\w)_+)#${number("emphasizedNumber")}(?=_+(?!\w))`;
 const fullRef = String.raw`(?<![\w-])(?<refOwner>${owner})\/(?<refRepo>${repo})#${number("refNumber")}${refEnd}`;
-// a subpage like `/pull/N/files` isn't a reference, and GitHub doesn't link `http://` or `www.` ones
+// with or without `https://`, but not `http://` or `www.`, which otherUrl leaves visible; a trailing `/`, `#fragment`
+// or `?query` is fine, a subpage like `/pull/N/files` isn't
 const url = String.raw`(?<![\w.-]|http:\/\/)(?:https:\/\/)?github\.com\/(?<urlOwner>${owner})\/(?<urlRepo>${repo})\/(?:issues|pull)\/${number("urlNumber")}\/?(?![\w/-])`;
 
 const reference = new RegExp(
