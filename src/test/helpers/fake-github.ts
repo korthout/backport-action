@@ -26,7 +26,10 @@ function makePullRequest(overrides?: Partial<PullRequest>): PullRequest {
     body: "Test body",
     merge_commit_sha: "abc123",
     head: { ref: "feature-branch", sha: "abc123" },
-    base: { sha: "def456" },
+    base: {
+      sha: "def456",
+      repo: { name: "backport-action", owner: { login: "korthout" } },
+    },
     user: { login: "author" },
     labels: [{ name: "backport main" }],
     requested_reviewers: [],
@@ -49,7 +52,7 @@ export interface FakeSourcePr {
   merged_by?: { login: string } | null;
   requested_reviewers?: { login: string }[] | null;
   head?: { ref: string; sha: string };
-  base?: { sha: string };
+  base?: PullRequest["base"];
   commitShas?: string[];
   mergeCommitSha?: string;
 }

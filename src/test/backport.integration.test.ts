@@ -493,6 +493,34 @@ describe("Backport.run() orchestration", () => {
         }),
       );
     });
+
+    it("issue_refs placeholder: refers to the original pull request's repository", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          body: "Fixes #1 and camunda/camunda#1, see korthout/backport-action#1",
+          base: {
+            sha: "def456",
+            repo: { name: "camunda", owner: { login: "camunda" } },
+          },
+        },
+      });
+      const git = createMockGit();
+      const config = makeConfig({
+        pull: {
+          title: "[Backport ${target_branch}] ${pull_title}",
+          description: "Refers to ${issue_refs}",
+          branch_name: "backport-${pull_number}-to-${target_branch}",
+        },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs[0]).toEqual(
+        expect.objectContaining({
+          body: "Refers to #1 korthout/backport-action#1",
+        }),
+      );
+    });
   });
 
   describe("assignees", () => {
