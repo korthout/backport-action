@@ -22,19 +22,14 @@ export function getMentionedIssueRefs(
     reference,
   )) {
     const number =
-      groups.urlNumber ??
-      groups.pathNumber ??
-      groups.fullNumber ??
-      groups.number ??
-      groups.ghNumber;
+      groups.urlNumber ?? groups.fullNumber ?? groups.number ?? groups.ghNumber;
     if (number === undefined) continue; // a link that isn't to an issue or pull request
-    const urlRepo = groups.urlRepo ?? groups.pathRepo;
     const issueRepo =
-      urlRepo ?? groups.fullRepo ?? `${repo.owner}/${repo.repo}`;
+      groups.urlRepo ?? groups.fullRepo ?? `${repo.owner}/${repo.repo}`;
     // the same issue can be written differently, also as a bare reference to `repo`
     const key = `${issueRepo}#${number}`.toLowerCase();
     if (refs.has(key)) continue;
-    refs.set(key, urlRepo ? `${urlRepo}#${number}` : written);
+    refs.set(key, groups.urlRepo ? `${groups.urlRepo}#${number}` : written);
   }
   return [...refs.values()];
 }
@@ -42,12 +37,11 @@ export function getMentionedIssueRefs(
 // Each form has its own group names: duplicate named groups aren't needed, and not every Node.js version supports them.
 const reference = new RegExp(
   [
-    // https://github.com/owner/repo/issues/123 or /pull/123, optionally followed by `/`, a query or a fragment
-    String.raw`https:\/\/github\.com\/(?<urlRepo>[\w-]+\/[\w.-]+)\/(?:issues|pull)\/0*(?<urlNumber>[1-9]\d*)\/?(?![\w\/])`,
+    // https://github.com/owner/repo/issues/123 or /pull/123, optionally followed by `/`, a query or a fragment, and
+    // owner/repo/issues/123, which is also how github.com/owner/repo/issues/123 without a scheme is linked
+    String.raw`(?:https:\/\/github\.com\/|(?<![\w-]))(?<urlRepo>[\w-]+\/[\w.-]+)\/(?:issues|pull)\/0*(?<urlNumber>[1-9]\d*)\/?(?![\w\/])`,
     // any other url is a plain link, references inside it aren't linked
     String.raw`https?:\/\/[^\s<>]*|www\.[^\s<>]*`,
-    // owner/repo/issues/123, which is also how github.com/owner/repo/issues/123 without a scheme is linked
-    String.raw`(?<![\w-])(?<pathRepo>[\w-]+\/[\w.-]+)\/(?:issues|pull)\/0*(?<pathNumber>[1-9]\d*)\/?(?![\w\/])`,
     // owner/repo#123
     String.raw`(?<![\w-])(?<fullRepo>[\w-]+\/[\w.-]+)#0*(?<fullNumber>[1-9]\d*)(?!\w)`,
     // #123
