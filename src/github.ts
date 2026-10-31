@@ -112,6 +112,8 @@ export class Github implements GithubApi {
       .get({
         ...this.getRepo(),
         pull_number,
+        // adds body_html, the description as rendered by GitHub
+        mediaType: { format: "full" },
       })
       .then((response: { data: PullRequest }) => response.data as PullRequest);
   }
@@ -460,6 +462,7 @@ export type PullRequest = {
   number: number;
   title: string;
   body: string | null;
+  body_html?: string | null;
   merge_commit_sha: string | null;
   head: {
     sha: string;
@@ -467,6 +470,12 @@ export type PullRequest = {
   };
   base: {
     sha: string;
+    repo: {
+      name: string;
+      owner: {
+        login: string;
+      };
+    };
   };
   user: {
     login: string;

@@ -8,7 +8,10 @@ import { PullRequest } from "./github.js";
  */
 export function replacePlaceholders(
   template: string,
-  main: Pick<PullRequest, "body" | "user" | "number" | "title">,
+  main: Pick<
+    PullRequest,
+    "body" | "body_html" | "base" | "user" | "number" | "title"
+  >,
   target: string,
 ): string {
   const values: Record<string, string> = {
@@ -17,7 +20,7 @@ export function replacePlaceholders(
     pull_title: main.title,
     pull_description: main.body ?? "",
     target_branch: target,
-    issue_refs: getMentionedIssueRefs(main.body).join(" "),
+    issue_refs: getMentionedIssueRefs(main.body_html, main.base.repo).join(" "),
   };
   return template.replace(/\$\{(\w+)\}/g, (match, name) =>
     Object.hasOwn(values, name) ? values[name] : match,
@@ -25,38 +28,40 @@ export function replacePlaceholders(
 }
 
 /**
- * @param body Text in which to search for mentioned issues, references inside comments (`<!-- ... -->`) are ignored, an unclosed comment hides the rest of the text
- * @returns All found mentioned issues as GitHub issue references, each once in the order first found
+ * @param bodyHtml The original pull request's description as rendered by GitHub (`body_html`)
+ * @param repo The original pull request's repository, whose references are listed as `#N`; as the API returns it, in the casing GitHub also writes in links
+ * @returns The issues and pull requests that GitHub links as references in the description, each once in the order first found, as `#N` or `owner/repo#N`
  */
-export function getMentionedIssueRefs(body: string | null): string[] {
-  const text = body?.replace(patterns.comment, " ") ?? "";
-  const urls = [...text.matchAll(patterns.url)].map((match) => ({
-    index: match.index,
-    ref: `${match.groups?.org}/${match.groups?.repo}#${match.groups?.number}`,
-  }));
-  const refs = [...text.matchAll(patterns.ref)].map((match) => ({
-    index: match.index,
-    ref: match[0].trim(),
-  }));
-  const ordered = urls.concat(refs).sort((a, b) => a.index - b.index);
-  return [...new Set(ordered.map(({ ref }) => ref))];
+export function getMentionedIssueRefs(
+  bodyHtml: string | null | undefined,
+  repo: PullRequest["base"]["repo"],
+): string[] {
+  const refs = new Set<string>();
+  for (const [anchor] of bodyHtml?.matchAll(patterns.anchor) ?? []) {
+    if (!patterns.reference.test(anchor)) continue;
+    if (!patterns.issueOrPullRequest.test(anchor)) continue;
+    const [, owner, name, number] = patterns.href.exec(anchor) ?? [];
+    if (number === undefined) continue;
+    const isSameRepo = owner === repo.owner.login && name === repo.name;
+    refs.add(isSameRepo ? `#${number}` : `${owner}/${name}#${number}`);
+  }
+  return [...refs];
 }
 
+// GitHub doesn't document this markup. If it changes, `${issue_refs}` turns
+// empty without failing the run; the Issue refs markup workflow notices it.
 const patterns = {
-  // matches comments (`<!-- ... -->`), which GitHub does not render, including multi-line ones and an unclosed one up to the end
-  comment: /<!--[\s\S]*?(?:-->|$)/g,
+  anchor: /<a\s[^>]*>/g,
 
-  // matches urls to github issues at start, middle, end of line as individual word
-  // may be lead and trailed by whitespace which should be trimmed
-  // captures the `org`, `repo` and `number` of the issue
-  // https://regex101.com/r/XKRl8q/5
-  url: /(?:^| )(?:(?:https:\/\/)?(?:www\.)?github\.com\/(?<org>[^ \/\n]+)\/(?<repo>[^ \/\n]+)\/issues\/(?<number>[1-9][0-9]*)(?:\/)?)(?: |$)/gm,
+  // GitHub autolinks references (`#N`, `owner/repo#N`, URLs) with this class.
+  // A manual link like `[text](url)` doesn't get it, so it isn't listed.
+  reference: /\sclass="(?:[^"]*\s)?issue-link[\s"]/,
 
-  // matches `#123` at start, middle, end of line as individual word
-  // may be lead and trailed by whitespace which should be trimmed
-  // captures `number` of the issue (and optionally the `org` and `repo`)
-  // https://regex101.com/r/2gAB8O/2
-  ref: /(?:^| )((?<org>[^\n #\/]+)\/(?<repo>[^\n #\/]+))?#(?<number>[1-9][0-9]*)(?: |$)/gm,
+  // excludes discussions, which GitHub also links with the class above
+  issueOrPullRequest: /\sdata-hovercard-type="(?:issue|pull_request)"/,
+
+  // captures `owner`, `repo` and `number`, on any host for GitHub Enterprise
+  href: /\shref="https?:\/\/[^/"]+\/([^/"]+)\/([^/"]+)\/(?:issues|pull)\/(\d+)(?:#[^"]*)?"/,
 };
 
 export function coerceCherryPickingMergeMode(

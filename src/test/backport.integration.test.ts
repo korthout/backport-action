@@ -493,6 +493,32 @@ describe("Backport.run() orchestration", () => {
         }),
       );
     });
+
+    it("issue_refs: lists references from body_html relative to the original repository", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          body: "Fixes #7",
+          body_html:
+            '<p dir="auto">Fixes <a class="issue-link js-issue-link" data-hovercard-type="issue" href="https://github.com/test-owner/test-repo/issues/7">#7</a></p>',
+        },
+      });
+      const git = createMockGit();
+      const config = makeConfig({
+        pull: {
+          title: "[Backport ${target_branch}] ${pull_title}",
+          description: "Backport of #${pull_number} for ${issue_refs}",
+          branch_name: "backport-${pull_number}-to-${target_branch}",
+        },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs[0]).toEqual(
+        expect.objectContaining({
+          body: "Backport of #42 for #7",
+        }),
+      );
+    });
   });
 
   describe("assignees", () => {

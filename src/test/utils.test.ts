@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import dedent from "dedent";
 import {
   coerceCherryPickingMergeMode,
@@ -6,271 +7,36 @@ import {
   replacePlaceholders,
 } from "../utils.js";
 
+// Each case's markdown, the references it should give, and its html: the
+// description as GitHub renders it in the original pull request's `body_html`.
+// To add a case, write its markdown and refs, then render its html with
+// `node src/test/fixtures/render-issue-refs.mjs`.
+const cases: Record<
+  string,
+  { markdown: string; refs: string[]; html?: string }
+> = JSON.parse(
+  readFileSync(new URL("fixtures/issue-refs.json", import.meta.url), "utf8"),
+);
+const repo = { name: "backport-action", owner: { login: "korthout" } };
+
+function rendered(name: string): string {
+  const html = cases[name]?.html;
+  if (html === undefined) {
+    throw new Error(`No rendered case in fixtures/issue-refs.json: ${name}`);
+  }
+  return html;
+}
+
 describe("get mentioned issues", () => {
-  describe("returns an empty list", () => {
-    it("for an null text", () => {
-      expect(getMentionedIssueRefs(null)).toHaveLength(0);
-    });
-
-    it("for an empty text", () => {
-      expect(getMentionedIssueRefs("")).toHaveLength(0);
-    });
-
-    it("for a text without mentioned issues", () => {
-      expect(getMentionedIssueRefs(text({}))).toHaveLength(0);
-    });
-
-    it("for a text with an issue reference as part of a word", () => {
-      expect(getMentionedIssueRefs(text({ part: "#123" }))).toHaveLength(0);
-    });
-
-    it("for a text with an external issue reference as part of a word", () => {
-      expect(
-        getMentionedIssueRefs(text({ part: "zeebe-io/zeebe#123" })),
-      ).toHaveLength(0);
-    });
-
-    it("for a text with an issue url as part of a word", () => {
-      expect(
-        getMentionedIssueRefs(
-          text({ part: "github.com/zeebe-io/backport-action/issues/123" }),
-        ),
-      ).toHaveLength(0);
-    });
+  it("returns an empty list for a missing rendered description", () => {
+    expect(getMentionedIssueRefs(null, repo)).toEqual([]);
+    expect(getMentionedIssueRefs(undefined, repo)).toEqual([]);
   });
 
-  describe("returns a single reference", () => {
-    it("for a text with an issue reference at the start", () => {
-      expect(getMentionedIssueRefs(text({ start: "#123" }))).toEqual(["#123"]);
-    });
-    it("for a text with an issue reference in the middle", () => {
-      expect(getMentionedIssueRefs(text({ middle: "#123" }))).toEqual(["#123"]);
-    });
-    it("for a text with an issue reference at the end", () => {
-      expect(getMentionedIssueRefs(text({ end: "#123" }))).toEqual(["#123"]);
-    });
-
-    it("for a text with an external issue reference at the start", () => {
-      expect(
-        getMentionedIssueRefs(text({ start: "zeebe-io/zeebe#123" })),
-      ).toEqual(["zeebe-io/zeebe#123"]);
-    });
-    it("for a text with an external issue reference in the middle", () => {
-      expect(
-        getMentionedIssueRefs(text({ middle: "zeebe-io/zeebe#123" })),
-      ).toEqual(["zeebe-io/zeebe#123"]);
-    });
-    it("for a text with an external issue reference at the end", () => {
-      expect(
-        getMentionedIssueRefs(text({ end: "zeebe-io/zeebe#123" })),
-      ).toEqual(["zeebe-io/zeebe#123"]);
-    });
-
-    it("for a text with an issue url at the start", () => {
-      expect(
-        getMentionedIssueRefs(
-          text({ start: "github.com/zeebe-io/backport-action/issues/123/" }),
-        ),
-      ).toEqual(["zeebe-io/backport-action#123"]);
-    });
-    it("for a text with an issue url in the middle", () => {
-      expect(
-        getMentionedIssueRefs(
-          text({ middle: "github.com/zeebe-io/backport-action/issues/123" }),
-        ),
-      ).toEqual(["zeebe-io/backport-action#123"]);
-    });
-    it("for a text with an issue url at the end", () => {
-      expect(
-        getMentionedIssueRefs(
-          text({ end: "github.com/zeebe-io/backport-action/issues/123" }),
-        ),
-      ).toEqual(["zeebe-io/backport-action#123"]);
-    });
-  });
-
-  describe("returns all references", () => {
-    it("for a text with an issue reference at the start, middle and end", () => {
-      expect(
-        getMentionedIssueRefs(
-          text({ start: "#123", middle: "#234", end: "#345" }),
-        ),
-      ).toEqual(["#123", "#234", "#345"]);
-    });
-    it("for a text with an external issue reference at the start, middle and end", () => {
-      expect(
-        getMentionedIssueRefs(
-          text({
-            start: "zeebe-io/zeebe#123",
-            middle: "zeebe-io/zeebe#234",
-            end: "zeebe-io/zeebe#345",
-          }),
-        ),
-      ).toEqual([
-        "zeebe-io/zeebe#123",
-        "zeebe-io/zeebe#234",
-        "zeebe-io/zeebe#345",
-      ]);
-    });
-    it("for a text with an issue url at the start, middle and end", () => {
-      const base = "github.com/zeebe-io/backport-action/issues/";
-      expect(
-        getMentionedIssueRefs(
-          text({
-            start: `${base}123`,
-            middle: `${base}234`,
-            end: `${base}345`,
-          }),
-        ),
-      ).toEqual([
-        "zeebe-io/backport-action#123",
-        "zeebe-io/backport-action#234",
-        "zeebe-io/backport-action#345",
-      ]);
-    });
-    it("for a text with an external issue url at the start, middle and end", () => {
-      const base = "github.com/zeebe-io/zeebe/issues/";
-      expect(
-        getMentionedIssueRefs(
-          text({
-            start: `${base}123`,
-            middle: `${base}234`,
-            end: `${base}345`,
-          }),
-        ),
-      ).toEqual([
-        "zeebe-io/zeebe#123",
-        "zeebe-io/zeebe#234",
-        "zeebe-io/zeebe#345",
-      ]);
-    });
-  });
-
-  describe("returns each reference once", () => {
-    it("for a text with a repeated issue reference", () => {
-      expect(getMentionedIssueRefs("Fixes #123 and see #123 again")).toEqual([
-        "#123",
-      ]);
-    });
-    it("for a text with a repeated external issue reference", () => {
-      expect(
-        getMentionedIssueRefs("zeebe-io/zeebe#123 and zeebe-io/zeebe#123"),
-      ).toEqual(["zeebe-io/zeebe#123"]);
-    });
-    it("for a text with a repeated issue url", () => {
-      expect(
-        getMentionedIssueRefs(
-          "github.com/zeebe-io/zeebe/issues/123 and github.com/zeebe-io/zeebe/issues/123",
-        ),
-      ).toEqual(["zeebe-io/zeebe#123"]);
-    });
-    it("for a text with an issue url and an external issue reference to the same issue", () => {
-      expect(
-        getMentionedIssueRefs(
-          "github.com/zeebe-io/zeebe/issues/123 and zeebe-io/zeebe#123",
-        ),
-      ).toEqual(["zeebe-io/zeebe#123"]);
-    });
-    it("in the order in which they were first found", () => {
-      expect(getMentionedIssueRefs("#1 and #2 and #1 and #3 and #2")).toEqual([
-        "#1",
-        "#2",
-        "#3",
-      ]);
-    });
-  });
-
-  describe("returns references in the order they appear", () => {
-    it("for an issue reference followed by an issue url", () => {
-      expect(getMentionedIssueRefs("#1 then github.com/a/b/issues/2")).toEqual([
-        "#1",
-        "a/b#2",
-      ]);
-    });
-
-    it("for an issue url followed by an issue reference", () => {
-      expect(getMentionedIssueRefs("github.com/a/b/issues/2 and #1")).toEqual([
-        "a/b#2",
-        "#1",
-      ]);
-    });
-
-    it("for a mix of issue references and urls with duplicates", () => {
-      expect(
-        getMentionedIssueRefs(
-          "#1 and github.com/a/b/issues/2 and a/b#2 and #1",
-        ),
-      ).toEqual(["#1", "a/b#2"]);
-    });
-
-    it("for an issue url after several issue references", () => {
-      expect(
-        getMentionedIssueRefs("#1 and a/b#3 and github.com/a/b/issues/2"),
-      ).toEqual(["#1", "a/b#3", "a/b#2"]);
-    });
-  });
-
-  describe("ignores references inside comments", () => {
-    it("for a multi-line comment in a pull request template", () => {
-      const body = dedent`
-        ## Related issues
-
-        <!--
-        - This PR fully resolves the issue: closes #1234
-        - One of several PRs for the issue: relates to #1234 or a bare #1234
-        -->
-
-        - [x] This PR does not need a linked issue
-      `;
-      expect(getMentionedIssueRefs(body)).toEqual([]);
-    });
-
-    it("while keeping references outside of the comment", () => {
-      expect(
-        getMentionedIssueRefs(
-          "relates to #28374\n<!-- closes #1234 -->\nfixes #54840",
-        ),
-      ).toEqual(["#28374", "#54840"]);
-    });
-
-    it("for a comment in the middle of a line", () => {
-      expect(getMentionedIssueRefs("see #1 <!-- not #2 --> and #3")).toEqual([
-        "#1",
-        "#3",
-      ]);
-    });
-
-    it("for an issue url", () => {
-      expect(
-        getMentionedIssueRefs("<!-- github.com/zeebe-io/zeebe/issues/123 -->"),
-      ).toEqual([]);
-    });
-
-    it("for an external issue reference", () => {
-      expect(getMentionedIssueRefs("<!-- zeebe-io/zeebe#123 -->")).toEqual([]);
-    });
-
-    it("without joining the text before and after a comment into a reference", () => {
-      expect(getMentionedIssueRefs("a/b<!-- x -->#7")).toEqual(["#7"]);
-    });
-
-    it("without joining the text before and after a comment into a word", () => {
-      expect(getMentionedIssueRefs("fixes #1<!-- x -->and more")).toEqual([
-        "#1",
-      ]);
-    });
-
-    it("for an unclosed comment, which hides the rest of the description", () => {
-      expect(getMentionedIssueRefs("Fixes #1\n<!-- closes #1234")).toEqual([
-        "#1",
-      ]);
-    });
-
-    it("for a closed comment followed by an unclosed comment", () => {
-      expect(
-        getMentionedIssueRefs("#1 and <!-- #2 --> #3 and\n<!-- #4"),
-      ).toEqual(["#1", "#3"]);
-    });
+  it.each(Object.keys(cases))("%s", (name) => {
+    expect(getMentionedIssueRefs(rendered(name), repo)).toEqual(
+      cases[name].refs,
+    );
   });
 });
 
@@ -278,6 +44,8 @@ describe("compose body/title", () => {
   const main_default = {
     number: 123,
     body: "foo-body",
+    body_html: null,
+    base: { repo },
     user: { login: "foo-author" },
     title: "some pr title",
   };
@@ -339,43 +107,17 @@ describe("compose body/title", () => {
         );
       });
 
-      it("and body has a referred issue", () => {
+      it("and body has referred issues", () => {
         expect(
           replacePlaceholders(
             template,
             {
               ...main_default,
-              body: "Body mentions #123 and that's it.",
+              body_html: rendered("lists issues and pull requests"),
             },
             target,
           ),
-        ).toEqual("Backport that refers to: #123");
-      });
-
-      it("and body refers to the same issue more than once", () => {
-        expect(
-          replacePlaceholders(
-            template,
-            {
-              ...main_default,
-              body: "Fixes #123 and see #123 again",
-            },
-            target,
-          ),
-        ).toEqual("Backport that refers to: #123");
-      });
-
-      it("and body has some referred issues", () => {
-        expect(
-          replacePlaceholders(
-            template,
-            {
-              ...main_default,
-              body: "This body refers to #123 and foo/bar#456",
-            },
-            target,
-          ),
-        ).toEqual("Backport that refers to: #123 foo/bar#456");
+        ).toEqual("Backport that refers to: #706 #749");
       });
     });
 
@@ -427,10 +169,13 @@ describe("compose body/title", () => {
         expect(
           replacePlaceholders(
             template,
-            { ...main_default, body: "Body mentions #123 and that's it." },
+            {
+              ...main_default,
+              body_html: rendered("lists issues and pull requests"),
+            },
             target,
           ),
-        ).toEqual("Refers to #123 and again #123");
+        ).toEqual("Refers to #706 #749 and again #706 #749");
       });
     });
 
@@ -523,10 +268,12 @@ function text({
   end?: string;
   part?: string;
 }) {
-  return dedent`${start ?? ""} foo bar
-                bar bar ${middle ?? ""} bar 
+  return dedent`
+    ${start} foo bar
+    bar bar ${middle} bar
 
-                foo/${part ?? ""} foo${part ?? ""}foo ${part ?? ""}foo
-                
-                foo bar bar foo ${end ?? ""}`;
+    foo${part}foo ${part}foo
+
+    foo bar bar foo ${end}
+  `;
 }

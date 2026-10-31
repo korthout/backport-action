@@ -63,6 +63,11 @@ jobs:
 > This workflow runs on [`pull_request_target`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target) so that `GITHUB_TOKEN` has write access to the repo when the merged pull request comes from a forked repository.
 > This write access is necessary for the action to push the commits it cherry-picked.
 
+> **Note**
+> In a private repository, the [`issue_refs`](#placeholders) placeholder also needs `issues: read` in `permissions`.
+> Without it, GitHub doesn't link issue references in the original pull request's description for the action, and `issue_refs` lists only pull requests.
+> When you pass another token as [`github_token`](#github_token), that token needs read access to issues instead.
+
 ### Trigger using a comment
 
 You can also trigger the backport action by writing a comment containing `/backport` on a merged pull request.
@@ -509,7 +514,7 @@ The following placeholders are available and are replaced with:
 
 Placeholder | Replaced with
 ------------|------------
-`issue_refs` | GitHub issue references to all issues mentioned in the original pull request description (excluding HTML comments `<!-- ... -->`), each listed once and seperated by a space, e.g. `#123 #456 korthout/backport-action#789`
+`issue_refs` | The issues and pull requests that GitHub links as references in the original pull request description, each listed once in the order first found and separated by a space, e.g. `#123 #456 korthout/backport-action#789`. References to the original pull request's repository are listed as `#123`, others as `owner/repo#123`. As on GitHub, references in code and in HTML comments (`<!-- ... -->`) are not linked, and neither are references to issues that don't exist. Markdown links to issues (`[text](url)`) are not listed. GitHub only links references that the [`github_token`](#github_token) can read: in a private repository, grant the `issues: read` permission, or only pull requests are listed (see [Usage](#usage)).
 `pull_author` | The username of the original pull request's author, e.g. `korthout`
 `pull_description`| The description (i.e. body) of the original pull request that is backported, e.g. `Summary: This patch was created to..`
 `pull_number` | The number of the original pull request that is backported, e.g. `123`
