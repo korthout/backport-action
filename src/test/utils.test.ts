@@ -523,10 +523,12 @@ function text({
   end?: string;
   part?: string;
 }) {
-  return dedent`${start ?? ""} foo bar
-                bar bar ${middle ?? ""} bar 
-
-                foo/${part ?? ""} foo${part ?? ""}foo ${part ?? ""}foo
-                
-                foo bar bar foo ${end ?? ""}`;
+  return [
+    `${start} foo bar`,
+    `bar bar ${middle} bar`,
+    "",
+    `foo/${part} foo${part}foo ${part}foo`,
+    "",
+    `foo bar bar foo ${end}`,
+  ].join("\n");
 }
