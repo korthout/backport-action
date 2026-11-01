@@ -430,7 +430,7 @@ describe("get mentioned issues", () => {
     });
   });
 
-  describe("reads the markdown as CommonMark and GFM define it", () => {
+  describe("finds references as written, skipping what Markdown makes code, comments or links", () => {
     for (const { name, markdown, expected, limit, found } of fixture.cases) {
       it(name, () => {
         const refs = getMentionedIssueRefs(markdown, origin);

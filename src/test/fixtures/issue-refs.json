@@ -55,10 +55,17 @@
       ]
     },
     {
-      "name": "number: leading zeros are ignored",
+      "name": "number: leading zeros are kept as written",
       "markdown": "#0706",
       "expected": [
         "#0706"
+      ]
+    },
+    {
+      "name": "originRef: listed without checking that the issue exists",
+      "markdown": "#999999",
+      "expected": [
+        "#999999"
       ]
     },
     {
@@ -253,12 +260,12 @@
       ]
     },
     {
-      "name": "limit: indented code in a list item",
+      "name": "limit: indented code in a list item or block quote",
       "markdown": "- item\n\n      #706\n\n#752",
       "expected": [
         "#752"
       ],
-      "limit": "Markdown makes this indented code, because it's indented 4 spaces past the list item's content; regexes can't measure that indentation",
+      "limit": "Markdown makes this indented code, because it's indented 4 spaces past the list item's content; regexes can't measure the indentation of list items and block quotes",
       "found": [
         "#706",
         "#752"
