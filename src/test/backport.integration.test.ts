@@ -493,6 +493,27 @@ describe("Backport.run() orchestration", () => {
         }),
       );
     });
+    it("issue_refs: lists an issue written bare and in full once, in full", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          body: "Fixes #7, see https://github.com/test-owner/test-repo/issues/7",
+        },
+      });
+      const git = createMockGit();
+      const config = makeConfig({
+        pull: {
+          title: "[Backport ${target_branch}] ${pull_title}",
+          description: "Refs ${issue_refs}",
+          branch_name: "backport-${pull_number}-to-${target_branch}",
+        },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs[0]).toEqual(
+        expect.objectContaining({ body: "Refs test-owner/test-repo#7" }),
+      );
+    });
   });
 
   describe("assignees", () => {
