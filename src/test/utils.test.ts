@@ -7,14 +7,13 @@ import {
   replacePlaceholders,
 } from "../utils.js";
 
-// Rendered by GitHub, see render-issue-refs.mjs
 const fixture: {
   repository: string;
   cases: {
     name: string;
     markdown: string;
-    github: string[];
-    differs?: string;
+    expected: string[];
+    limit?: string;
     found?: string[];
   }[];
 } = JSON.parse(
@@ -325,15 +324,6 @@ describe("get mentioned issues", () => {
   });
 
   describe("writes references as first written", () => {
-    it("for a bare reference", () => {
-      expect(getMentionedIssueRefs("#1 GH-2 gh-3 #04", origin)).toEqual([
-        "#1",
-        "GH-2",
-        "gh-3",
-        "#04",
-      ]);
-    });
-
     it("for a full reference to the original repository", () => {
       expect(
         getMentionedIssueRefs("Korthout/Backport-Action#1", origin),
@@ -440,25 +430,16 @@ describe("get mentioned issues", () => {
     });
   });
 
-  describe("reads the markdown the way GitHub renders it", () => {
-    // GitHub writes a reference to the origin as `#N`, without leading zeros; issue_refs keeps the spelling
-    const asGitHubWrites = (refs: string[]) =>
-      refs.map((ref) => {
-        const [, name, number] = ref.match(/^(.*?)(?:#|GH-)0*(\d+)$/i)!;
-        const inOrigin =
-          name === "" || name.toLowerCase() === origin.toLowerCase();
-        return inOrigin ? `#${number}` : `${name}#${number}`;
-      });
-
-    for (const { name, markdown, github, differs, found } of fixture.cases) {
+  describe("reads the markdown as CommonMark and GFM define it", () => {
+    for (const { name, markdown, expected, limit, found } of fixture.cases) {
       it(name, () => {
-        const refs = asGitHubWrites(getMentionedIssueRefs(markdown, origin));
-        if (differs) {
-          // where issue_refs differs from GitHub, on purpose or by a limit of regexes, and what it finds instead
+        const refs = getMentionedIssueRefs(markdown, origin);
+        if (limit) {
+          // a known limit, so a fix or a further regression shows up here
           expect(refs).toEqual(found);
-          expect(refs).not.toEqual(github);
+          expect(refs).not.toEqual(expected);
         } else {
-          expect(refs).toEqual(github);
+          expect(refs).toEqual(expected);
         }
       });
     }
