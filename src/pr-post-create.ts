@@ -17,6 +17,7 @@ export async function postCreatePR(
   labelsToCopy: string[],
   targetRepo: { owner: string; repo: string },
   workflowRepo: { owner: string; repo: string },
+  draft: boolean,
 ): Promise<void> {
   if (config.copy_milestone == true) {
     const milestone = mainpr.milestone?.number;
@@ -179,7 +180,7 @@ export async function postCreatePR(
     }
   }
 
-  if (config.auto_merge_enabled === true) {
+  if (config.auto_merge_enabled === true && !draft) {
     console.info("Attempting to enable auto-merge for PR #" + newPrNumber);
     try {
       await github.enableAutoMerge(

@@ -238,6 +238,7 @@ Default: `false` (disabled)
 
 Controls whether to auto-merge the created backport pull request.
 When enabled, backport pull requests will automatically merge when all required checks pass and approvals are received.
+Auto-merge is skipped for draft backport pull requests, such as those created with `conflict_resolution: draft_commit_conflicts`.
 Can be set to a simple boolean (`true`/`false`) or controlled dynamically via workflow expressions. Examples:
 
 **Simple boolean** (always enable or disable):
