@@ -1,10 +1,11 @@
 import type { Repo } from "./github.js";
-import { visibleText } from "./markdown.js";
+import { visibleTextAndLinks } from "./markdown.js";
 
 // Finds the references to issues and pull requests in a pull request description, as written there.
 //
-// Markdown decides where a reference counts (markdown.ts): in the visible text. So a reference in code, a comment or an
-// html tag doesn't count. A reference is matched as written: an html entity like `&#35;1` isn't one.
+// Markdown decides where a reference counts (markdown.ts): in the visible text, any form of reference counts, and in a
+// link destination only a url to an issue or pull request. So a reference in code, a comment, an html tag or a link's
+// text doesn't count. A reference is matched as written: an html entity like `&#35;1` isn't one.
 
 /**
  * @param body The description of the original pull request
@@ -17,8 +18,9 @@ export function getMentionedIssueRefs(
   repo: Repo,
 ): string[] {
   const refs = new Map<string, string>();
-  for (const text of visibleText(body ?? "")) {
-    for (const { 0: written, groups = {} } of text.matchAll(reference)) {
+  for (const { kind, text } of visibleTextAndLinks(body ?? "")) {
+    const pattern = kind === "visible text" ? reference : linkedIssueUrl;
+    for (const { 0: written, groups = {} } of text.matchAll(pattern)) {
       addRef(refs, written, groups, repo);
     }
   }
@@ -70,5 +72,12 @@ const reference = new RegExp(
     String.raw`(?<![\w#&])#0*(?<number>[1-9]\d*)(?!\w)`,
     String.raw`(?<!\w)[Gg][Hh]-0*(?<ghNumber>[1-9]\d*)(?![\w#])`,
   ].join("|"),
+  "g",
+);
+
+// in a link destination, only a full url to an issue or pull request is a reference, optionally followed by a query or
+// a fragment
+const linkedIssueUrl = new RegExp(
+  String.raw`^https:\/\/${issueUrl}(?:[?#]|$)`,
   "g",
 );

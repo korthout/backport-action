@@ -1,23 +1,27 @@
-// Reads a pull request description as Markdown, to find the text that can hold references to issues: its visible text.
+// Reads a pull request description as Markdown, to find the text that can hold references to issues: its visible text
+// and its link destinations.
 //
 // Markdown is CommonMark (https://spec.commonmark.org/0.31.2/, whose section numbers are cited below) with GitHub's
-// extensions (https://github.github.com/gfm/). The scanner follows it only as far as that changes the visible text. The
-// cases in src/test/fixtures/issue-refs.json marked `gap` show where it differs.
+// extensions (https://github.github.com/gfm/). The scanner follows it only as far as that changes the visible text and
+// the link destinations. The cases in src/test/fixtures/issue-refs.json marked `gap` show where it differs.
 //
 // Terms
 //
 // Markdown's terms are used as CommonMark defines them, like block, container block (a block quote or list item, which
-// holds other blocks), leaf block, paragraph, lazy continuation line, inline content and code span. On top of those:
+// holds other blocks), leaf block, paragraph, lazy continuation line, inline content, code span, link destination and
+// link reference definition. On top of those:
 //
-// - Visible text: the text of the paragraphs and headings outside code, comments and html tags. An autolink's url is
-//   visible text, and so is a bare url, which GitHub turns into a link (GFM's "Autolinks (extension)").
+// - Visible text: the text of the paragraphs and headings outside code, comments, html tags and links. A link's text is
+//   left out, because it's only a label for the link's destination. An autolink's url is visible text, and so is a bare
+//   url, which GitHub turns into a link (GFM's "Autolinks (extension)").
 // - Hidden block: a block whose lines aren't visible text, and that stays open until a line ends it: a fenced code
 //   block, or an html block opened by `<!--` or `<pre`. The rest of the line that ends an html block is visible text.
 //
 // How it works
 //
 // Like CommonMark's parsing strategy (appendix A), the scanner first reads the block structure of the whole
-// description, and then the inline structure of each paragraph and heading.
+// description, and then the inline structure of each paragraph and heading. Inline structure comes second, because a
+// link can use a link reference definition further down.
 //
 // 1. Block structure, one line at a time (sections 4 and 5). The state is what's open, because that decides how the
 //    next line is read: the container blocks, the paragraph, and the hidden block. For each line (`readLine`):
@@ -28,14 +32,16 @@
 //    b. If a hidden block is open, the line belongs to it, up to its end (4.5, 4.6).
 //    c. Open the container blocks that the line starts (5.1, 5.2).
 //    d. Read the rest of the line as part of a leaf block (4): a blank line or thematic break ends the paragraph (4.9,
-//       4.1), and so does a setext heading underline (4.3); indented code (4.4) isn't visible text; a fence or html
-//       block opens a hidden block (4.5, 4.6); an ATX heading is inline content of its own (4.2); any other line is
-//       part of a paragraph (4.8).
-//    What's kept for the next step is the inline content of the paragraphs and headings.
+//       4.1), and so does a setext heading underline (4.3); indented code (4.4) and link reference definitions (4.7)
+//       aren't visible text; a fence or html block opens a hidden block (4.5, 4.6); an ATX heading is inline content
+//       of its own (4.2); any other line is part of a paragraph (4.8).
+//    What's kept for the next step is the inline content of the paragraphs and headings, and the link reference
+//    definitions.
 // 2. Inline structure, for each paragraph and heading (section 6). Left to right, at each character that can open an
-//    inline construct, try a backslash escape (2.4), a code span (6.1), a comment or another html tag (6.6), or an
-//    autolink (6.5). The first one that opens takes the place of its source, which is a space in the visible text, or
-//    for an autolink its url.
+//    inline construct, try a backslash escape (2.4), a code span (6.1), a comment or another html tag (6.6), an
+//    autolink (6.5), or a link or image (6.3, 6.4). The first one that opens takes the place of its source, which is
+//    a space in the visible text, or for an autolink its url. A link's destination is added as a part of its own,
+//    where the link occurs.
 //
 // Scanning takes time linear in the length of the description, so no description can slow down the run: the nesting of
 // container blocks is capped, and each search for the end of an inline construct only moves forward (`ForwardSearch`).
@@ -51,6 +57,8 @@ type BlockState = {
   hiddenBlock?: HiddenBlock;
   /** The inline content read so far: of each paragraph and heading, and of the rest of a line after a hidden block */
   inlineContent: string[];
+  /** The destinations of the link reference definitions read so far, by normalized label */
+  linkDefinitions: Map<string, string>;
 };
 
 type ContainerBlock =
@@ -66,21 +74,32 @@ type HiddenBlock = {
 /** Deeper container blocks are read as text, so that scanning stays fast for deeply nested input */
 const maxContainerBlocks = 100;
 
+/** A part of the description that can hold references */
+export type TextPart = {
+  kind: "visible text" | "link destination";
+  text: string;
+};
+
 /**
- * @returns The visible text of the paragraphs and headings, in order of occurrence. In visible text, hidden parts are
- *   replaced by a space, so the text around them isn't joined into a reference.
+ * @returns The visible text of the paragraphs and headings, and the destinations of their links, in order of
+ *   occurrence. In visible text, hidden parts are replaced by a space, so the text around them isn't joined into a
+ *   reference.
  */
-export function visibleText(body: string): string[] {
+export function visibleTextAndLinks(body: string): TextPart[] {
   const state: BlockState = {
     containerBlocks: [],
     paragraph: [],
     inlineContent: [],
+    linkDefinitions: new Map(),
   };
   for (const line of body.split(/\r\n?|\n/)) {
     readLine(state, expandIndentTabs(line));
   }
   closeParagraph(state);
-  return state.inlineContent.map(visibleInline);
+  // a link can refer to a definition further down, so inline structure is read after all definitions are known
+  return state.inlineContent.flatMap((content) =>
+    visibleInline(content, state.linkDefinitions),
+  );
 }
 
 /** A tab in the indentation advances to the next tab stop, at every 4 columns */
@@ -217,6 +236,16 @@ function readLeafBlockLine(state: BlockState, line: string) {
   if (isBlank(line)) return closeParagraph(state);
   if (state.paragraph.length === 0) {
     if (/^ {4}/.test(line)) return; // indented code, which can't interrupt a paragraph
+    const definition = linkReferenceDefinition.exec(line);
+    if (definition && isLinkLabel(definition[1])) {
+      const [, label, destination] = definition;
+      // the first definition of a label takes precedence
+      const key = normalizeLabel(label);
+      if (!state.linkDefinitions.has(key)) {
+        state.linkDefinitions.set(key, unwrapDestination(destination));
+      }
+      return;
+    }
   } else if (setextUnderline.test(line)) {
     return closeParagraph(state); // the paragraph is a heading
   }
@@ -232,6 +261,28 @@ function readLeafBlockLine(state: BlockState, line: string) {
 
 const heading = /^ {0,3}#{1,6}(?:[ \t]|$)/;
 const setextUnderline = /^ {0,3}(?:=+|-+) *$/;
+
+// [label]: destination "optional title", on a single line
+const linkReferenceDefinition =
+  /^ {0,3}\[(?!\^)([^\[\]\n]+)\]:[ \t]*(<[^>\n]*>|[^\s<]\S*)(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'|\([^()\n]*\)))?[ \t]*$/;
+
+/** A link label needs a character other than whitespace, which in a link label is only a space, a tab or a line ending */
+function isLinkLabel(label: string): boolean {
+  return /[^ \t\r\n]/.test(label);
+}
+
+/** Link labels match when they're the same after collapsing their whitespace, ignoring case */
+function normalizeLabel(label: string): string {
+  return label
+    .replace(/[ \t\r\n]+/g, " ")
+    .replace(/^ | $/g, "")
+    .toLowerCase();
+}
+
+/** A link destination can be written between `<` and `>` */
+function unwrapDestination(destination: string): string {
+  return /^<(.*)>$/.exec(destination)?.[1] ?? destination;
+}
 
 /** @returns Whether the line opens a hidden block */
 function openHiddenBlock(state: BlockState, line: string): boolean {
@@ -307,32 +358,44 @@ function isBlank(line: string): boolean {
 }
 
 // -------------------------------------------------------------------------------------------------------------------
-// Inline structure: in a paragraph or heading, whichever opens first wins: a code span, a comment, or an html tag.
+// Inline structure: in a paragraph or heading, whichever opens first wins: a code span, a comment, a link, or an html
+// tag.
 //
 // Each construct is tried only where a character can open it, and searches for its end only move forward. So scanning
 // takes time linear in the length of the paragraph, also when constructs don't close.
 
-/** An inline construct: where it ends, and the visible text that takes its place */
-type InlineConstruct = { end: number; visible: string };
+/** An inline construct: where it ends, the visible text that takes its place, and the destination of a link */
+type InlineConstruct = { end: number; visible: string; destination?: string };
 
-function visibleInline(text: string): string {
+function visibleInline(
+  text: string,
+  linkDefinitions: Map<string, string>,
+): TextPart[] {
+  const parts: TextPart[] = [];
   const search = new ForwardSearch(text);
-  const constructStart = /[\\`<]/g;
+  const constructStart = /[\\`<!\[]/g;
   let visible = "";
   let copied = 0;
   for (let m; (m = constructStart.exec(text));) {
-    const construct = inlineConstructAt(text, m.index, search);
+    const construct = inlineConstructAt(text, m.index, search, linkDefinitions);
     if (construct === undefined) continue;
     visible += text.slice(copied, m.index) + construct.visible;
     copied = constructStart.lastIndex = construct.end;
+    if (construct.destination !== undefined) {
+      parts.push({ kind: "visible text", text: visible });
+      parts.push({ kind: "link destination", text: construct.destination });
+      visible = "";
+    }
   }
-  return visible + text.slice(copied);
+  parts.push({ kind: "visible text", text: visible + text.slice(copied) });
+  return parts;
 }
 
 function inlineConstructAt(
   text: string,
   start: number,
   search: ForwardSearch,
+  linkDefinitions: Map<string, string>,
 ): InlineConstruct | undefined {
   switch (text[start]) {
     case "\\":
@@ -345,6 +408,8 @@ function inlineConstructAt(
         autolink(text, start) ??
         htmlTag(text, start, search)
       );
+    default:
+      return link(text, start, linkDefinitions);
   }
 }
 
@@ -393,7 +458,7 @@ function autolink(text: string, start: number): InlineConstruct | undefined {
   return { end: start + url.length, visible: ` ${url.slice(1, -1)} ` };
 }
 
-/** An html tag's attributes aren't text, and a `code`, `pre` or `a` element hides its content */
+/** An html tag's attributes aren't text, a `code`, `pre` or `a` element hides its content, and an `a` element links */
 function htmlTag(
   text: string,
   start: number,
@@ -405,8 +470,19 @@ function htmlTag(
   const element = /^<(code|pre|a)[\s\/>]/i.exec(tag)?.[1].toLowerCase();
   const close =
     element === undefined ? undefined : search.next(closingTags[element], end);
-  return { end: close?.end ?? end, visible: " " };
+  const destination = element === "a" ? hrefOf(tag) : undefined;
+  return { end: close?.end ?? end, visible: " ", destination };
 }
+
+function hrefOf(tag: string): string | undefined {
+  for (const [, name, ...value] of tag.matchAll(attribute)) {
+    if (name.toLowerCase() === "href")
+      return value.find((v) => v !== undefined);
+  }
+}
+
+const attribute =
+  /\s([a-z_:][\w.:-]*)(?:\s*=\s*(?:([^\s"'=<>`]+)|'([^']*)'|"([^"]*)"))?/gi;
 
 // an open tag with its attributes, or a closing tag
 const htmlTagPattern =
@@ -416,6 +492,69 @@ const closingTags: Record<string, RegExp> = {
   pre: /<\/pre\s*>/gi,
   a: /<\/a\s*>/gi,
 };
+
+/** A link or image: its text and title aren't visible text, and a link's destination is kept apart */
+function link(
+  text: string,
+  start: number,
+  linkDefinitions: Map<string, string>,
+): InlineConstruct | undefined {
+  linkPattern.lastIndex = start;
+  const match = linkPattern.exec(text);
+  if (match === null) return;
+  const [whole] = match;
+  const { linkText, inline, destination, label } = match.groups!;
+  const isImage = whole.startsWith("!");
+  // the link or image takes up `length`, and only a link keeps its destination
+  const linkTo = (length: number, to: string) => ({
+    end: start + length,
+    visible: " ",
+    destination: isImage ? undefined : unwrapDestination(to),
+  });
+  if (inline !== undefined) return linkTo(whole.length, destination);
+  // a reference link is only a link when its label is defined
+  const defined = (l: string) => linkDefinitions.get(normalizeLabel(l));
+  // [text][label], a full reference link; a shortcut reference link can't be followed by a link label, so the link text
+  // and the link label are text when the label isn't defined
+  if (label !== undefined && isLinkLabel(label)) {
+    const full = defined(label);
+    return full === undefined ? undefined : linkTo(whole.length, full);
+  }
+  // [text][], a collapsed reference link
+  const collapsed = label === "" ? defined(linkText) : undefined;
+  if (collapsed !== undefined) return linkTo(whole.length, collapsed);
+  // [text], a shortcut reference link, taking up only the match up to its `]`
+  const shortcut = defined(linkText);
+  if (shortcut !== undefined) return linkTo(whole.indexOf("]") + 1, shortcut);
+}
+
+// Each run of whitespace in a link is matched whole, without backtracking into it, or a long run of it takes quadratic
+// time when the link doesn't close. The link destination is matched the same way, so that widening what it may contain
+// can't bring that back.
+const linkTextPattern = String.raw`\[(?<linkText>[^\[\]]*)\]`;
+const linkDestinationPattern = atomicGroup("destination", String.raw`[^()\s]*`);
+const linkTitlePattern = String.raw`"[^"]*"|'[^']*'|\([^()]*\)`;
+// (destination "title")
+const inlineLinkPattern = [
+  String.raw`(?<inline>\(`,
+  atomicGroup("spaceBeforeDestination", String.raw`\s*`),
+  linkDestinationPattern,
+  String.raw`(?:${atomicGroup("spaceBeforeTitle", String.raw`\s+`)}(?:${linkTitlePattern}))?`,
+  atomicGroup("spaceBeforeEnd", String.raw`\s*`),
+  String.raw`\))`,
+].join("");
+const linkLabelPattern = String.raw`\[(?<label>[^\[\]]*)\]`;
+
+// [text](destination "title"), [text][label], [text][] or [text]
+const linkPattern = new RegExp(
+  String.raw`!?${linkTextPattern}(?:${inlineLinkPattern}|${linkLabelPattern})?`,
+  "y",
+);
+
+/** @returns A pattern that matches `pattern` whole, without backtracking into it, as the group `name`: an atomic group */
+function atomicGroup(name: string, pattern: string): string {
+  return String.raw`(?=(?<${name}>${pattern}))\k<${name}>`;
+}
 
 /** @returns The match of the sticky `pattern` at `index`, if any */
 function matchAt(
