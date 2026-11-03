@@ -4,7 +4,7 @@ import { getMentionedIssueRefs } from "../issue-refs.js";
 
 type Fixture = {
   repository: string;
-  cases: { name: string; markdown: string; expected: string[] }[];
+  cases: { name: string; markdown: string; expected: string[]; gap?: string }[];
 };
 
 const fixture: Fixture = JSON.parse(
@@ -13,9 +13,10 @@ const fixture: Fixture = JSON.parse(
 const [owner, repo] = fixture.repository.split("/");
 
 describe("get mentioned issues", () => {
-  describe("lists the references as written, outside comments", () => {
-    for (const { name, markdown, expected } of fixture.cases) {
-      it(name, () => {
+  describe("lists the references as written, outside code and comments", () => {
+    for (const { name, markdown, expected, gap } of fixture.cases) {
+      // a case with a gap documents where the scanner differs from Markdown's rules
+      (gap ? it.fails : it)(name, () => {
         expect(getMentionedIssueRefs(markdown, { owner, repo })).toEqual(
           expected,
         );
@@ -39,6 +40,8 @@ describe("get mentioned issues", () => {
     const repeat = (text: string) => text.repeat(size / text.length);
 
     it.each([
+      ["block quote markers", repeat(">")],
+      ["nested list items and blank lines", repeat("- ") + repeat("\n")],
       ["glued references", repeat("#1")],
       ["repository-like words", repeat("a.a-a") + "/b#1"],
       ["urls", repeat("https://github.com/a/b/issues/1/")],

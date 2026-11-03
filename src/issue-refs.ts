@@ -3,8 +3,8 @@ import { visibleText } from "./markdown.js";
 
 // Finds the references to issues and pull requests in a pull request description, as written there.
 //
-// Markdown decides where a reference counts (markdown.ts): in the visible text. So a reference in a comment doesn't count.
-// A reference is matched as written: an html entity like `&#35;1` isn't one.
+// Markdown decides where a reference counts (markdown.ts): in the visible text. So a reference in code or a comment
+// doesn't count. A reference is matched as written: an html entity like `&#35;1` isn't one.
 
 /**
  * @param body The description of the original pull request

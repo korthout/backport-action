@@ -109,9 +109,167 @@
       "expected": []
     },
     {
+      "name": "paragraph text: headings, emphasis and tables don't hide references",
+      "markdown": "## Fixes #706\n\n*#752* \"#753\"\n\n| a |\n|---|\n| #749 |",
+      "expected": ["#706", "#752", "#753", "#749"]
+    },
+    {
+      "name": "setext heading: its text is linked",
+      "markdown": "#706\n---",
+      "expected": ["#706"]
+    },
+    {
+      "name": "setext heading: its underline can end with spaces or tabs",
+      "markdown": "intro\n=== \t\n    #706",
+      "expected": []
+    },
+    {
+      "name": "thematic break: isn't a list item",
+      "markdown": "* * *\n#706\n\n- - -\n    #752",
+      "expected": ["#706"]
+    },
+    {
+      "name": "thematic break: spaces or tabs between and after its markers",
+      "markdown": "*\t*\t* \t\n    #706",
+      "expected": []
+    },
+    {
+      "name": "fenced code block: backticks or tildes, with an info string",
+      "markdown": "```ts\n#706\n```\n~~~\n#752\n~~~\nfixes #753",
+      "expected": ["#753"]
+    },
+    {
+      "name": "fenced code block: interrupts a paragraph",
+      "markdown": "para\n```\n#706\n```\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "fenced code block: closes with a fence of the same character, at least as long, without text",
+      "markdown": "~~~~\n#706\n```\n~~~\n~~~~ x\n    ~~~~\n~~~~\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "fenced code block: its closing fence can end with spaces or tabs",
+      "markdown": "~~~\n#706\n~~~ \t\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "fenced code block: unclosed, hides the rest",
+      "markdown": "fixes #752\n```\n#706",
+      "expected": ["#752"]
+    },
+    {
+      "name": "fenced code block: only a tilde fence can have a backtick in its info string",
+      "markdown": "~~~ a`b\n#752\n~~~\n``` a`b\n#706\n```\n#753",
+      "expected": ["#706"]
+    },
+    {
+      "name": "indented code block: a tab after spaces advances to the next tab stop",
+      "markdown": "- a\n\n  \t#706\n\n#752\n\n  \t#753",
+      "expected": ["#706", "#752"]
+    },
+    {
+      "name": "indented code block: four spaces or a tab",
+      "markdown": "para\n\n    #706\n\n\t#752\n\n#753",
+      "expected": ["#753"]
+    },
+    {
+      "name": "indented code block: can't interrupt a paragraph",
+      "markdown": "para\n    #706",
+      "expected": ["#706"]
+    },
+    {
+      "name": "html block: a comment hides up to the line of its end, the rest of that line is visible",
+      "markdown": "<!-- a\n\n#706\n\n--> #752\n#753",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "html block: an unclosed comment hides the rest",
+      "markdown": "Fixes #706\n<!-- closes #752",
+      "expected": ["#706"]
+    },
+    {
+      "name": "html block: pre hides its lines, also when unclosed",
+      "markdown": "<pre>\n#706\n</pre>\n\n#752\n\n<pre>\n#753",
+      "expected": ["#752"]
+    },
+    {
+      "name": "html block: other blocks like div and script don't hide",
+      "markdown": "<div>\n#706\n</div>\n\n<script>\n#752\n</script>",
+      "expected": ["#706", "#752"]
+    },
+    {
+      "name": "list item: its content column decides what is indented code",
+      "markdown": "- item\n\n      #706\n\n- item\n\n    #752\n\n#753",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "list item: one that starts with a blank line has its content 1 column after the marker",
+      "markdown": "-\n     #706\n\n-   \n      #752",
+      "expected": ["#706"]
+    },
+    {
+      "name": "list item: a fenced code block ends with the item",
+      "markdown": "- ```\n  #706\n\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "list item: nested",
+      "markdown": "- a\n  - b\n\n        #706\n\n#752\n\n1. a\n   1. b\n\n          #706\n\n#753",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "list item: interrupts a paragraph",
+      "markdown": "para\n- #706\n* #752",
+      "expected": ["#706", "#752"]
+    },
+    {
+      "name": "block quote: a fenced code block ends with the quote",
+      "markdown": "> ```\n> #706\n\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "block quote: indented code",
+      "markdown": ">     #706\n\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "block quote: lazy continuation",
+      "markdown": "> a\n> > b\n#706",
+      "expected": ["#706"]
+    },
+    {
+      "name": "block quote: in a list item",
+      "markdown": "- a\n  > - b\n  >   ```\n  >   #706\n\n#752\n\n- a\n\n  > ```\n  > #706\n- #753",
+      "expected": ["#752", "#753"]
+    },
+    {
       "name": "html entity: isn't a reference as written",
       "markdown": "&#35;706 &num;752",
       "expected": []
+    },
+    {
+      "name": "blank line: only spaces and tabs, not other whitespace like a non-breaking space",
+      "markdown": "fixes\n\u00a0\n[#706]: https://example.com\n\nsee\n\u00a0\n    #752",
+      "expected": ["#706", "#752"]
+    },
+    {
+      "name": "gap: fence in an html block",
+      "markdown": "<details>\n```\nfixes #706\n```\n</details>",
+      "expected": ["#706"],
+      "gap": "Markdown keeps the content of an html block as is up to a blank line, the scanner still opens a fenced code block in it"
+    },
+    {
+      "name": "gap: tab after a list item marker",
+      "markdown": "-\tfixes\n\n      #706",
+      "expected": ["#706"],
+      "gap": "Markdown expands a tab after a container marker to the next tab stop, the scanner only expands tabs at the start of a line"
+    },
+    {
+      "name": "gap: tab after a block quote marker",
+      "markdown": ">\t\t#706\n\n> \t\t#752",
+      "expected": [],
+      "gap": "Markdown expands a tab after a container marker to the next tab stop, the scanner only expands tabs at the start of a line"
     }
   ]
 }
