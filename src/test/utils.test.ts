@@ -280,6 +280,10 @@ describe("compose body/title", () => {
     body: "foo-body",
     user: { login: "foo-author" },
     title: "some pr title",
+    base: {
+      sha: "def456",
+      repo: { name: "backport-action", owner: { login: "korthout" } },
+    },
   };
   const target = "foo-target";
 

@@ -467,6 +467,12 @@ export type PullRequest = {
   };
   base: {
     sha: string;
+    repo: {
+      name: string;
+      owner: {
+        login: string;
+      };
+    };
   };
   user: {
     login: string;
