@@ -569,7 +569,7 @@ The following placeholders are available and are replaced with:
 
 Placeholder | Replaced with
 ------------|------------
-`issue_refs` | GitHub issue references to all issues mentioned in the original pull request description (excluding HTML comments `<!-- ... -->`), each listed once and seperated by a space, e.g. `#123 #456 korthout/backport-action#789`
+`issue_refs` | References to the issues and pull requests that the original pull request description refers to, each listed once in the order they first appear and separated by a space, e.g. `#123 #456 korthout/backport-action#789`. Finds `#123`, `GH-123`, `owner/repo#123`, and GitHub issue and pull request URLs, also as a link's target (listed as `owner/repo#123`). Skips code, HTML comments `<!-- ... -->` and link text, as Markdown defines them.
 `pull_author` | The username of the original pull request's author, e.g. `korthout`
 `pull_description`| The description (i.e. body) of the original pull request that is backported, e.g. `Summary: This patch was created to..`
 `pull_number` | The number of the original pull request that is backported, e.g. `123`
