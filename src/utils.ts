@@ -1,4 +1,5 @@
 import { PullRequest } from "./github.js";
+import { getMentionedIssueRefs } from "./issue-refs.js";
 
 /**
  * @param template The template potentially containing placeholders
@@ -8,7 +9,7 @@ import { PullRequest } from "./github.js";
  */
 export function replacePlaceholders(
   template: string,
-  main: Pick<PullRequest, "body" | "user" | "number" | "title">,
+  main: Pick<PullRequest, "body" | "user" | "number" | "title" | "base">,
   target: string,
 ): string {
   const values: Record<string, string> = {
@@ -17,47 +18,18 @@ export function replacePlaceholders(
     pull_title: main.title,
     pull_description: main.body ?? "",
     target_branch: target,
-    issue_refs: getMentionedIssueRefs(main.body).join(" "),
   };
+  // scanning the description takes time, so only when the template uses it
+  if (template.includes("${issue_refs}")) {
+    values.issue_refs = getMentionedIssueRefs(main.body, {
+      owner: main.base.repo.owner.login,
+      repo: main.base.repo.name,
+    }).join(" ");
+  }
   return template.replace(/\$\{(\w+)\}/g, (match, name) =>
     Object.hasOwn(values, name) ? values[name] : match,
   );
 }
-
-/**
- * @param body Text in which to search for mentioned issues, references inside comments (`<!-- ... -->`) are ignored, an unclosed comment hides the rest of the text
- * @returns All found mentioned issues as GitHub issue references, each once in the order first found
- */
-export function getMentionedIssueRefs(body: string | null): string[] {
-  const text = body?.replace(patterns.comment, " ") ?? "";
-  const urls = [...text.matchAll(patterns.url)].map((match) => ({
-    index: match.index,
-    ref: `${match.groups?.org}/${match.groups?.repo}#${match.groups?.number}`,
-  }));
-  const refs = [...text.matchAll(patterns.ref)].map((match) => ({
-    index: match.index,
-    ref: match[0].trim(),
-  }));
-  const ordered = urls.concat(refs).sort((a, b) => a.index - b.index);
-  return [...new Set(ordered.map(({ ref }) => ref))];
-}
-
-const patterns = {
-  // matches comments (`<!-- ... -->`), which GitHub does not render, including multi-line ones and an unclosed one up to the end
-  comment: /<!--[\s\S]*?(?:-->|$)/g,
-
-  // matches urls to github issues at start, middle, end of line as individual word
-  // may be lead and trailed by whitespace which should be trimmed
-  // captures the `org`, `repo` and `number` of the issue
-  // https://regex101.com/r/XKRl8q/5
-  url: /(?:^| )(?:(?:https:\/\/)?(?:www\.)?github\.com\/(?<org>[^ \/\n]+)\/(?<repo>[^ \/\n]+)\/issues\/(?<number>[1-9][0-9]*)(?:\/)?)(?: |$)/gm,
-
-  // matches `#123` at start, middle, end of line as individual word
-  // may be lead and trailed by whitespace which should be trimmed
-  // captures `number` of the issue (and optionally the `org` and `repo`)
-  // https://regex101.com/r/2gAB8O/2
-  ref: /(?:^| )((?<org>[^\n #\/]+)\/(?<repo>[^\n #\/]+))?#(?<number>[1-9][0-9]*)(?: |$)/gm,
-};
 
 export function coerceCherryPickingMergeMode(
   raw: string,
