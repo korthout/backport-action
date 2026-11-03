@@ -229,6 +229,11 @@
       "expected": ["#706", "#752"]
     },
     {
+      "name": "list item: one numbered other than 1 can't interrupt a paragraph",
+      "markdown": "run `make\n2. #706` now\n\nsee [docs\n2. #752](https://x)\n\ntext `a\n-\n#753` b",
+      "expected": ["#753"]
+    },
+    {
       "name": "block quote: a fenced code block ends with the quote",
       "markdown": "> ```\n> #706\n\n#752",
       "expected": ["#752"]
@@ -299,6 +304,91 @@
       "expected": ["korthout/backport-action#706"]
     },
     {
+      "name": "link: text and title are hidden, also of an image",
+      "markdown": "[#706](https://github.com/korthout/backport-action/issues/752) ![#753](x.png) [see #749](https://x 'title') [see #755]( https://x (t) ) #756",
+      "expected": ["korthout/backport-action#752", "#756"]
+    },
+    {
+      "name": "link: a destination that starts with a quote isn't a title, so a space inside it means it's no link",
+      "markdown": "[a]( \"t #706\") [b](x \"#752\")",
+      "expected": ["#706"]
+    },
+    {
+      "name": "link: its destination counts when it's a url to an issue or pull request, not its text",
+      "markdown": "[see #6](https://www.github.com/camunda/camunda/issues/7) [x](<https://github.com/actions/checkout/pull/8>)",
+      "expected": ["camunda/camunda#7", "actions/checkout#8"]
+    },
+    {
+      "name": "link: its destination counts in order of occurrence",
+      "markdown": "#706 fixes [the crash](https://github.com/camunda/camunda/issues/7), see #752",
+      "expected": ["#706", "camunda/camunda#7", "#752"]
+    },
+    {
+      "name": "link: a destination that isn't a full url to an issue or pull request doesn't count",
+      "markdown": "[top](#706) [docs](../issues/752) [x](github.com/camunda/camunda/issues/753) [y](https://github.com/camunda/camunda/pull/749/files) [z](https://example.com/#755)",
+      "expected": []
+    },
+    {
+      "name": "link: a destination with a trailing slash, query or fragment counts",
+      "markdown": "[a](https://github.com/camunda/camunda/issues/7/) [b](https://github.com/camunda/camunda/issues/8?x=1) [c](https://github.com/camunda/camunda/issues/9#issuecomment-1)",
+      "expected": ["camunda/camunda#7", "camunda/camunda#8", "camunda/camunda#9"]
+    },
+    {
+      "name": "link: hidden in code and comments, with its destination",
+      "markdown": "`[a](https://github.com/camunda/camunda/issues/7)` <!-- [b](https://github.com/camunda/camunda/issues/8) -->\n\n```\n[c](https://github.com/camunda/camunda/issues/9)\n```",
+      "expected": []
+    },
+    {
+      "name": "reference link: the destination of its definition counts, the first definition of a label wins",
+      "markdown": "[the crash][1] [crash] [other][]\n\n[1]: https://github.com/camunda/camunda/pull/7\n[crash]: <https://github.com/actions/checkout/issues/8> 'title'\n[other]: https://github.com/camunda/camunda/issues/9\n[other]: https://github.com/camunda/camunda/issues/10\n[unused]: https://github.com/camunda/camunda/issues/11",
+      "expected": ["camunda/camunda#7", "actions/checkout#8", "camunda/camunda#9"]
+    },
+    {
+      "name": "html a element: its href counts when it's a url to an issue or pull request, not its content",
+      "markdown": "<a href=\"https://github.com/camunda/camunda/issues/7\">#706</a> <a title=x href='https://github.com/camunda/camunda/pull/8'>y</a> <a href=https://github.com/camunda/camunda/issues/9>z</a> <a name=\"https://github.com/camunda/camunda/issues/10\"></a> <a title=\"see href=https://github.com/camunda/camunda/issues/11\">w</a>",
+      "expected": ["camunda/camunda#7", "camunda/camunda#8", "camunda/camunda#9"]
+    },
+    {
+      "name": "html a element: without an href, like an anchor, it's no link and its content is visible",
+      "markdown": "<a name=\"x\">Fixes #706</a> <a id=y>#752</a> <a href=\"https://example.com\">#753</a>",
+      "expected": ["#706", "#752"]
+    },
+    {
+      "name": "reference link: hidden only when its label is defined",
+      "markdown": "[#706][y] [#752] [#753][] [#749][nope] [#755]\n\n[y]: https://example.com\n[#752]: https://example.com",
+      "expected": ["#753", "#749", "#755"]
+    },
+    {
+      "name": "reference link: a shortcut reference link can't be followed by a link label, which needs more than whitespace",
+      "markdown": "[#706][nope] [#752][ ]\n\n[#706]: https://github.com/camunda/camunda/issues/7\n[#752]: https://github.com/camunda/camunda/issues/8",
+      "expected": ["#706", "camunda/camunda#8"]
+    },
+    {
+      "name": "reference link: only spaces, tabs and line endings are whitespace in a link label",
+      "markdown": "[#706][\u00a0] [#752][ \t\n ]\n\n[#706]: https://github.com/camunda/camunda/issues/7\n[#752]: https://github.com/camunda/camunda/issues/8",
+      "expected": ["#706", "camunda/camunda#8"]
+    },
+    {
+      "name": "link reference definition: its link label needs more than spaces, tabs and line endings, which are also all that's collapsed",
+      "markdown": "[#706][\u00a0] [#752][a\u00a0b]\n\n[ ]: https://github.com/camunda/camunda/issues/7\n\n[a b]: https://github.com/camunda/camunda/issues/8",
+      "expected": ["#706", "#752", "camunda/camunda#7"]
+    },
+    {
+      "name": "reference link: in [a][b][c] with only c defined, [b][c] is the link",
+      "markdown": "[#706][#752][x]\n\n[x]: https://github.com/camunda/camunda/issues/7\n[#706]: https://github.com/camunda/camunda/issues/8",
+      "expected": ["#706", "camunda/camunda#7"]
+    },
+    {
+      "name": "link reference definition: hidden, also in a container",
+      "markdown": "> [#706]: https://example.com\n\n- [#752]: https://example.com\n\n[#706] [#752] #753",
+      "expected": ["#753"]
+    },
+    {
+      "name": "link reference definition: not after a paragraph, in code, when invalid, or for a footnote",
+      "markdown": "foo\n[#706]: https://example.com\n\n```\n[#752]: https://example.com\n```\n\n[#706] [#752]\n\n[note]: see #753\n\nx[^1]\n\n[^1]: #749",
+      "expected": ["#706", "#752", "#753", "#749"]
+    },
+    {
       "name": "html entity: isn't a reference as written",
       "markdown": "&#35;706 &num;752",
       "expected": []
@@ -314,10 +404,57 @@
       "expected": ["#706", "#752"]
     },
     {
+      "name": "line ending: a carriage return on its own also ends a line",
+      "markdown": "fixes\n\r\r\n[#706]: https://example.com\n\nsee\r\r    #752",
+      "expected": []
+    },
+    {
       "name": "gap: emphasis with underscores",
       "markdown": "_#752_",
       "expected": ["#752"],
       "gap": "Markdown reads `_` as emphasis here, the scanner reads it as part of a word"
+    },
+    {
+      "name": "gap: non-breaking space in a link destination or before a link title",
+      "markdown": "[#706](x\u00a0y) [#752](x \u00a0\"t\")",
+      "expected": ["#752"],
+      "gap": "Markdown only reads spaces, tabs and line endings as whitespace in a link, the scanner also other whitespace like a non-breaking space"
+    },
+    {
+      "name": "gap: link syntax like nested brackets",
+      "markdown": "[a [b] #706](https://example.com)",
+      "expected": [],
+      "gap": "Markdown allows balanced brackets in link text, the scanner doesn't"
+    },
+    {
+      "name": "gap: link reference definition across lines",
+      "markdown": "[y]: https://example.com\n  \"title #753\"",
+      "expected": [],
+      "gap": "Markdown allows a link reference definition's title on the next line, the scanner doesn't"
+    },
+    {
+      "name": "gap: reference in the query or fragment of a url to an issue",
+      "markdown": "https://github.com/actions/checkout/issues/1?note=#752",
+      "expected": ["actions/checkout#1"],
+      "gap": "Markdown links a url with its query and fragment, the scanner ends a url to an issue at its number and reads what follows as text"
+    },
+    {
+      "name": "gap: url right before a table cell",
+      "markdown": "| a | b |\n|---|---|\n|https://example.com|#706|",
+      "expected": ["#706"],
+      "gap": "Markdown splits a table row into cells before it reads a url, the scanner reads a url up to the next whitespace, across a `|`"
+    },
+    {
+      "name": "gap: code span or html tag that starts in a link's text and ends after it",
+      "markdown": "[see `](https://github.com/actions/checkout/issues/1)` x",
+      "expected": [],
+      "gap": "Markdown reads a code span, an autolink or an html tag before a link, the scanner reads the link first"
+    },
+    {
+      "name": "gap: github.com in capitals",
+      "markdown": "https://GitHub.com/actions/checkout/issues/1 [x](https://WWW.GITHUB.COM/actions/checkout/pull/2)",
+      "expected": ["actions/checkout#1", "actions/checkout#2"],
+      "gap": "A host name is the same in any case, the scanner only recognizes github.com in lowercase"
     },
     {
       "name": "gap: code span in an html block",
