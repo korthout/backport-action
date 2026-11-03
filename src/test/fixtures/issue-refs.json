@@ -224,14 +224,81 @@
       "expected": ["#752", "#753"]
     },
     {
+      "name": "code span: ends at a run of as many backticks",
+      "markdown": "`#706` ``a ` #752`` ```#753``` #749",
+      "expected": ["#749"]
+    },
+    {
+      "name": "code span: across lines, but not across paragraphs",
+      "markdown": "`a\n#706` #752\n\na ` b\n\nfixes #753 and ` c",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "code span: unmatched backticks are literal",
+      "markdown": "a `` b #706\n\n`#752 #753",
+      "expected": ["#706", "#752", "#753"]
+    },
+    {
+      "name": "escape: a backslash makes the next character literal",
+      "markdown": "\\`#706\\` \\#752 \\``#753` #749",
+      "expected": ["#706", "#752", "#749"]
+    },
+    {
+      "name": "comment: inline, also the short forms, hidden as a space",
+      "markdown": "see #706 <!-- not #752 --> and #753 a/b<!-- x -->#756\n\n<!--> #749\n\na <!---> #755 -->",
+      "expected": ["#706", "#753", "#756", "#749", "#755"]
+    },
+    {
+      "name": "comment: unclosed in a paragraph is literal",
+      "markdown": "a <!-- #706\nb #752\n\n#753",
+      "expected": ["#706", "#752", "#753"]
+    },
+    {
+      "name": "comment: whichever opens first wins over a code span",
+      "markdown": "Use `<!--` here #752\n\n<!-- `x` #706 --> #753",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "html tag: hidden as a space with its attributes, and code, pre and a hide their content",
+      "markdown": "<code>#706</code> <pre>#752</pre> <a href=\"https://example.com\">#753</a> <kbd>#749</kbd><br>#755 <span\ntitle=\"#756\">x</span>",
+      "expected": ["#749", "#755"]
+    },
+    {
+      "name": "html tag: text in angle brackets that isn't a tag is visible",
+      "markdown": "x <b and #706 > z\n\n<a x #752 >\n\nx </b #753>",
+      "expected": ["#706", "#752", "#753"]
+    },
+    {
+      "name": "autolink: its url is visible",
+      "markdown": "<https://github.com/korthout/backport-action/issues/706>",
+      "expected": ["korthout/backport-action#706"]
+    },
+    {
       "name": "html entity: isn't a reference as written",
       "markdown": "&#35;706 &num;752",
       "expected": []
     },
     {
+      "name": "html tag: an unclosed code element only hides the tag",
+      "markdown": "<code>#706 and #752\n\nx <code>#753\n\n#749",
+      "expected": ["#706", "#752", "#753", "#749"]
+    },
+    {
       "name": "blank line: only spaces and tabs, not other whitespace like a non-breaking space",
       "markdown": "fixes\n\u00a0\n[#706]: https://example.com\n\nsee\n\u00a0\n    #752",
       "expected": ["#706", "#752"]
+    },
+    {
+      "name": "gap: emphasis with underscores",
+      "markdown": "_#752_",
+      "expected": ["#752"],
+      "gap": "Markdown reads `_` as emphasis here, the scanner reads it as part of a word"
+    },
+    {
+      "name": "gap: code span in an html block",
+      "markdown": "<div>\n`#706`\n</div>",
+      "expected": ["#706"],
+      "gap": "Markdown keeps the content of an html block as is, the scanner still reads code spans in it"
     },
     {
       "name": "gap: fence in an html block",
