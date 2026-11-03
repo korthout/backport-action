@@ -38,8 +38,17 @@ describe("get mentioned issues", () => {
     // GitHub limits a description to 65536 characters, these are about 1 MB
     const size = 1_000_000;
     const repeat = (text: string) => text.repeat(size / text.length);
+    const growingBacktickRuns = Array.from({ length: 1400 }, (_, i) =>
+      "`".repeat(i + 1),
+    ).join(" ");
 
     it.each([
+      ["unclosed comments", "a " + repeat("<!-- #1 ")],
+      ["unclosed code spans", repeat("`` ` #1 ")],
+      ["backtick runs of growing length", growingBacktickRuns],
+      ["unclosed html tags", repeat("<a x #1 ")],
+      ["unclosed code elements", repeat("<code> #1 ")],
+      ["unclosed autolinks", repeat("<a:x ")],
       ["block quote markers", repeat(">")],
       ["nested list items and blank lines", repeat("- ") + repeat("\n")],
       ["glued references", repeat("#1")],

@@ -7,9 +7,10 @@
 // Terms
 //
 // Markdown's terms are used as CommonMark defines them, like block, container block (a block quote or list item, which
-// holds other blocks), leaf block, paragraph, lazy continuation line and inline content. On top of those:
+// holds other blocks), leaf block, paragraph, lazy continuation line, inline content and code span. On top of those:
 //
-// - Visible text: the text of the paragraphs and headings outside code and comments.
+// - Visible text: the text of the paragraphs and headings outside code, comments and html tags. An autolink's url is
+//   visible text, and so is a bare url, which GitHub turns into a link (GFM's "Autolinks (extension)").
 // - Hidden block: a block whose lines aren't visible text, and that stays open until a line ends it: a fenced code
 //   block, or an html block opened by `<!--` or `<pre`. The rest of the line that ends an html block is visible text.
 //
@@ -31,11 +32,13 @@
 //       block opens a hidden block (4.5, 4.6); an ATX heading is inline content of its own (4.2); any other line is
 //       part of a paragraph (4.8).
 //    What's kept for the next step is the inline content of the paragraphs and headings.
-// 2. Inline structure, for each paragraph and heading: a comment (6.6) is hidden up to its end, or up to the end of the
-//    paragraph or heading.
+// 2. Inline structure, for each paragraph and heading (section 6). Left to right, at each character that can open an
+//    inline construct, try a backslash escape (2.4), a code span (6.1), a comment or another html tag (6.6), or an
+//    autolink (6.5). The first one that opens takes the place of its source, which is a space in the visible text, or
+//    for an autolink its url.
 //
 // Scanning takes time linear in the length of the description, so no description can slow down the run: the nesting of
-// container blocks is capped.
+// container blocks is capped, and each search for the end of an inline construct only moves forward (`ForwardSearch`).
 
 // -------------------------------------------------------------------------------------------------------------------
 // Block structure: line by line, find the paragraphs and headings, and skip the blocks that aren't visible text.
@@ -305,11 +308,168 @@ function isBlank(line: string): boolean {
 }
 
 // -------------------------------------------------------------------------------------------------------------------
-// Inline structure: in a paragraph or heading, hide the comments.
+// Inline structure: in a paragraph or heading, whichever opens first wins: a code span, a comment, or an html tag.
+//
+// Each construct is tried only where a character can open it, and searches for its end only move forward. So scanning
+// takes time linear in the length of the paragraph, also when constructs don't close.
+
+/** An inline construct: where it ends, and the visible text that takes its place */
+type InlineConstruct = { end: number; visible: string };
 
 function visibleInline(text: string): string {
-  return text.replace(comment, " ");
+  const search = new ForwardSearch(text);
+  const constructStart = /[\\`<]/g;
+  let visible = "";
+  let copied = 0;
+  for (let m; (m = constructStart.exec(text));) {
+    const construct = inlineConstructAt(text, m.index, search);
+    if (construct === undefined) continue;
+    visible += text.slice(copied, m.index) + construct.visible;
+    copied = constructStart.lastIndex = construct.end;
+  }
+  return visible + text.slice(copied);
 }
 
-// a comment ends at the next `-->`; an unclosed one hides the rest of the paragraph or heading
-const comment = /<!--[\s\S]*?(?:-->|$)/g;
+function inlineConstructAt(
+  text: string,
+  start: number,
+  search: ForwardSearch,
+): InlineConstruct | undefined {
+  switch (text[start]) {
+    case "\\":
+      return backslashEscape(text, start);
+    case "`":
+      return codeSpan(text, start, search);
+    case "<":
+      return (
+        comment(text, start, search) ??
+        autolink(text, start) ??
+        htmlTag(text, start, search)
+      );
+  }
+}
+
+/** An escaped character is literal text, it doesn't open anything */
+function backslashEscape(
+  text: string,
+  start: number,
+): InlineConstruct | undefined {
+  const escaped = text[start + 1];
+  if (escaped === undefined || !/[!-\/:-@\[-`{-~]/.test(escaped)) return;
+  return { end: start + 2, visible: escaped };
+}
+
+/** A code span ends at the next run of as many backticks; without one, the backticks are literal */
+function codeSpan(
+  text: string,
+  start: number,
+  search: ForwardSearch,
+): InlineConstruct {
+  const run = matchAt(/`+/y, text, start)!;
+  const end = start + run.length;
+  const closer = search.backtickRun(run.length, end);
+  if (closer === undefined) return { end, visible: run };
+  return { end: closer + run.length, visible: " " };
+}
+
+/** A comment ends at the next `-->`; without one, it is literal text */
+function comment(
+  text: string,
+  start: number,
+  search: ForwardSearch,
+): InlineConstruct | undefined {
+  const open = matchAt(/<!--(?:-?>)?/y, text, start);
+  if (open === undefined) return;
+  if (open.endsWith(">")) return { end: start + open.length, visible: " " };
+  const close = search.next(commentEnd, start + open.length);
+  return close === undefined ? undefined : { end: close.end, visible: " " };
+}
+
+const commentEnd = /-->/g;
+
+/** An autolink's text is its url */
+function autolink(text: string, start: number): InlineConstruct | undefined {
+  const url = matchAt(/<([a-z][\w+.-]*:[^\s<>]*)>/iy, text, start);
+  if (url === undefined) return;
+  return { end: start + url.length, visible: ` ${url.slice(1, -1)} ` };
+}
+
+/** An html tag's attributes aren't text, and a `code`, `pre` or `a` element hides its content */
+function htmlTag(
+  text: string,
+  start: number,
+  search: ForwardSearch,
+): InlineConstruct | undefined {
+  const tag = matchAt(htmlTagPattern, text, start);
+  if (tag === undefined) return;
+  const end = start + tag.length;
+  const element = /^<(code|pre|a)[\s\/>]/i.exec(tag)?.[1].toLowerCase();
+  const close =
+    element === undefined ? undefined : search.next(closingTags[element], end);
+  return { end: close?.end ?? end, visible: " " };
+}
+
+// an open tag with its attributes, or a closing tag
+const htmlTagPattern =
+  /<(?:[a-z][a-z0-9-]*(?:\s+[a-z_:][\w.:-]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*\s*\/?|\/[a-z][a-z0-9-]*\s*)>/iy;
+const closingTags: Record<string, RegExp> = {
+  code: /<\/code\s*>/gi,
+  pre: /<\/pre\s*>/gi,
+  a: /<\/a\s*>/gi,
+};
+
+/** @returns The match of the sticky `pattern` at `index`, if any */
+function matchAt(
+  pattern: RegExp,
+  text: string,
+  index: number,
+): string | undefined {
+  pattern.lastIndex = index;
+  return pattern.exec(text)?.[0];
+}
+
+/**
+ * Finds where a construct ends, in time linear in the length of the text overall. The scanner only moves forward, so
+ * each search starts at or after the previous one for the same pattern, and a previous result can be reused.
+ */
+class ForwardSearch {
+  readonly #text: string;
+  readonly #found = new Map<RegExp, { index: number; end: number } | null>();
+  /** Starts of the backtick runs by their length, and how many of those are before the last search */
+  readonly #backtickRuns = new Map<
+    number,
+    { starts: number[]; passed: number }
+  >();
+
+  constructor(text: string) {
+    this.#text = text;
+    for (const run of text.matchAll(/`+/g)) {
+      const runs = this.#backtickRuns.get(run[0].length) ?? {
+        starts: [],
+        passed: 0,
+      };
+      runs.starts.push(run.index);
+      this.#backtickRuns.set(run[0].length, runs);
+    }
+  }
+
+  /** @returns The first match of the global `pattern` that starts at or after `from`; use the same `pattern` object */
+  next(pattern: RegExp, from: number) {
+    let found = this.#found.get(pattern);
+    if (found === undefined || (found !== null && found.index < from)) {
+      pattern.lastIndex = from;
+      const match = pattern.exec(this.#text);
+      found = match && { index: match.index, end: pattern.lastIndex };
+      this.#found.set(pattern, found);
+    }
+    return found ?? undefined;
+  }
+
+  /** @returns The start of the first run of exactly `length` backticks that starts at or after `from` */
+  backtickRun(length: number, from: number): number | undefined {
+    const runs = this.#backtickRuns.get(length);
+    if (runs === undefined) return undefined;
+    while (runs.starts[runs.passed] < from) runs.passed++;
+    return runs.starts[runs.passed];
+  }
+}
