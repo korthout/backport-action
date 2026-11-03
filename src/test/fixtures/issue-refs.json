@@ -1,0 +1,117 @@
+{
+  "repository": "korthout/backport-action",
+  "cases": [
+    {
+      "name": "#N: separated by spaces, or preceded or followed by punctuation",
+      "markdown": "relates to #706 #752. (#753) [#749]: x -#755 a/#756",
+      "expected": ["#706", "#752", "#753", "#749", "#755", "#756"]
+    },
+    {
+      "name": "#N: not glued to a word, another reference or an entity",
+      "markdown": "foo#706 #752abc #753#749 &#755;",
+      "expected": ["#753"]
+    },
+    {
+      "name": "leading zeros: in references and urls",
+      "markdown": "#0 #0706 camunda/camunda#01 https://github.com/korthout/backport-action/issues/0752",
+      "expected": [
+        "#0706",
+        "camunda/camunda#01",
+        "korthout/backport-action#752"
+      ]
+    },
+    {
+      "name": "GH-N: in any case, not glued to a word or a reference",
+      "markdown": "GH-706 gh-752 fooGH-753 GH-749abc GH-755#1",
+      "expected": ["GH-706", "gh-752"]
+    },
+    {
+      "name": "owner/repo#N: not glued to a word or a dot, and the repository needs an owner",
+      "markdown": "actions/checkout#1. x.camunda/camunda#1 v4.2/foo#3 a.b/c#2 backport-action#706 korthout/backport-action#752abc",
+      "expected": ["actions/checkout#1"]
+    },
+    {
+      "name": "owner/repo#N: not preceded by a slash",
+      "markdown": "a/b/c#2 docs/korthout/backport-action#706 /actions/checkout#1 actions/checkout#3",
+      "expected": ["actions/checkout#3"]
+    },
+    {
+      "name": "owner/repo#N: not at the end of a path, also one with a dot",
+      "markdown": "release/v4.2/foo#1 docs/v1.0/korthout/backport-action#706 actions/checkout#3",
+      "expected": ["actions/checkout#3"]
+    },
+    {
+      "name": "owner/repo#N: not at the end of an absolute path",
+      "markdown": "/release/v4.2/foo#1 ~/a.b/c#2 /a/b#3 actions/checkout#4",
+      "expected": ["actions/checkout#4"]
+    },
+    {
+      "name": "owner/repo#N: after punctuation other than a dot or a slash",
+      "markdown": "(actions/checkout#1) [actions/checkout#2] \"actions/checkout#3\" ,actions/checkout#4 **x.**actions/checkout#5",
+      "expected": [
+        "actions/checkout#1",
+        "actions/checkout#2",
+        "actions/checkout#3",
+        "actions/checkout#4",
+        "actions/checkout#5"
+      ]
+    },
+    {
+      "name": "owner/repo#N: not after a dot, like after a host such as gitlab.com",
+      "markdown": "see gitlab.com/group#12 and gitlab.com/group/project#13",
+      "expected": []
+    },
+    {
+      "name": "url: to an issue or pull request, with or without scheme",
+      "markdown": "https://github.com/camunda/camunda/issues/1 github.com/actions/checkout/pull/1 https://github.com/korthout/backport-action/pull/749/ https://github.com/korthout/backport-action/issues/706#issuecomment-1",
+      "expected": [
+        "camunda/camunda#1",
+        "actions/checkout#1",
+        "korthout/backport-action#749",
+        "korthout/backport-action#706"
+      ]
+    },
+    {
+      "name": "url: also with www.",
+      "markdown": "https://www.github.com/actions/checkout/issues/1 www.github.com/actions/checkout/pull/2",
+      "expected": ["actions/checkout#1", "actions/checkout#2"]
+    },
+    {
+      "name": "same issue: listed once, as first written",
+      "markdown": "#1 GH-2 #01 Actions/Checkout#1 actions/checkout#1 Actions/Checkout#3 #3",
+      "expected": [
+        "#1",
+        "GH-2",
+        "Actions/Checkout#1",
+        "Actions/Checkout#3",
+        "#3"
+      ]
+    },
+    {
+      "name": "same issue: written in full replaces a bare reference to the repository, in place",
+      "markdown": "Korthout/Backport-Action#1 #1 korthout/backport-action#1 #2 GH-3 korthout/backport-action#2 #4 https://github.com/Korthout/Backport-Action/pull/5 #5",
+      "expected": [
+        "Korthout/Backport-Action#1",
+        "korthout/backport-action#2",
+        "GH-3",
+        "#4",
+        "Korthout/Backport-Action#5"
+      ]
+    },
+    {
+      "name": "existence: issues and repositories aren't checked",
+      "markdown": "#999999 nope/nope#1",
+      "expected": ["#999999", "nope/nope#1"]
+    },
+    {
+      "name": "url: other urls are plain links",
+      "markdown": "http://github.com/korthout/backport-action/issues/752 https://github.com/korthout/backport-action/pull/749/files https://example.com/#753",
+      "expected": []
+    },
+    {
+      "name": "html entity: isn't a reference as written",
+      "markdown": "&#35;706 &num;752",
+      "expected": []
+    }
+  ]
+}
