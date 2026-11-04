@@ -735,8 +735,10 @@ describe("Backport.run() orchestration", () => {
       const backport = new Backport(github, config, git);
       await backport.run();
 
-      expect(github.createdPRs[0].draft).toBe(true);
-      expect(github.autoMergeByPR.has(100)).toBe(false);
+      expect(github.createdPRs).toHaveLength(1);
+      const [draftPr] = github.createdPRs;
+      expect(draftPr.draft).toBe(true);
+      expect(github.autoMergeByPR.has(draftPr.number)).toBe(false);
       expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
     });
   });
