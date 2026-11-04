@@ -822,6 +822,51 @@ describe("Backport.run() orchestration", () => {
   });
 
   describe("comment_style: legacy (default)", () => {
+    it("unmerged pull request: failed error comment does not fail the job", async () => {
+      const github = new FakeGithub({ merged: false });
+      const error = new Error("comment creation failed");
+      github.failOn("createComment", error);
+      const logError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        const backport = new Backport(github, makeConfig(), createMockGit());
+        await backport.run();
+
+        expect(logError).toHaveBeenCalledWith(
+          "Failed to create comment on original pull request:",
+          error,
+        );
+        expect(core.setFailed).not.toHaveBeenCalled();
+        expect(github.createdPRs).toHaveLength(0);
+      } finally {
+        logError.mockRestore();
+      }
+    });
+
+    it("merge commits not allowed: failed error comment does not fail the job", async () => {
+      const github = new FakeGithub();
+      const error = new Error("comment creation failed");
+      github.failOn("createComment", error);
+      const git = createMockGit({
+        findMergeCommits: vi.fn().mockResolvedValue(["abc123"]),
+      });
+      const logError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        const backport = new Backport(github, makeConfig(), git);
+        await backport.run();
+
+        expect(logError).toHaveBeenCalledWith(
+          "Failed to create comment on original pull request:",
+          error,
+        );
+        expect(core.setFailed).not.toHaveBeenCalled();
+        expect(github.createdPRs).toHaveLength(0);
+      } finally {
+        logError.mockRestore();
+      }
+    });
+
     it("single target: posts one comment and never updates", async () => {
       const github = new FakeGithub();
       const git = createMockGit();
