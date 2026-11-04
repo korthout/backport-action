@@ -1,6 +1,6 @@
 ---
 name: decision-brief
-description: Use when deciding whether a backport-action issue, feature request or PR fits the product ("should we do #N?"), working through the decision backlog, recording a decision, or mining past decisions into ADRs.
+description: Use when deciding whether a backport-action issue, feature request or PR fits the product ("should we do #N?"), checking a contributor's proposed approach on an issue before they open a pull request, working through the decision backlog, recording a decision, or mining past decisions into ADRs.
 ---
 
 # Decision brief
