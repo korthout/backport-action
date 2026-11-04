@@ -186,7 +186,11 @@ export async function postCreatePR(
     }
   }
 
-  if (config.auto_merge_enabled === true && !newPr.draft) {
+  if (config.auto_merge_enabled === true && newPr.draft) {
+    console.info(
+      `Not enabling auto-merge for PR #${newPrNumber}, because GitHub doesn't allow auto-merge on draft pull requests`,
+    );
+  } else if (config.auto_merge_enabled === true) {
     console.info("Attempting to enable auto-merge for PR #" + newPrNumber);
     try {
       await github.enableAutoMerge(
