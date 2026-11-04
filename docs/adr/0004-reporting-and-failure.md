@@ -10,6 +10,8 @@ The action can backport to several target branches in one run, and some may succ
 
 **A misconfiguration fails the job before backporting starts.** No backport could succeed, so failing fast is the only useful outcome. Missing permissions count as a misconfiguration too. Today they only surface partway through, as a failed backport. Detecting them up front isn't a breaking change (ADR-0001): the old behavior is unusable, because missing permissions never produce a successful backport.
 
+**A failed comment doesn't change the job's status.** Comments are prose (ADR-0001), so the action logs the failure and carries on as if the comment had been posted. That holds even when a missing permission causes it: a missing permission is a misconfiguration, and it fails the job when it's detected up front, not when a comment fails ([#619](https://github.com/korthout/backport-action/issues/619#issuecomment-6634446431)).
+
 **A failed backport doesn't fail the job by default.** It is reported per target branch ([#343](https://github.com/korthout/backport-action/issues/343#issuecomment-1570782481)). An opt-in to fail the job on failed backports is acceptable ([#647](https://github.com/korthout/backport-action/issues/647)) under two conditions:
 
 - Its documentation states that a failed job may still have created some backport pull requests.
