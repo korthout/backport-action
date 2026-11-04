@@ -19,6 +19,22 @@ export function requestError(
   });
 }
 
+/**
+ * Mirrors `GraphqlResponseError` from `@octokit/graphql`, which `GithubApi`
+ * throws when GitHub rejects a GraphQL request. Like the real one, it is not a
+ * `RequestError`. Defined here because `@octokit/graphql` is only a transitive
+ * dependency.
+ */
+class GraphqlResponseError extends Error {
+  override name = "GraphqlResponseError";
+
+  constructor(responseError: string) {
+    super(
+      `Request failed due to following response errors:\n - ${responseError}`,
+    );
+  }
+}
+
 function makePullRequest(overrides?: Partial<PullRequest>): PullRequest {
   return {
     number: 42,
@@ -249,6 +265,9 @@ export class FakeGithub implements GithubApi {
   ) {
     if (this._failures.has("enableAutoMerge"))
       throw this._failures.get("enableAutoMerge")!;
+    if (this.createdPRs.find((created) => created.number === pr)?.draft) {
+      throw new GraphqlResponseError("Pull request Pull request is a draft");
+    }
     this.autoMergeByPR.set(pr, mergeMethod);
     return { status: 200 as const };
   }
