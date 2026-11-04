@@ -208,7 +208,7 @@ export class FakeGithub implements GithubApi {
     }
     const number = this._nextPrNumber++;
     this.createdPRs.push({ ...pr, number });
-    return { status: 201 as const, data: { number } };
+    return { status: 201 as const, data: { number, draft: pr.draft } };
   }
 
   async labelPR(pr: number, labels: string[], _repo: Repo) {

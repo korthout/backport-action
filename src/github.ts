@@ -499,6 +499,7 @@ export type CreatePullRequestResponse = {
   status: number;
   data: {
     number: number;
+    draft?: boolean;
     requested_reviewers?: ({ login: string } | null)[] | null;
   };
 };
