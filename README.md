@@ -242,7 +242,6 @@ Default: `false` (disabled)
 
 Controls whether to auto-merge the created backport pull request.
 When enabled, backport pull requests will automatically merge when all required checks pass and approvals are received.
-Auto-merge is skipped for draft backport pull requests, such as those created with `conflict_resolution: draft_commit_conflicts`.
 Can be set to a simple boolean (`true`/`false`) or controlled dynamically via workflow expressions. Examples:
 
 **Simple boolean** (always enable or disable):
@@ -392,7 +391,7 @@ In all cases, the action will stop the cherry-pick at the first conflict encount
 
 Behavior is defined by the option selected.
 - When set to `fail` the backport fails when the cherry-pick encounters a conflict.
-- When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed.
+- When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed. Auto-merge won't be enabled for this draft pull request, because GitHub doesn't allow auto-merge on drafts.
 
 Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
 
