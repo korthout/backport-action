@@ -119,7 +119,7 @@ inputs:
 
       Behavior is defined by the option selected.
       - When set to `fail` the backport fails when the cherry-pick encounters a conflict.
-      - When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed.
+      - When set to `draft_commit_conflicts` the backport will always create a draft pull request with the first conflict encountered committed. Auto-merge won't be enabled for this draft pull request, because GitHub doesn't allow auto-merge on drafts.
 
       Instructions are provided on the original pull request on how to resolve the conflict and continue the cherry-pick.
 
