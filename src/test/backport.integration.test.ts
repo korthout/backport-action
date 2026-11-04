@@ -741,6 +741,29 @@ describe("Backport.run() orchestration", () => {
 
       expect(github.autoMergeByPR.get(100)).toBe("merge");
     });
+
+    it("auto-merge enabled: skips for backport PR with conflicts", async () => {
+      const github = new FakeGithub();
+      const git = createMockGit({
+        cherryPick: vi.fn().mockResolvedValue({
+          status: "conflicts",
+          uncommittedShas: ["abc123"],
+          skippedShas: [],
+        }),
+      });
+      const config = makeConfig({
+        auto_merge_enabled: true,
+        experimental: { conflict_resolution: "draft_commit_conflicts" },
+      });
+      const backport = new Backport(github, config, git);
+      await backport.run();
+
+      expect(github.createdPRs).toHaveLength(1);
+      const [draftPr] = github.createdPRs;
+      expect(draftPr.draft).toBe(true);
+      expect(github.autoMergeByPR.has(draftPr.number)).toBe(false);
+      expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+    });
   });
 
   describe("outputs", () => {

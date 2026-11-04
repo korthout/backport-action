@@ -489,6 +489,7 @@ export class Backport {
 
       console.info(`Create PR for ${branchname}`);
       const { title, body } = this.composePRContent(targetBranch, mainpr);
+      const draft = cherryPickResult.status === "conflicts";
       let new_pr_response: CreatePullRequestResponse;
       try {
         new_pr_response = await this.github.createPR({
@@ -499,7 +500,7 @@ export class Backport {
           head: branchname,
           base: targetBranch,
           maintainer_can_modify: true,
-          draft: cherryPickResult.status === "conflicts",
+          draft,
         });
       } catch (error) {
         if (!(error instanceof RequestError)) throw error;
@@ -535,7 +536,7 @@ export class Backport {
       await postCreatePR(
         this.github,
         this.config,
-        new_pr.number,
+        new_pr,
         mainpr,
         context.labelsToCopy,
         { owner: targetOwner, repo: targetRepo },
