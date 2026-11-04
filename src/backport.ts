@@ -536,12 +536,11 @@ export class Backport {
       await postCreatePR(
         this.github,
         this.config,
-        new_pr.number,
+        new_pr,
         mainpr,
         context.labelsToCopy,
         { owner: targetOwner, repo: targetRepo },
         { owner: context.workflowOwner, repo: context.workflowRepo },
-        draft,
       );
 
       if (cherryPickResult.status === "conflicts") {

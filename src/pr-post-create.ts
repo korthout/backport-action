@@ -1,5 +1,10 @@
 import type { Config } from "./backport.js";
-import { GithubApi, PullRequest, RequestError } from "./github.js";
+import {
+  CreatePullRequestResponse,
+  GithubApi,
+  PullRequest,
+  RequestError,
+} from "./github.js";
 
 /**
  * Performs the post-PR-creation side-effects: copying milestones, assignees,
@@ -12,13 +17,14 @@ import { GithubApi, PullRequest, RequestError } from "./github.js";
 export async function postCreatePR(
   github: GithubApi,
   config: Config,
-  newPrNumber: number,
+  newPr: CreatePullRequestResponse["data"],
   mainpr: PullRequest,
   labelsToCopy: string[],
   targetRepo: { owner: string; repo: string },
   workflowRepo: { owner: string; repo: string },
-  draft: boolean,
 ): Promise<void> {
+  const newPrNumber = newPr.number;
+
   if (config.copy_milestone == true) {
     const milestone = mainpr.milestone?.number;
     if (milestone) {
@@ -180,7 +186,7 @@ export async function postCreatePR(
     }
   }
 
-  if (config.auto_merge_enabled === true && !draft) {
+  if (config.auto_merge_enabled === true && !newPr.draft) {
     console.info("Attempting to enable auto-merge for PR #" + newPrNumber);
     try {
       await github.enableAutoMerge(
