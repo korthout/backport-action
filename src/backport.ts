@@ -40,6 +40,9 @@ type PRContent = {
   body: string;
 };
 
+const ALL_MERGE_COMMITS_EXCLUDED =
+  "all selected commits were merge commits excluded by `merge_commits: skip`";
+
 /**
  * Per-run context shared by every per-target backport.
  *
@@ -380,6 +383,14 @@ export class Backport {
     const { targetOwner, targetRepo, remote, commitShasToCherryPick, mainpr } =
       context;
 
+    if (commitShasToCherryPick.length === 0) {
+      return {
+        status: "skipped",
+        targetBranch,
+        reason: ALL_MERGE_COMMITS_EXCLUDED,
+      };
+    }
+
     console.log(`Backporting to target branch '${targetBranch}...'`);
 
     try {
@@ -571,15 +582,8 @@ export class Backport {
   }
 
   /**
-   * Posts the per-target comments matching the existing legacy behavior:
-   *   - failed: post the failure message on the source PR
-   *   - success / success_with_conflicts: post the success message on the
-   *     source PR; for conflicts, also post the recovery instructions on
-   *     the new backport PR
-   *   - skipped: no comment (matches the previous `continue` behavior)
-   *
-   * Phase 8c will replace this with the progressive summary comment flow
-   * when `comment_style: summary` is enabled.
+   * Posts per-target comments in legacy mode. Skipped target branches are
+   * silent unless every commit was excluded by `merge_commits: skip`.
    */
   private async handleTargetResultLegacy(
     result: TargetResult,
@@ -588,7 +592,24 @@ export class Backport {
     const { workflowOwner, workflowRepo, targetOwner, targetRepo, pullNumber } =
       context;
 
-    if (result.status === "skipped") return;
+    if (result.status === "skipped") {
+      if (result.reason === ALL_MERGE_COMMITS_EXCLUDED) {
+        try {
+          await this.github.createComment({
+            owner: workflowOwner,
+            repo: workflowRepo,
+            issue_number: pullNumber,
+            body: `Nothing to backport to \`${result.targetBranch}\`: ${result.reason}.`,
+          });
+        } catch (error) {
+          console.error(
+            "Failed to post comment on the original pull request:",
+            error,
+          );
+        }
+      }
+      return;
+    }
 
     if (result.status === "failed") {
       const message = composeFailureMessage(result);

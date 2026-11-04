@@ -343,7 +343,7 @@ describe("formatRunComment", () => {
     ];
     const out = formatRunComment(results, [], context);
 
-    expect(out).toContain("backported this pull request");
+    expect(out).toContain("found nothing to backport");
     expect(out).toContain(":heavy_minus_sign: Skipped");
     expect(out).not.toContain("<details>");
   });
