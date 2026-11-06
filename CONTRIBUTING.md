@@ -77,11 +77,18 @@ PRs should not include changes to `dist/` — it is rebuilt automatically after 
 It's fine to temporarily commit `dist/` for testing purposes, but those changes should be removed before merging.
 See [CI.md](docs/CI.md) for details.
 
+### Branches and backports
+
+Once `release-vN` has been cut, `main` develops the next major (today `main` develops v5, and `release-v4` is the current major).
+
+- A change that should also ship in the current major (fixes, non-breaking additions, dependency and security updates) gets the `backport release-vN` label, e.g. `backport release-v4`. When the pull request is merged to `main`, this action backports it to `release-vN`.
+- A breaking change gets the `breaking` label and merges to `main` without a `backport` label, so it ships with the next major. See [ADR-0001](docs/adr/0001-compatibility-and-releases.md).
+
 ### Releases
 
 The distribution is hosted in this repository under `dist`.
 Simply build and package the distribution and commit the changes to publish a new snapshot version.
 
-To release a version, run the [Release](https://github.com/korthout/backport-action/actions/workflows/release.yml) workflow from the branch that should be released.
+To release a version, run the [Release](https://github.com/korthout/backport-action/actions/workflows/release.yml) workflow from the branch that should be released. Releases of the current major run from `release-vN`, releases of the next major from `main`.
 This sets the release version and tags the release commit.
 It also creates/moves the major and minor tags (e.g. `v1` and `v1.2`) to the latest corresponding release as [officially recommended](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md).
