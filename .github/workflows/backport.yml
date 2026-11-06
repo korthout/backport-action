@@ -4,9 +4,7 @@ on:
     types: [closed]
   issue_comment:
     types: [created]
-permissions:
-  contents: write # so it can comment
-  pull-requests: write # so it can create pull requests
+permissions: {} # the job uses the backport-action app's token, not GITHUB_TOKEN
 jobs:
   backport:
     name: Backport pull request
@@ -25,8 +23,19 @@ jobs:
         startsWith(github.event.comment.body, '/backport')
       )
     steps:
+      # Pull requests opened with GITHUB_TOKEN wait for approval before CI runs.
+      # The app's token makes the backport pull requests run CI right away.
+      - name: Create app token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.BACKPORT_ACTION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BACKPORT_ACTION_APP_PRIVATE_KEY }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }} # backport-action pushes with it
       - name: Create backport pull requests
         uses: korthout/backport-action@0ebd44f9c79a4a0a171200dcdcceec3ed9ca732f # v4.7.1
         with:
           comment_style: summary
+          github_token: ${{ steps.app-token.outputs.token }}

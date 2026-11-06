@@ -5,7 +5,10 @@
 - **CI** (`ci.yml`) validates PRs (format-check, build, package, test).
 - **Publish** (`publish.yml`) commits built `dist/` artifacts after merges to `main` and `release-*` branches, and moves the `vN.next-preview` tag to that commit, with N the major version in `package.json`.
 - **Release** (`release.yml`) stamps versions and creates tags (manual trigger). Does not build `dist/` itself -- Publish handles that when Release pushes to `main` or `release-*`.
-- **Backport** (`backport.yml`) cherry-picks merged PRs to release branches via the backport-action itself.
+- **Backport** (`backport.yml`) cherry-picks merged pull requests to release branches via the backport-action itself.
+  It authenticates as the `backport-action` GitHub App, so CI runs on its backport pull requests without approval.
+  Mergify merges them once `build` passes, unless they're labeled `do-not-merge`.
+  The app's credentials are the repository variable `BACKPORT_ACTION_APP_CLIENT_ID` and the secret `BACKPORT_ACTION_APP_PRIVATE_KEY`.
 
 ## Why dist/ is committed post-merge, not in PRs
 
