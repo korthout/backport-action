@@ -22,7 +22,7 @@ Pick from the request:
 
 Every mode judges against the same sources. Read them before writing anything:
 
-- `CLAUDE.md` — product values (Fast, No inputs required, Flexible & configurable, Clear), "Don't break user space", maintainability stance
+- `AGENTS.md` — product values (Fast, No inputs required, Flexible & configurable, Clear), "Don't break user space", maintainability stance
 - `CONTEXT.md` — domain language; use its terms and respect its _Avoid_ lists
 - `docs/adr/` — past decisions (may not exist yet; see bootstrap)
 
@@ -103,7 +103,7 @@ Once the maintainer decides:
 3. Propose labels (`accepted`, `declined`, `needs-design`).
 4. Show the draft reply and labels, and wait for approval before touching GitHub.
 
-If the maintainer overrules the recommendation, ask for the reason in a sentence and capture it — as an ADR or a CONTEXT.md/CLAUDE.md note. Disagreements are how future briefs get calibrated; losing them means the same wrong recommendation next time.
+If the maintainer overrules the recommendation, ask for the reason in a sentence and capture it — as an ADR or a CONTEXT.md/AGENTS.md note. Disagreements are how future briefs get calibrated; losing them means the same wrong recommendation next time.
 
 ## When the decision needs real design
 
