@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 GitHub Action that backports merged PRs to other branches.
 
@@ -48,7 +48,7 @@ This action has many users; maintainer burden compounds. When facing tradeoffs, 
 
 ## Pointers
 
-Entry points live at the root (README, CONTRIBUTING, CLAUDE, CONTEXT). Reference material they link to lives in `docs/`.
+Entry points live at the root (README, CONTRIBUTING, AGENTS, CONTEXT). Reference material they link to lives in `docs/`.
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) — build, package, release flow
 - [docs/TESTING.md](docs/TESTING.md) — test architecture, where to add tests, E2E
