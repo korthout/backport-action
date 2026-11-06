@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 GitHub Action that backports merged PRs to other branches.
 
@@ -36,8 +36,6 @@ This action has many users; maintainer burden compounds. When facing tradeoffs, 
 - Once `release-vN` is cut, `main` develops the next major. A change that should also ship in the current major gets the `backport release-vN` label (today `backport release-v4`); breaking changes don't. See [CONTRIBUTING.md](CONTRIBUTING.md#branches-and-backports)
 - Merging goes through the Mergify queue (`@mergifyio queue`) — don't merge or push to `main` directly
 - File issues from a template in `.github/ISSUE_TEMPLATE/`, keep its headings, and pass its `labels` to `gh issue create --label`
-- Input docs live in two places: `README.md` (under `## Inputs`) and `action.yml` (`description:` field). Keep them in sync — any change to one must be mirrored in the other.
-- Inputs are sorted alphanumerically in both places. README examples show the default value. Docs say "pull request", not "PR".
 - An input's name states exactly what it does and aligns with its siblings (e.g. `copy_requested_reviewers`, `add_labels`, `auto_merge_enabled`)
 
 ## Reviewing contributions
@@ -48,8 +46,9 @@ This action has many users; maintainer burden compounds. When facing tradeoffs, 
 
 ## Pointers
 
-Entry points live at the root (README, CONTRIBUTING, CLAUDE, CONTEXT). Reference material they link to lives in `docs/`.
+Entry points live at the root (README, CONTRIBUTING, AGENTS, CONTEXT). Reference material they link to lives in `docs/`.
 
+- [docs/DOCUMENTING.md](docs/DOCUMENTING.md) — doc conventions; read when changing or reviewing README.md or action.yml
 - [CONTRIBUTING.md](CONTRIBUTING.md) — build, package, release flow
 - [docs/TESTING.md](docs/TESTING.md) — test architecture, where to add tests, E2E
 - [CONTEXT.md](CONTEXT.md) — domain language; use its terms and respect its _Avoid_ lists
