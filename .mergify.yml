@@ -19,3 +19,11 @@ pull_request_rules:
     actions:
       queue:
         name: default
+  - name: automatic merge for backport pull requests
+    conditions:
+      - author = backport-action[bot]
+      - check-success = build
+      - label != do-not-merge
+    actions:
+      queue:
+        name: default
