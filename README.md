@@ -58,11 +58,71 @@ jobs:
 > **Note**
 > This workflow runs on [`pull_request_target`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target) so that `GITHUB_TOKEN` has write access to the repo when the merged pull request comes from a forked repository.
 > This write access is necessary for the action to push the commits it cherry-picked.
+> On public repositories, from December 2, 2026, GitHub [blocks `pull_request_target`](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target#default-policy-for-pull_request_target) unless an [Actions policy](https://docs.github.com/en/actions/how-tos/administer/control-workflow-execution) allows it.
+> To keep backporting, add a policy in your repository's settings that targets this workflow file and allows `pull_request_target`.
+
+### Run CI on backport pull requests
+
+By default, the action creates backport pull requests with `GITHUB_TOKEN`.
+On these pull requests, your CI may not run at all, or its runs wait for a maintainer to approve them.
+To run CI right away, give the action a token from a [GitHub App](https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps) or a [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) (PAT).
+We recommend a GitHub App: with a PAT, the backport pull requests are created by the person who owns the token, and the token expires and has to be rotated.
+
+<details><summary>Run CI on backport pull requests with a GitHub App</summary>
+ <p>
+
+1. [Register a GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) owned by the account that owns your repository, user or organization.
+   In that account's **Settings**, go to **Developer settings** → **GitHub Apps** and click **New GitHub App**:
+   - Enter a **GitHub App name** and a **Homepage URL**, for example your repository's URL.
+   - Under **Webhook**, deselect **Active**, because the app doesn't need webhook events.
+   - Under **Permissions** → **Repository permissions**, set **Contents** and **Pull requests** to **Read and write**.
+     If backports may change files in `.github/workflows`, also set **Workflows** to **Read and write**, because GitHub refuses changes to workflow files from an app without it.
+     These permissions are enough for the action's default inputs.
+   - Under **Where can this GitHub App be installed?**, keep **Only on this account**.
+     A private app can only be installed on the account that owns it.
+   - Click **Create GitHub App**.
+     The app's **General** page shows its **Client ID**.
+2. In the app's settings, go to **Credentials** → **Key pairs** and click **New key** to generate a private key.
+   GitHub requires a private key before you can install the app.
+3. Click **Install App**, then **Install** next to your account, and select **Only select repositories** with your repository.
+4. In your repository's **Settings** → **Secrets and variables** → **Actions**, store the app's client ID as a variable (for example `APP_CLIENT_ID`) and the private key as a secret (for example `APP_PRIVATE_KEY`).
+5. Create a token with the app, and pass it to both `actions/checkout` and the action.
+   Pin any third‑party action you use for this by commit SHA for supply‑chain security.
+
+```yaml
+...
+steps:
+  - name: Create app token
+    id: app-token
+    uses: actions/create-github-app-token@v3
+    with:
+      client-id: ${{ vars.APP_CLIENT_ID }}
+      private-key: ${{ secrets.APP_PRIVATE_KEY }}
+  - uses: actions/checkout@v6
+    with:
+      # the action pushes the backport branch with these credentials
+      token: ${{ steps.app-token.outputs.token }}
+  - name: Create backport pull requests
+    uses: korthout/backport-action@v4
+    with:
+      # the action creates the backport pull request with this token
+      github_token: ${{ steps.app-token.outputs.token }}
+```
+
+The backport pull requests are then created by the app, and their CI runs without approval.
+
+> **Note**
+> To use a PAT instead, give it the same permissions as in step 1, and use it in place of `steps.app-token.outputs.token`.
+
+</p>
+</details>
 
 ### Trigger using a comment
 
 You can also trigger the backport action by writing a comment containing `/backport` on a merged pull request.
 To enable this, add the following workflow configuration to your repository's `.github/workflows` folder.
+On public repositories, also allow `issue_comment` in the [Actions policy for `pull_request_target`](#usage).
+That policy blocks every event it doesn't allow for this workflow, so without `issue_comment`, the `/backport` comments fail to start the workflow.
 
 <details><summary>Trigger backport action using a comment</summary>
  <p>
@@ -411,7 +471,7 @@ Default: `${{ github.token }}`
 Token to authenticate requests to GitHub.
 Used to create and label pull requests and to comment.
 
-Either `GITHUB_TOKEN` or a repo-scoped [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) (PAT).
+Either `GITHUB_TOKEN`, a GitHub App token, or a [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) (PAT).
 
 ### `github_workspace`
 
