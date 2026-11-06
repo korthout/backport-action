@@ -11,11 +11,13 @@ Please open an [issue on GitHub](https://github.com/korthout/backport-action/iss
 
 Saw a typo or want to make other changes to the [README](https://korthout.github.io/backport-action/blob/main/README.md)?
 Feel free to open a pull request with your changes.
+Follow the [documentation conventions](docs/DOCUMENTING.md).
 
 ## Code changes
 
 I welcome code changes.
 If you're thinking of opening a large pull request, please consider opening an issue on GitHub first to discuss it.
+When your change touches `README.md` or `action.yml`, follow the [documentation conventions](docs/DOCUMENTING.md).
 
 ### Build from source
 
