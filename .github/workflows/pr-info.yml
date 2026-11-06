@@ -16,7 +16,9 @@ jobs:
           script: |
             const labels = context.payload.pull_request.labels.map(l => l.name);
             const author = context.payload.pull_request.user.login;
-            const isAutoMerge = labels.includes('automerge') && author === 'renovate[bot]';
+            const isAutoMerge =
+              (labels.includes('automerge') && author === 'renovate[bot]') ||
+              author === 'backport-action[bot]';
             const message = isAutoMerge
               ? 'This PR will be merged automatically once the build check passes.'
               : 'This PR can be added to the merge queue by commenting `@mergifyio queue`.';
