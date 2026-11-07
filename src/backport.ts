@@ -207,12 +207,20 @@ export class Backport {
         if (isSummary) {
           await updateSummary(formatRunComment([], [], commentCtx, message));
         } else {
-          this.github.createComment({
-            owner: workflowOwner,
-            repo: workflowRepo,
-            issue_number: pull_number,
-            body: message,
-          });
+          try {
+            await this.github.createComment({
+              owner: workflowOwner,
+              repo: workflowRepo,
+              issue_number: pull_number,
+              body: message,
+            });
+          } catch (error) {
+            // A failed comment must not change the job's status (ADR-0004).
+            console.error(
+              "Failed to create comment on original pull request:",
+              error,
+            );
+          }
         }
         return;
       }
@@ -250,12 +258,20 @@ export class Backport {
               formatRunComment([], target_branches, commentCtx, error.message),
             );
           } else {
-            this.github.createComment({
-              owner: workflowOwner,
-              repo: workflowRepo,
-              issue_number: pull_number,
-              body: error.message,
-            });
+            try {
+              await this.github.createComment({
+                owner: workflowOwner,
+                repo: workflowRepo,
+                issue_number: pull_number,
+                body: error.message,
+              });
+            } catch (commentError) {
+              // A failed comment must not change the job's status (ADR-0004).
+              console.error(
+                "Failed to create comment on original pull request:",
+                commentError,
+              );
+            }
           }
           return;
         }
