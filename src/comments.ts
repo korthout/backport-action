@@ -77,6 +77,9 @@ function formatIntroduction(
   if (failedCount > 0) {
     return `${ACTION_LINK} completed backporting this pull request with failures in ${runLink}.`;
   }
+  if (results.length > 0 && results.every((r) => r.status === "skipped")) {
+    return `${ACTION_LINK} found nothing to backport for this pull request in ${runLink}.`;
+  }
   return `${ACTION_LINK} backported this pull request in ${runLink}.`;
 }
 
