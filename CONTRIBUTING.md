@@ -7,6 +7,8 @@ I welcome contributions for feature requests and bug reports, as well as for doc
 If you would want to see something added or changed, or encountered a bug.
 Please open an [issue on GitHub](https://github.com/korthout/backport-action/issues).
 
+To report a security vulnerability, don't open an issue; follow the [security policy](SECURITY.md) instead.
+
 ## Docs changes
 
 Saw a typo or want to make other changes to the [README](https://korthout.github.io/backport-action/blob/main/README.md)?
