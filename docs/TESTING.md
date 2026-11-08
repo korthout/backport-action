@@ -32,17 +32,25 @@ E2E tests (separate repository)
 └── korthout/backport-action-test  — real GitHub Actions + real GitHub API
 ```
 
+The codebase has two external boundaries: `GithubApi` and `GitApi`. The integration tests mock/fake one or more of these boundaries. For example, `git.integration.test.ts` uses `FakeGithub` (a fake `GithubApi`) so it can test against a real Git repo. This gives fast orchestration tests AND realistic git tests without needing a real GitHub API.
+
+E2E tests in [korthout/backport-action-test](https://github.com/korthout/backport-action-test) complete the strategy by exercising the action on real GitHub PRs against the real GitHub API and workflow triggers.
+
+## How tests are written
+
 The tests in this repo are written like this:
 - Easy to understand what the test does
 - Easy to extend for new features (mostly just copy-paste and adjust)
-- Test behavior not implementation by verifying results rather than checking that a function was called
+- Test behavior, not implementation (see [Testing behavior](#testing-behavior))
 - They need to run fast, keeping the total duration of all tests under 5 seconds
 
 That means that most tests will either be unit tests or fast running integration tests.
 
-The codebase has two external boundaries: `GithubApi` and `GitApi`. The integration tests mock/fake one or more of these boundaries. For example, `git.integration.test.ts` uses `FakeGithub` (a fake `GithubApi`) so it can test against a real Git repo. This gives fast orchestration tests AND realistic git tests without needing a real GitHub API.
+### Testing behavior
 
-E2E tests in [korthout/backport-action-test](https://github.com/korthout/backport-action-test) complete the strategy by exercising the action on real GitHub PRs against the real GitHub API and workflow triggers.
+Behavior is anything users can experience from the action: for example, the pull requests it opens, the comments it writes, its outputs, its logs, and whether the job fails. Tests verify behavior where users experience it (the fakes for the `GithubApi` and `GitApi` boundaries, the mocked `@actions/core`, and spies on `console`), not at the code in between. That way, parts of the implementation can be swapped without breaking the test suite.
+
+A test should only fail when what users experience changes. That failure is a prompt to decide: were we aware of this change, and do we want it? Not every change breaks what users depend on. Prose like comments and logs may change in any release, but we should still know when it does. That's why logs are worth testing too.
 
 ## Where to add your test
 
