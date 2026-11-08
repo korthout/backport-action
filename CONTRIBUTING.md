@@ -63,6 +63,11 @@ npm run all
 
 This action can also be tested end-to-end using [korthout/backport-action-test](https://github.com/korthout/backport-action-test).
 
+### Commit messages
+
+Explain in each commit message why the change is needed, not only what it changes.
+Future readers of the history rely on that reason to understand the change.
+
 ### CI Design
 
 For details on why `dist/` is not committed in PRs and how the CI workflows interact, see [CI.md](docs/CI.md).
