@@ -6,6 +6,10 @@ on:
       - main
       - 'release-*'
 
+# Fetches and pushes go over SSH with PUBLISH_DEPLOY_KEY, not GITHUB_TOKEN.
+permissions:
+  contents: read
+
 concurrency:
   group: publish-${{ github.ref }}
   cancel-in-progress: true
