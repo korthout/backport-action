@@ -36,6 +36,7 @@ This action has many users; maintainer burden compounds. When facing tradeoffs, 
 - Once `release-vN` is cut, `main` develops the next major. A change that should also ship in the current major gets the `backport release-vN` label (today `backport release-v4`); breaking changes don't. See [CONTRIBUTING.md](CONTRIBUTING.md#branches-and-backports)
 - Merging goes through the Mergify queue (`@mergifyio queue`) — don't merge or push to `main` directly
 - File issues from a template in `.github/ISSUE_TEMPLATE/`, keep its headings, and pass its `labels` to `gh issue create --label`
+- Label a pull request with the label its issue template would give (`bug`, `enhancement`, `maintenance`). `documentation` is for user-facing docs; work on the repository itself, including contributor docs and `SECURITY.md`, is `maintenance`
 - An input's name states exactly what it does and aligns with its siblings (e.g. `copy_requested_reviewers`, `add_labels`, `auto_merge_enabled`)
 
 ## Reviewing contributions
