@@ -4,6 +4,8 @@ on:
   pull_request_target:
     types: [opened]
 
+permissions: {} # the job comments with BACKPORT_ACTION_PAT, not GITHUB_TOKEN
+
 jobs:
   comment:
     if: github.event.pull_request.user.login != 'mergify[bot]'
