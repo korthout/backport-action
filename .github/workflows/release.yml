@@ -15,6 +15,9 @@ on:
         description: Don't push commits or tags
         type: boolean
         default: true
+# Fetches and pushes go over SSH with PUBLISH_DEPLOY_KEY, not GITHUB_TOKEN.
+permissions:
+  contents: read
 concurrency: release
 jobs:
   release:

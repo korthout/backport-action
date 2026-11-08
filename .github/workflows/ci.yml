@@ -4,6 +4,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read # checkout fetches the pull request with GITHUB_TOKEN
+
 jobs:
   build:
     runs-on: ubuntu-latest
