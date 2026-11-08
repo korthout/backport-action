@@ -218,7 +218,11 @@ describe("Backport.run() orchestration", () => {
       "draft_commit_conflicts",
     ] as const) {
       it(`excludes all merge commits without creating a backport (${conflictResolution})`, async () => {
-        const github = new FakeGithub();
+        const github = new FakeGithub({
+          sourcePr: {
+            labels: [{ name: "backport main" }, { name: "backport release" }],
+          },
+        });
         const git = createMockGit({
           findMergeCommits: vi.fn().mockResolvedValue(["abc123"]),
         });
@@ -230,17 +234,26 @@ describe("Backport.run() orchestration", () => {
           },
           experimental: { conflict_resolution: conflictResolution },
         });
-        await new Backport(github, config, git).run();
+        const log = vi.spyOn(console, "log").mockImplementation(() => {});
+        try {
+          await new Backport(github, config, git).run();
+          expect(log).toHaveBeenCalledWith(
+            "Nothing to backport. All selected commits were merge commits excluded by `merge_commits: skip`.",
+          );
+        } finally {
+          log.mockRestore();
+        }
 
         expect(git.checkout).not.toHaveBeenCalled();
         expect(git.cherryPick).not.toHaveBeenCalled();
         expect(git.push).not.toHaveBeenCalled();
         expect(github.createdPRs).toHaveLength(0);
-        expect(github.comments).toContainEqual(
+        expect(github.comments).toHaveLength(1);
+        expect(github.comments[0]).toEqual(
           expect.objectContaining({
             issue_number: 42,
             body: expect.stringContaining(
-              "merge commits excluded by `merge_commits: skip`",
+              "All selected commits were merge commits excluded by `merge_commits: skip`",
             ),
           }),
         );
@@ -275,10 +288,11 @@ describe("Backport.run() orchestration", () => {
       const final = github.updatedComments.at(-1);
       expect(final?.body).toContain("found nothing to backport");
       expect(final?.body).toContain(
-        "merge commits excluded by `merge_commits: skip`",
+        "All selected commits were merge commits excluded by `merge_commits: skip`",
       );
-      expect(final?.body).toContain("| `main` | :heavy_minus_sign: Skipped");
-      expect(final?.body).toContain("| `release` | :heavy_minus_sign: Skipped");
+      expect(final?.body).not.toContain("| Target |");
+      expect(final?.body).not.toContain(":hourglass: Pending");
+      expect(github.comments).toHaveLength(1);
       expect(git.checkout).not.toHaveBeenCalled();
       expect(github.createdPRs).toHaveLength(0);
       expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
@@ -332,7 +346,7 @@ describe("Backport.run() orchestration", () => {
       try {
         await new Backport(github, config, git).run();
         expect(log).toHaveBeenCalledWith(
-          "Failed to post comment on the original pull request:",
+          "Failed to create comment on original pull request:",
           expect.objectContaining({ message: "comment unavailable" }),
         );
         expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);

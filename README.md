@@ -455,7 +455,7 @@ Specifies how the action should deal with merge commits on the merged pull reque
 
 - When set to `fail` the backport fails when the action detects one or more merge commits.
 - When set to `skip` the action only cherry-picks non-merge commits, i.e. it excludes merge commits.
-  If no commits remain after excluding merge commits, the action skips each target branch and does not create a backport pull request.
+  If no commits remain after excluding merge commits, the action doesn't backport to any target branch.
   This can be useful when you [keep your pull requests in sync with the base branch using merge commits](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/keeping-your-pull-request-in-sync-with-the-base-branch).
 
 ### `pull_description`
