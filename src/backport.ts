@@ -11,6 +11,7 @@ import { CherryPickResult, GitApi, GitRefNotFoundError } from "./git.js";
 import {
   CommentContext,
   formatInitialComment,
+  formatNoCommitsComment,
   formatNoTargetsComment,
   formatRunComment,
 } from "./comments.js";
@@ -39,9 +40,6 @@ type PRContent = {
   title: string;
   body: string;
 };
-
-const ALL_MERGE_COMMITS_EXCLUDED =
-  "all selected commits were merge commits excluded by `merge_commits: skip`";
 
 /**
  * Per-run context shared by every per-target backport.
@@ -286,6 +284,32 @@ export class Backport {
         throw error;
       }
 
+      if (commitShasToCherryPick.length === 0) {
+        const reason =
+          "All selected commits were merge commits excluded by `merge_commits: skip`.";
+        const message = `Nothing to backport. ${reason}`;
+        console.log(message);
+        if (isSummary) {
+          await updateSummary(formatNoCommitsComment(commentCtx, reason));
+        } else {
+          try {
+            await this.github.createComment({
+              owner: workflowOwner,
+              repo: workflowRepo,
+              issue_number: pull_number,
+              body: message,
+            });
+          } catch (error) {
+            console.error(
+              "Failed to create comment on original pull request:",
+              error,
+            );
+          }
+        }
+        this.createOutput(new Map<string, boolean>(), []);
+        return;
+      }
+
       let labelsToCopy: string[] = [];
       if (typeof this.config.copy_labels_pattern !== "undefined") {
         let copyLabelsPattern: RegExp = this.config.copy_labels_pattern;
@@ -398,14 +422,6 @@ export class Backport {
   ): Promise<TargetResult> {
     const { targetOwner, targetRepo, remote, commitShasToCherryPick, mainpr } =
       context;
-
-    if (commitShasToCherryPick.length === 0) {
-      return {
-        status: "skipped",
-        targetBranch,
-        reason: ALL_MERGE_COMMITS_EXCLUDED,
-      };
-    }
 
     console.log(`Backporting to target branch '${targetBranch}...'`);
 
@@ -598,8 +614,7 @@ export class Backport {
   }
 
   /**
-   * Posts per-target comments in legacy mode. Skipped target branches are
-   * silent unless every commit was excluded by `merge_commits: skip`.
+   * Posts per-target comments in legacy mode. Skipped target branches are silent.
    */
   private async handleTargetResultLegacy(
     result: TargetResult,
@@ -608,24 +623,7 @@ export class Backport {
     const { workflowOwner, workflowRepo, targetOwner, targetRepo, pullNumber } =
       context;
 
-    if (result.status === "skipped") {
-      if (result.reason === ALL_MERGE_COMMITS_EXCLUDED) {
-        try {
-          await this.github.createComment({
-            owner: workflowOwner,
-            repo: workflowRepo,
-            issue_number: pullNumber,
-            body: `Nothing to backport to \`${result.targetBranch}\`: ${result.reason}.`,
-          });
-        } catch (error) {
-          console.error(
-            "Failed to post comment on the original pull request:",
-            error,
-          );
-        }
-      }
-      return;
-    }
+    if (result.status === "skipped") return;
 
     if (result.status === "failed") {
       const message = composeFailureMessage(result);

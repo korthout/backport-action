@@ -108,6 +108,15 @@ export function formatNoTargetsComment(context: CommentContext): string {
                 To avoid unnecessary action runs, update your workflow so this action only runs for PRs that should be backported, such as PRs with a matching backport label or runs with explicit \`target_branches\`.`;
 }
 
+/** Body for a run with no commits left after excluding merge commits. */
+export function formatNoCommitsComment(
+  context: CommentContext,
+  reason: string,
+): string {
+  const runLink = `[workflow run ${context.runId}](${context.runUrl})`;
+  return `${ACTION_LINK} found nothing to backport from this pull request in ${runLink}.\n\n${reason}`;
+}
+
 function formatTable(
   results: TargetResult[],
   pendingTargets: string[],

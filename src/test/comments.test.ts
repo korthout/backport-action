@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   CommentContext,
   formatInitialComment,
+  formatNoCommitsComment,
   formatNoTargetsComment,
   formatRunComment,
   formatSingleTargetComment,
@@ -413,6 +414,19 @@ describe("formatRunComment", () => {
 
     expect(out).toContain(":warning: Drafted with conflicts #200");
     expect(out).not.toContain("<details>");
+  });
+});
+
+describe("formatNoCommitsComment", () => {
+  it("reports why no commits remain without a target table", () => {
+    const reason =
+      "All selected commits were merge commits excluded by `merge_commits: skip`.";
+    const out = formatNoCommitsComment(context, reason);
+
+    expect(out).toContain("found nothing to backport from this pull request");
+    expect(out).toContain(reason);
+    expect(out).toContain(`[workflow run ${context.runId}](${context.runUrl})`);
+    expect(out).not.toContain("| Target |");
   });
 });
 
