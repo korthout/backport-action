@@ -53,7 +53,10 @@ describe("get mentioned issues", () => {
       ["whitespace in a link", "[a](" + repeat(" ")],
       ["unclosed autolinks", repeat("<a:x ")],
       ["block quote markers", repeat(">")],
-      ["nested list items and blank lines", repeat("- ") + repeat("\n")],
+      [
+        "nested list items and blank lines",
+        "- ".repeat(25_000) + "x" + "\n".repeat(50_000),
+      ],
       ["glued references", repeat("#1")],
       ["repository-like words", repeat("a.a-a") + "/b#1"],
       ["urls", repeat("https://github.com/a/b/issues/1/")],
