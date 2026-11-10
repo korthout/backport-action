@@ -1,0 +1,489 @@
+{
+  "repository": "korthout/backport-action",
+  "cases": [
+    {
+      "name": "#N: separated by spaces, or preceded or followed by punctuation",
+      "markdown": "relates to #706 #752. (#753) [#749]: x -#755 a/#756",
+      "expected": ["#706", "#752", "#753", "#749", "#755", "#756"]
+    },
+    {
+      "name": "#N: not glued to a word, another reference or an entity",
+      "markdown": "foo#706 #752abc #753#749 &#755;",
+      "expected": ["#753"]
+    },
+    {
+      "name": "#N: glued to a letter other than an ascii one is a reference",
+      "markdown": "é#706 修复#752 исправляет#753",
+      "expected": ["#706", "#752", "#753"]
+    },
+    {
+      "name": "leading zeros: in references and urls",
+      "markdown": "#0 #0706 camunda/camunda#01 https://github.com/korthout/backport-action/issues/0752",
+      "expected": [
+        "#0706",
+        "camunda/camunda#01",
+        "korthout/backport-action#752"
+      ]
+    },
+    {
+      "name": "GH-N: in any case, not glued to a word or a reference",
+      "markdown": "GH-706 gh-752 fooGH-753 GH-749abc GH-755#1",
+      "expected": ["GH-706", "gh-752"]
+    },
+    {
+      "name": "owner/repo#N: not glued to a word or a dot, and the repository needs an owner",
+      "markdown": "actions/checkout#1. x.camunda/camunda#1 v4.2/foo#3 a.b/c#2 backport-action#706 korthout/backport-action#752abc",
+      "expected": ["actions/checkout#1"]
+    },
+    {
+      "name": "owner/repo#N: not preceded by a slash",
+      "markdown": "a/b/c#2 docs/korthout/backport-action#706 /actions/checkout#1 actions/checkout#3",
+      "expected": ["actions/checkout#3"]
+    },
+    {
+      "name": "owner/repo#N: not at the end of a path, also one with a dot",
+      "markdown": "release/v4.2/foo#1 docs/v1.0/korthout/backport-action#706 actions/checkout#3",
+      "expected": ["actions/checkout#3"]
+    },
+    {
+      "name": "owner/repo#N: not at the end of an absolute path",
+      "markdown": "/release/v4.2/foo#1 ~/a.b/c#2 /a/b#3 actions/checkout#4",
+      "expected": ["actions/checkout#4"]
+    },
+    {
+      "name": "owner/repo#N: after punctuation other than a dot or a slash",
+      "markdown": "(actions/checkout#1) [actions/checkout#2] \"actions/checkout#3\" ,actions/checkout#4 **x.**actions/checkout#5",
+      "expected": [
+        "actions/checkout#1",
+        "actions/checkout#2",
+        "actions/checkout#3",
+        "actions/checkout#4",
+        "actions/checkout#5"
+      ]
+    },
+    {
+      "name": "owner/repo#N: not after a dot, like after a host such as gitlab.com",
+      "markdown": "see gitlab.com/group#12 and gitlab.com/group/project#13",
+      "expected": []
+    },
+    {
+      "name": "url: to an issue or pull request, with or without scheme",
+      "markdown": "https://github.com/camunda/camunda/issues/1 github.com/actions/checkout/pull/1 https://github.com/korthout/backport-action/pull/749/ https://github.com/korthout/backport-action/issues/706#issuecomment-1",
+      "expected": [
+        "camunda/camunda#1",
+        "actions/checkout#1",
+        "korthout/backport-action#749",
+        "korthout/backport-action#706"
+      ]
+    },
+    {
+      "name": "url: also with www.",
+      "markdown": "https://www.github.com/actions/checkout/issues/1 www.github.com/actions/checkout/pull/2",
+      "expected": ["actions/checkout#1", "actions/checkout#2"]
+    },
+    {
+      "name": "same issue: listed once, as first written",
+      "markdown": "#1 GH-2 #01 Actions/Checkout#1 actions/checkout#1 Actions/Checkout#3 #3",
+      "expected": [
+        "#1",
+        "GH-2",
+        "Actions/Checkout#1",
+        "Actions/Checkout#3",
+        "#3"
+      ]
+    },
+    {
+      "name": "same issue: written in full replaces a bare reference to the repository, in place",
+      "markdown": "Korthout/Backport-Action#1 #1 korthout/backport-action#1 #2 GH-3 korthout/backport-action#2 #4 https://github.com/Korthout/Backport-Action/pull/5 #5",
+      "expected": [
+        "Korthout/Backport-Action#1",
+        "korthout/backport-action#2",
+        "GH-3",
+        "#4",
+        "Korthout/Backport-Action#5"
+      ]
+    },
+    {
+      "name": "existence: issues and repositories aren't checked",
+      "markdown": "#999999 nope/nope#1",
+      "expected": ["#999999", "nope/nope#1"]
+    },
+    {
+      "name": "url: other urls are plain links",
+      "markdown": "http://github.com/korthout/backport-action/issues/752 https://github.com/korthout/backport-action/pull/749/files https://example.com/#753",
+      "expected": []
+    },
+    {
+      "name": "paragraph text: headings, emphasis and tables don't hide references",
+      "markdown": "## Fixes #706\n\n*#752* \"#753\"\n\n| a |\n|---|\n| #749 |",
+      "expected": ["#706", "#752", "#753", "#749"]
+    },
+    {
+      "name": "setext heading: its text is linked",
+      "markdown": "#706\n---",
+      "expected": ["#706"]
+    },
+    {
+      "name": "setext heading: its underline can end with spaces or tabs",
+      "markdown": "intro\n=== \t\n    #706",
+      "expected": []
+    },
+    {
+      "name": "thematic break: isn't a list item",
+      "markdown": "* * *\n#706\n\n- - -\n    #752",
+      "expected": ["#706"]
+    },
+    {
+      "name": "thematic break: spaces or tabs between and after its markers",
+      "markdown": "*\t*\t* \t\n    #706",
+      "expected": []
+    },
+    {
+      "name": "fenced code block: backticks or tildes, with an info string",
+      "markdown": "```ts\n#706\n```\n~~~\n#752\n~~~\nfixes #753",
+      "expected": ["#753"]
+    },
+    {
+      "name": "fenced code block: interrupts a paragraph",
+      "markdown": "para\n```\n#706\n```\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "fenced code block: closes with a fence of the same character, at least as long, without text",
+      "markdown": "~~~~\n#706\n```\n~~~\n~~~~ x\n    ~~~~\n~~~~\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "fenced code block: its closing fence can end with spaces or tabs",
+      "markdown": "~~~\n#706\n~~~ \t\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "fenced code block: unclosed, hides the rest",
+      "markdown": "fixes #752\n```\n#706",
+      "expected": ["#752"]
+    },
+    {
+      "name": "fenced code block: only a tilde fence can have a backtick in its info string",
+      "markdown": "~~~ a`b\n#752\n~~~\n``` a`b\n#706\n```\n#753",
+      "expected": ["#706"]
+    },
+    {
+      "name": "indented code block: a tab after spaces advances to the next tab stop",
+      "markdown": "- a\n\n  \t#706\n\n#752\n\n  \t#753",
+      "expected": ["#706", "#752"]
+    },
+    {
+      "name": "indented code block: four spaces or a tab",
+      "markdown": "para\n\n    #706\n\n\t#752\n\n#753",
+      "expected": ["#753"]
+    },
+    {
+      "name": "indented code block: can't interrupt a paragraph",
+      "markdown": "para\n    #706",
+      "expected": ["#706"]
+    },
+    {
+      "name": "html block: a comment hides up to the line of its end, the rest of that line is visible",
+      "markdown": "<!-- a\n\n#706\n\n--> #752\n#753",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "html block: an unclosed comment hides the rest",
+      "markdown": "Fixes #706\n<!-- closes #752",
+      "expected": ["#706"]
+    },
+    {
+      "name": "html block: pre hides its lines, also when unclosed",
+      "markdown": "<pre>\n#706\n</pre>\n\n#752\n\n<pre>\n#753",
+      "expected": ["#752"]
+    },
+    {
+      "name": "html block: other blocks like div and script don't hide",
+      "markdown": "<div>\n#706\n</div>\n\n<script>\n#752\n</script>",
+      "expected": ["#706", "#752"]
+    },
+    {
+      "name": "list item: its content column decides what is indented code",
+      "markdown": "- item\n\n      #706\n\n- item\n\n    #752\n\n#753",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "list item: one that starts with a blank line has its content 1 column after the marker",
+      "markdown": "-\n     #706\n\n-   \n      #752",
+      "expected": ["#706"]
+    },
+    {
+      "name": "list item: a fenced code block ends with the item",
+      "markdown": "- ```\n  #706\n\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "list item: nested",
+      "markdown": "- a\n  - b\n\n        #706\n\n#752\n\n1. a\n   1. b\n\n          #706\n\n#753",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "list item: interrupts a paragraph",
+      "markdown": "para\n- #706\n* #752",
+      "expected": ["#706", "#752"]
+    },
+    {
+      "name": "list item: one numbered other than 1 can't interrupt a paragraph",
+      "markdown": "run `make\n2. #706` now\n\nsee [docs\n2. #752](https://x)\n\ntext `a\n-\n#753` b",
+      "expected": ["#753"]
+    },
+    {
+      "name": "list item: one numbered other than 1 starts when it doesn't continue the paragraph's blocks",
+      "markdown": "1. first\n2. ```\n   #706\n   ```\n\n#752\n\n1. a ` b\n2. #753 and ` c",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "block quote: a fenced code block ends with the quote",
+      "markdown": "> ```\n> #706\n\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "block quote: indented code",
+      "markdown": ">     #706\n\n#752",
+      "expected": ["#752"]
+    },
+    {
+      "name": "block quote: lazy continuation",
+      "markdown": "> a\n> > b\n#706",
+      "expected": ["#706"]
+    },
+    {
+      "name": "block quote: in a list item",
+      "markdown": "- a\n  > - b\n  >   ```\n  >   #706\n\n#752\n\n- a\n\n  > ```\n  > #706\n- #753",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "code span: ends at a run of as many backticks",
+      "markdown": "`#706` ``a ` #752`` ```#753``` #749",
+      "expected": ["#749"]
+    },
+    {
+      "name": "code span: across lines, but not across paragraphs",
+      "markdown": "`a\n#706` #752\n\na ` b\n\nfixes #753 and ` c",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "code span: unmatched backticks are literal",
+      "markdown": "a `` b #706\n\n`#752 #753",
+      "expected": ["#706", "#752", "#753"]
+    },
+    {
+      "name": "escape: a backslash makes the next character literal",
+      "markdown": "\\`#706\\` \\#752 \\``#753` #749",
+      "expected": ["#706", "#752", "#749"]
+    },
+    {
+      "name": "comment: inline, also the short forms, hidden as a space",
+      "markdown": "see #706 <!-- not #752 --> and #753 a/b<!-- x -->#756\n\n<!--> #749\n\na <!---> #755 -->",
+      "expected": ["#706", "#753", "#756", "#749", "#755"]
+    },
+    {
+      "name": "comment: unclosed in a paragraph is literal",
+      "markdown": "a <!-- #706\nb #752\n\n#753",
+      "expected": ["#706", "#752", "#753"]
+    },
+    {
+      "name": "comment: whichever opens first wins over a code span",
+      "markdown": "Use `<!--` here #752\n\n<!-- `x` #706 --> #753",
+      "expected": ["#752", "#753"]
+    },
+    {
+      "name": "html tag: hidden as a space with its attributes, and code, pre and a hide their content",
+      "markdown": "<code>#706</code> <pre>#752</pre> <a href=\"https://example.com\">#753</a> <kbd>#749</kbd><br>#755 <span\ntitle=\"#756\">x</span>",
+      "expected": ["#749", "#755"]
+    },
+    {
+      "name": "html tag: text in angle brackets that isn't a tag is visible",
+      "markdown": "x <b and #706 > z\n\n<a x #752 >\n\nx </b #753>",
+      "expected": ["#706", "#752", "#753"]
+    },
+    {
+      "name": "autolink: its url is visible",
+      "markdown": "<https://github.com/korthout/backport-action/issues/706>",
+      "expected": ["korthout/backport-action#706"]
+    },
+    {
+      "name": "link: text and title are hidden, also of an image",
+      "markdown": "[#706](https://github.com/korthout/backport-action/issues/752) ![#753](x.png) [see #749](https://x 'title') [see #755]( https://x (t) ) #756",
+      "expected": ["korthout/backport-action#752", "#756"]
+    },
+    {
+      "name": "link: a destination that starts with a quote isn't a title, so a space inside it means it's no link",
+      "markdown": "[a]( \"t #706\") [b](x \"#752\")",
+      "expected": ["#706"]
+    },
+    {
+      "name": "link: its destination counts when it's a url to an issue or pull request, not its text",
+      "markdown": "[see #6](https://www.github.com/camunda/camunda/issues/7) [x](<https://github.com/actions/checkout/pull/8>)",
+      "expected": ["camunda/camunda#7", "actions/checkout#8"]
+    },
+    {
+      "name": "link: its destination counts in order of occurrence",
+      "markdown": "#706 fixes [the crash](https://github.com/camunda/camunda/issues/7), see #752",
+      "expected": ["#706", "camunda/camunda#7", "#752"]
+    },
+    {
+      "name": "link: a destination that isn't a full url to an issue or pull request doesn't count",
+      "markdown": "[top](#706) [docs](../issues/752) [x](github.com/camunda/camunda/issues/753) [y](https://github.com/camunda/camunda/pull/749/files) [z](https://example.com/#755)",
+      "expected": []
+    },
+    {
+      "name": "link: a destination with a trailing slash, query or fragment counts",
+      "markdown": "[a](https://github.com/camunda/camunda/issues/7/) [b](https://github.com/camunda/camunda/issues/8?x=1) [c](https://github.com/camunda/camunda/issues/9#issuecomment-1)",
+      "expected": ["camunda/camunda#7", "camunda/camunda#8", "camunda/camunda#9"]
+    },
+    {
+      "name": "link: hidden in code and comments, with its destination",
+      "markdown": "`[a](https://github.com/camunda/camunda/issues/7)` <!-- [b](https://github.com/camunda/camunda/issues/8) -->\n\n```\n[c](https://github.com/camunda/camunda/issues/9)\n```",
+      "expected": []
+    },
+    {
+      "name": "reference link: the destination of its definition counts, the first definition of a label wins",
+      "markdown": "[the crash][1] [crash] [other][]\n\n[1]: https://github.com/camunda/camunda/pull/7\n[crash]: <https://github.com/actions/checkout/issues/8> 'title'\n[other]: https://github.com/camunda/camunda/issues/9\n[other]: https://github.com/camunda/camunda/issues/10\n[unused]: https://github.com/camunda/camunda/issues/11",
+      "expected": ["camunda/camunda#7", "actions/checkout#8", "camunda/camunda#9"]
+    },
+    {
+      "name": "html a element: its href counts when it's a url to an issue or pull request, not its content",
+      "markdown": "<a href=\"https://github.com/camunda/camunda/issues/7\">#706</a> <a title=x href='https://github.com/camunda/camunda/pull/8'>y</a> <a href=https://github.com/camunda/camunda/issues/9>z</a> <a name=\"https://github.com/camunda/camunda/issues/10\"></a> <a title=\"see href=https://github.com/camunda/camunda/issues/11\">w</a>",
+      "expected": ["camunda/camunda#7", "camunda/camunda#8", "camunda/camunda#9"]
+    },
+    {
+      "name": "html a element: without an href, like an anchor, it's no link and its content is visible",
+      "markdown": "<a name=\"x\">Fixes #706</a> <a id=y>#752</a> <a href=\"https://example.com\">#753</a>",
+      "expected": ["#706", "#752"]
+    },
+    {
+      "name": "reference link: hidden only when its label is defined",
+      "markdown": "[#706][y] [#752] [#753][] [#749][nope] [#755]\n\n[y]: https://example.com\n[#752]: https://example.com",
+      "expected": ["#753", "#749", "#755"]
+    },
+    {
+      "name": "reference link: a shortcut reference link can't be followed by a link label, which needs more than whitespace",
+      "markdown": "[#706][nope] [#752][ ]\n\n[#706]: https://github.com/camunda/camunda/issues/7\n[#752]: https://github.com/camunda/camunda/issues/8",
+      "expected": ["#706", "camunda/camunda#8"]
+    },
+    {
+      "name": "reference link: only spaces, tabs and line endings are whitespace in a link label",
+      "markdown": "[#706][\u00a0] [#752][ \t\n ]\n\n[#706]: https://github.com/camunda/camunda/issues/7\n[#752]: https://github.com/camunda/camunda/issues/8",
+      "expected": ["#706", "camunda/camunda#8"]
+    },
+    {
+      "name": "link reference definition: its link label needs more than spaces, tabs and line endings, which are also all that's collapsed",
+      "markdown": "[#706][\u00a0] [#752][a\u00a0b]\n\n[ ]: https://github.com/camunda/camunda/issues/7\n\n[a b]: https://github.com/camunda/camunda/issues/8",
+      "expected": ["#706", "#752", "camunda/camunda#7"]
+    },
+    {
+      "name": "reference link: in [a][b][c] with only c defined, [b][c] is the link",
+      "markdown": "[#706][#752][x]\n\n[x]: https://github.com/camunda/camunda/issues/7\n[#706]: https://github.com/camunda/camunda/issues/8",
+      "expected": ["#706", "camunda/camunda#7"]
+    },
+    {
+      "name": "link reference definition: hidden, also in a container",
+      "markdown": "> [#706]: https://example.com\n\n- [#752]: https://example.com\n\n[#706] [#752] #753",
+      "expected": ["#753"]
+    },
+    {
+      "name": "link reference definition: not after a paragraph, in code, when invalid, or for a footnote",
+      "markdown": "foo\n[#706]: https://example.com\n\n```\n[#752]: https://example.com\n```\n\n[#706] [#752]\n\n[note]: see #753\n\nx[^1]\n\n[^1]: #749",
+      "expected": ["#706", "#752", "#753", "#749"]
+    },
+    {
+      "name": "html entity: isn't a reference as written",
+      "markdown": "&#35;706 &num;752",
+      "expected": []
+    },
+    {
+      "name": "html tag: an unclosed code element only hides the tag",
+      "markdown": "<code>#706 and #752\n\nx <code>#753\n\n#749",
+      "expected": ["#706", "#752", "#753", "#749"]
+    },
+    {
+      "name": "blank line: only spaces and tabs, not other whitespace like a non-breaking space",
+      "markdown": "fixes\n\u00a0\n[#706]: https://example.com\n\nsee\n\u00a0\n    #752",
+      "expected": ["#706", "#752"]
+    },
+    {
+      "name": "line ending: a carriage return on its own also ends a line",
+      "markdown": "fixes\n\r\r\n[#706]: https://example.com\n\nsee\r\r    #752",
+      "expected": []
+    },
+    {
+      "name": "gap: emphasis with underscores",
+      "markdown": "_#752_",
+      "expected": ["#752"],
+      "gap": "Markdown reads `_` as emphasis here, the scanner reads it as part of a word"
+    },
+    {
+      "name": "gap: non-breaking space in a link destination or before a link title",
+      "markdown": "[#706](x\u00a0y) [#752](x \u00a0\"t\")",
+      "expected": ["#752"],
+      "gap": "Markdown only reads spaces, tabs and line endings as whitespace in a link, the scanner also other whitespace like a non-breaking space"
+    },
+    {
+      "name": "gap: link syntax like nested brackets",
+      "markdown": "[a [b] #706](https://example.com)",
+      "expected": [],
+      "gap": "Markdown allows balanced brackets in link text, the scanner doesn't"
+    },
+    {
+      "name": "gap: link reference definition across lines",
+      "markdown": "[y]: https://example.com\n  \"title #753\"",
+      "expected": [],
+      "gap": "Markdown allows a link reference definition's title on the next line, the scanner doesn't"
+    },
+    {
+      "name": "gap: reference in the query or fragment of a url to an issue",
+      "markdown": "https://github.com/actions/checkout/issues/1?note=#752",
+      "expected": ["actions/checkout#1"],
+      "gap": "Markdown links a url with its query and fragment, the scanner ends a url to an issue at its number and reads what follows as text"
+    },
+    {
+      "name": "gap: url right before a table cell",
+      "markdown": "| a | b |\n|---|---|\n|https://example.com|#706|",
+      "expected": ["#706"],
+      "gap": "Markdown splits a table row into cells before it reads a url, the scanner reads a url up to the next whitespace, across a `|`"
+    },
+    {
+      "name": "gap: code span or html tag that starts in a link's text and ends after it",
+      "markdown": "[see `](https://github.com/actions/checkout/issues/1)` x",
+      "expected": [],
+      "gap": "Markdown reads a code span, an autolink or an html tag before a link, the scanner reads the link first"
+    },
+    {
+      "name": "gap: github.com in capitals",
+      "markdown": "https://GitHub.com/actions/checkout/issues/1 [x](https://WWW.GITHUB.COM/actions/checkout/pull/2)",
+      "expected": ["actions/checkout#1", "actions/checkout#2"],
+      "gap": "A host name is the same in any case, the scanner only recognizes github.com in lowercase"
+    },
+    {
+      "name": "gap: code span in an html block",
+      "markdown": "<div>\n`#706`\n</div>",
+      "expected": ["#706"],
+      "gap": "Markdown keeps the content of an html block as is, the scanner still reads code spans in it"
+    },
+    {
+      "name": "gap: fence in an html block",
+      "markdown": "<details>\n```\nfixes #706\n```\n</details>",
+      "expected": ["#706"],
+      "gap": "Markdown keeps the content of an html block as is up to a blank line, the scanner still opens a fenced code block in it"
+    },
+    {
+      "name": "gap: tab after a list item marker",
+      "markdown": "-\tfixes\n\n      #706",
+      "expected": ["#706"],
+      "gap": "Markdown expands a tab after a container marker to the next tab stop, the scanner only expands tabs at the start of a line"
+    },
+    {
+      "name": "gap: tab after a block quote marker",
+      "markdown": ">\t\t#706\n\n> \t\t#752",
+      "expected": [],
+      "gap": "Markdown expands a tab after a container marker to the next tab stop, the scanner only expands tabs at the start of a line"
+    }
+  ]
+}
