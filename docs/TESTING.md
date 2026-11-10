@@ -22,6 +22,7 @@ Tests are split into three tiers:
 Unit tests (fast, isolated)
 ├── backport.test.ts
 ├── utils.test.ts
+├── issue-refs.test.ts
 └── git.test.ts
 
 Integration tests (still fast, specific focus)
@@ -57,7 +58,9 @@ A test should only fail when what users experience changes. That failure is a pr
 Most changes (like introducing a new input or output) need an **integration test**. These are fast and cover the majority of scenarios. 
 
 Unit tests only need to be written for newly introduced algorithms or code that can produce many different results.
-For example, `findTargetBranch` in `backport.test.ts` or `getMentionedIssueRefs` in `utils.test.ts`.
+For example, `findTargetBranch` in `backport.test.ts` or `getMentionedIssueRefs` in `issue-refs.test.ts`.
+
+The `issue-refs.test.ts` cases live in `src/test/fixtures/issue-refs.json`: each has its Markdown and exactly what `${issue_refs}` lists for it, and is named `<construct>: <rule>`. A case with a `gap` reason records where the scanner differs from Markdown and runs as an expected failure, so a fix shows up as a failing test whose `gap` can then be removed. See [ADR-0005](adr/0005-reading-issue-references.md) for when an edge case gets fixed.
 
 E2E tests are rarely expanded — see [E2E tests](#e2e-tests) below.
 
