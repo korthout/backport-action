@@ -918,6 +918,32 @@ describe("Backport.run() orchestration", () => {
       }
     });
 
+    it("target result: failed comment does not fail the job and continues to next target", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport target1" }, { name: "backport target2" }],
+        },
+      });
+      const error = new Error("comment creation failed");
+      github.failOn("createComment", error);
+      const git = createMockGit();
+      const logError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        const backport = new Backport(github, makeConfig(), git);
+        await backport.run();
+
+        expect(logError).toHaveBeenCalledWith(
+          "Failed to create comment on original pull request:",
+          error,
+        );
+        expect(core.setFailed).not.toHaveBeenCalled();
+        expect(github.createdPRs).toHaveLength(2);
+      } finally {
+        logError.mockRestore();
+      }
+    });
+
     it("single target: posts one comment and never updates", async () => {
       const github = new FakeGithub();
       const git = createMockGit();
