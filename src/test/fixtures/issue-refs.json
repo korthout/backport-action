@@ -234,6 +234,11 @@
       "expected": ["#753"]
     },
     {
+      "name": "list item: one numbered other than 1 starts when it doesn't continue the paragraph's blocks",
+      "markdown": "1. first\n2. ```\n   #706\n   ```\n\n#752\n\n1. a ` b\n2. #753 and ` c",
+      "expected": ["#752", "#753"]
+    },
+    {
       "name": "block quote: a fenced code block ends with the quote",
       "markdown": "> ```\n> #706\n\n#752",
       "expected": ["#752"]

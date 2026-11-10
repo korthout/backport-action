@@ -161,7 +161,10 @@ function continuationOf(
 /** A lazy continuation line continues the open paragraph without the markers of all its container blocks */
 function isLazyContinuationLine(state: BlockState, rest: string): boolean {
   return (
-    state.paragraph.length > 0 && !isBlank(rest) && !interruptsParagraph(rest)
+    state.paragraph.length > 0 &&
+    !isBlank(rest) &&
+    !interruptsParagraph(rest) &&
+    listItemMarker(rest, false) === undefined
   );
 }
 
