@@ -42,7 +42,7 @@ This action has many users; maintainer burden compounds. When facing tradeoffs, 
 ## Reviewing contributions
 
 - Agree on the design in the issue before a pull request is written
-- The maintainer may take over a contribution to ship it sooner, instead of running another review round. Always credit the contributor in the release notes.
+- The maintainer may take over a contribution to ship it sooner, instead of running another review round. Always credit the contributor in the release notes. See the [take-over-contribution](.claude/skills/take-over-contribution/SKILL.md) skill.
 - Pre-existing bugs found in review get their own issue; don't fold them into an unrelated pull request
 
 ## Pointers
