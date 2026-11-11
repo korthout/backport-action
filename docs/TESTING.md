@@ -35,6 +35,8 @@ E2E tests (separate repository)
 
 The codebase has two external boundaries: `GithubApi` and `GitApi`. The integration tests mock/fake one or more of these boundaries. For example, `git.integration.test.ts` uses `FakeGithub` (a fake `GithubApi`) so it can test against a real Git repo. This gives fast orchestration tests AND realistic git tests without needing a real GitHub API.
 
+Fakes reject what the real API rejects. Otherwise a test passes against the fake while the action fails for users. For example, GitHub refuses to enable auto-merge on a draft pull request, so `FakeGithub` throws a `GraphqlResponseError`-like error for it, just as GitHub's API does. When you find something the real API rejects, make the fake reject it the same way.
+
 E2E tests in [korthout/backport-action-test](https://github.com/korthout/backport-action-test) complete the strategy by exercising the action on real GitHub PRs against the real GitHub API and workflow triggers.
 
 ## How tests are written
@@ -43,6 +45,7 @@ The tests in this repo are written like this:
 - Easy to understand what the test does
 - Easy to extend for new features (mostly just copy-paste and adjust)
 - Test behavior, not implementation (see [Testing behavior](#testing-behavior))
+- Assert what the change needs, not what other tests already cover. For example, the test that skips auto-merge on a draft backport pull request doesn't assert the conflict-resolution comment on the draft, because another test already covers that comment
 - They need to run fast, keeping the total duration of all tests under 5 seconds
 
 That means that most tests will either be unit tests or fast running integration tests.
