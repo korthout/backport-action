@@ -6,10 +6,6 @@ This can be useful when you're supporting multiple versions of your product.
 After fixing a bug, you may want to apply that patch to the other versions.
 The manual labor of cherry-picking the individual commits can be automated using this action.
 
-> [!IMPORTANT]
-> This README describes the upcoming v5, which is not released yet.
-> If you use v4 (`@v4`), read the [v4 docs](https://github.com/korthout/backport-action/blob/release-v4/README.md) instead.
-
 ## Features
 
 - Works out of the box - No configuration required / Defaults for everything
@@ -56,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Create backport pull requests
-        uses: korthout/backport-action@v4
+        uses: korthout/backport-action@v5
 ```
 
 > **Note**
@@ -107,7 +103,7 @@ steps:
       # the action pushes the backport branch with these credentials
       token: ${{ steps.app-token.outputs.token }}
   - name: Create backport pull requests
-    uses: korthout/backport-action@v4
+    uses: korthout/backport-action@v5
     with:
       # the action creates the backport pull request with this token
       github_token: ${{ steps.app-token.outputs.token }}
@@ -161,7 +157,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Create backport pull requests
-        uses: korthout/backport-action@v4
+        uses: korthout/backport-action@v5
 ```
 
 </p>
@@ -210,7 +206,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Create backport pull requests
-        uses: korthout/backport-action@v4
+        uses: korthout/backport-action@v5
         with:
           target_branches: ${{ needs.determine-target-branch.outputs.branch }}
 ```
@@ -245,7 +241,7 @@ Pin any third‑party action you use for this by commit SHA for supply‑chain s
     git_user_signingkey: true
     git_commit_gpgsign: true
 - name: Create backport pull requests
-  uses: korthout/backport-action@v4
+  uses: korthout/backport-action@v5
   with:
     git_committer_name: ${{ steps.import-gpg.outputs.name }}
     git_committer_email: ${{ steps.import-gpg.outputs.email }}
