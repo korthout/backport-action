@@ -38,4 +38,8 @@ jobs:
         uses: korthout/backport-action@0ebd44f9c79a4a0a171200dcdcceec3ed9ca732f # v4.7.1
         with:
           comment_style: summary
+          experimental: >
+            {
+              "conflict_resolution": "draft_commit_conflicts"
+            }
           github_token: ${{ steps.app-token.outputs.token }}
