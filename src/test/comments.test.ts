@@ -344,7 +344,9 @@ describe("formatRunComment", () => {
     ];
     const out = formatRunComment(results, [], context);
 
-    expect(out).toContain("found nothing to backport");
+    expect(out).toContain(
+      "found nothing left to backport from this pull request",
+    );
     expect(out).toContain(":heavy_minus_sign: Skipped");
     expect(out).not.toContain("<details>");
   });
@@ -420,10 +422,12 @@ describe("formatRunComment", () => {
 describe("formatNoCommitsComment", () => {
   it("reports why no commits remain without a target table", () => {
     const reason =
-      "All selected commits were merge commits excluded by `merge_commits: skip`.";
+      "This pull request contains only merge commits, and `merge_commits: skip` excludes them.";
     const out = formatNoCommitsComment(context, reason);
 
-    expect(out).toContain("found nothing to backport from this pull request");
+    expect(out).toContain(
+      "found nothing left to backport from this pull request",
+    );
     expect(out).toContain(reason);
     expect(out).toContain(`[workflow run ${context.runId}](${context.runUrl})`);
     expect(out).not.toContain("| Target |");

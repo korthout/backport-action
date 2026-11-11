@@ -286,7 +286,7 @@ export class Backport {
 
       if (commitShasToCherryPick.length === 0) {
         const reason =
-          "All selected commits were merge commits excluded by `merge_commits: skip`.";
+          "This pull request contains only merge commits, and `merge_commits: skip` excludes them.";
         const message = `Nothing to backport. ${reason}`;
         console.log(message);
         if (isSummary) {

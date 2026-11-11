@@ -238,7 +238,7 @@ describe("Backport.run() orchestration", () => {
         try {
           await new Backport(github, config, git).run();
           expect(log).toHaveBeenCalledWith(
-            "Nothing to backport. All selected commits were merge commits excluded by `merge_commits: skip`.",
+            "Nothing to backport. This pull request contains only merge commits, and `merge_commits: skip` excludes them.",
           );
         } finally {
           log.mockRestore();
@@ -253,7 +253,7 @@ describe("Backport.run() orchestration", () => {
           expect.objectContaining({
             issue_number: 42,
             body: expect.stringContaining(
-              "All selected commits were merge commits excluded by `merge_commits: skip`",
+              "This pull request contains only merge commits, and `merge_commits: skip` excludes them",
             ),
           }),
         );
@@ -286,9 +286,11 @@ describe("Backport.run() orchestration", () => {
       await new Backport(github, config, git).run();
 
       const final = github.updatedComments.at(-1);
-      expect(final?.body).toContain("found nothing to backport");
       expect(final?.body).toContain(
-        "All selected commits were merge commits excluded by `merge_commits: skip`",
+        "found nothing left to backport from this pull request",
+      );
+      expect(final?.body).toContain(
+        "This pull request contains only merge commits, and `merge_commits: skip` excludes them",
       );
       expect(final?.body).not.toContain("| Target |");
       expect(final?.body).not.toContain(":hourglass: Pending");
