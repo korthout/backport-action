@@ -213,6 +213,158 @@ describe("Backport.run() orchestration", () => {
   });
 
   describe("cherry-pick", () => {
+    for (const conflictResolution of [
+      "fail",
+      "draft_commit_conflicts",
+    ] as const) {
+      it(`excludes all merge commits without creating a backport (${conflictResolution})`, async () => {
+        const github = new FakeGithub({
+          sourcePr: {
+            labels: [{ name: "backport main" }, { name: "backport release" }],
+            commitShas: ["merge-sha"],
+          },
+          mergeStrategyResult: MergeStrategy.MERGECOMMIT,
+        });
+        const git = createMockGit({
+          findMergeCommits: vi.fn().mockResolvedValue(["merge-sha"]),
+        });
+        const config = makeConfig({
+          commits: {
+            cherry_picking: "auto",
+            cherry_picking_merge_mode: "default",
+            merge_commits: "skip",
+          },
+          experimental: { conflict_resolution: conflictResolution },
+        });
+        const log = vi.spyOn(console, "log").mockImplementation(() => {});
+        try {
+          await new Backport(github, config, git).run();
+          expect(log).toHaveBeenCalledWith(
+            "Nothing to backport. This pull request contains only merge commits, and `merge_commits: skip` excludes them.",
+          );
+        } finally {
+          log.mockRestore();
+        }
+
+        expect(git.checkout).not.toHaveBeenCalled();
+        expect(git.cherryPick).not.toHaveBeenCalled();
+        expect(git.push).not.toHaveBeenCalled();
+        expect(github.createdPRs).toHaveLength(0);
+        expect(github.comments).toHaveLength(1);
+        expect(github.comments[0]).toEqual(
+          expect.objectContaining({
+            issue_number: 42,
+            body: expect.stringContaining(
+              "This pull request contains only merge commits, and `merge_commits: skip` excludes them",
+            ),
+          }),
+        );
+        expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+        expect(core.setOutput).toHaveBeenCalledWith(
+          "was_successful_by_target",
+          "",
+        );
+        expect(core.setOutput).toHaveBeenCalledWith("created_pull_numbers", "");
+      });
+    }
+
+    it("excludes all merge commits in the summary comment", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport main" }, { name: "backport release" }],
+          commitShas: ["merge-sha"],
+        },
+        mergeStrategyResult: MergeStrategy.MERGECOMMIT,
+      });
+      const git = createMockGit({
+        findMergeCommits: vi.fn().mockResolvedValue(["merge-sha"]),
+      });
+      const config = makeConfig({
+        commits: {
+          cherry_picking: "auto",
+          cherry_picking_merge_mode: "default",
+          merge_commits: "skip",
+        },
+        comment_style: "summary",
+      });
+      await new Backport(github, config, git).run();
+
+      const final = github.updatedComments.at(-1);
+      expect(final?.body).toContain(
+        "found nothing left to backport from this pull request",
+      );
+      expect(final?.body).toContain(
+        "This pull request contains only merge commits, and `merge_commits: skip` excludes them",
+      );
+      expect(final?.body).not.toContain("| Target |");
+      expect(final?.body).not.toContain(":hourglass: Pending");
+      expect(github.comments).toHaveLength(1);
+      expect(git.checkout).not.toHaveBeenCalled();
+      expect(github.createdPRs).toHaveLength(0);
+      expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+      expect(core.setOutput).toHaveBeenCalledWith(
+        "was_successful_by_target",
+        "",
+      );
+      expect(core.setOutput).toHaveBeenCalledWith("created_pull_numbers", "");
+    });
+
+    it("continues when a non-merge commit remains", async () => {
+      const github = new FakeGithub({
+        sourcePr: { commitShas: ["merge-sha", "change-sha"] },
+        mergeStrategyResult: MergeStrategy.MERGECOMMIT,
+      });
+      const git = createMockGit({
+        findMergeCommits: vi.fn().mockResolvedValue(["merge-sha"]),
+      });
+      const config = makeConfig({
+        commits: {
+          cherry_picking: "auto",
+          cherry_picking_merge_mode: "default",
+          merge_commits: "skip",
+        },
+      });
+      await new Backport(github, config, git).run();
+
+      expect(git.cherryPick).toHaveBeenCalledWith(
+        ["change-sha"],
+        "fail",
+        "/tmp",
+        "default",
+      );
+      expect(github.createdPRs).toHaveLength(1);
+    });
+
+    it("keeps a failed legacy explanation comment from failing the run", async () => {
+      const github = new FakeGithub({
+        sourcePr: { commitShas: ["merge-sha"] },
+        mergeStrategyResult: MergeStrategy.MERGECOMMIT,
+      });
+      github.failOn("createComment", new Error("comment unavailable"));
+      const git = createMockGit({
+        findMergeCommits: vi.fn().mockResolvedValue(["merge-sha"]),
+      });
+      const config = makeConfig({
+        commits: {
+          cherry_picking: "auto",
+          cherry_picking_merge_mode: "default",
+          merge_commits: "skip",
+        },
+      });
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        await new Backport(github, config, git).run();
+        expect(log).toHaveBeenCalledWith(
+          "Failed to create comment on original pull request:",
+          expect.objectContaining({ message: "comment unavailable" }),
+        );
+        expect(core.setOutput).toHaveBeenCalledWith("was_successful", true);
+        expect(core.setFailed).not.toHaveBeenCalled();
+      } finally {
+        log.mockRestore();
+      }
+    });
+
     it("pull_request_head cherry-picking: uses PR commits, not merge commit", async () => {
       const github = new FakeGithub({
         sourcePr: {
