@@ -77,6 +77,9 @@ function formatIntroduction(
   if (failedCount > 0) {
     return `${ACTION_LINK} completed backporting this pull request with failures in ${runLink}.`;
   }
+  if (results.length > 0 && results.every((r) => r.status === "skipped")) {
+    return `${ACTION_LINK} found nothing left to backport from this pull request in ${runLink}.`;
+  }
   return `${ACTION_LINK} backported this pull request in ${runLink}.`;
 }
 
@@ -103,6 +106,15 @@ export function formatNoTargetsComment(context: CommentContext): string {
                 This can happen when the pull request has no labels matching \`label_pattern\`, or when no \`target_branches\` were configured.
 
                 To avoid unnecessary action runs, update your workflow so this action only runs for PRs that should be backported, such as PRs with a matching backport label or runs with explicit \`target_branches\`.`;
+}
+
+/** Body for a run with no commits left after excluding merge commits. */
+export function formatNoCommitsComment(
+  context: CommentContext,
+  reason: string,
+): string {
+  const runLink = `[workflow run ${context.runId}](${context.runUrl})`;
+  return `${ACTION_LINK} found nothing left to backport from this pull request in ${runLink}.\n\n${reason}`;
 }
 
 function formatTable(
