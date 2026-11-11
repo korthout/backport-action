@@ -35,7 +35,7 @@ gh api repos/korthout/backport-action/releases/generate-notes \
   -f tag_name=<new tag> -f previous_tag_name=<previous tag> -q .body
 ```
 
-Each entry reads `* <title> by @<login> in <pull request url>`. Keep their order; every section below lists its entries in this order. Discard GitHub's New Contributors section and rebuild it in step 6.
+Each entry reads `* <title> by @<login> in <pull request url>`. Keep their order; every section below lists its entries in this order, except What's Changed (see step 7). Discard GitHub's New Contributors section and rebuild it in step 6.
 
 ## 3. Resolve each entry to its original pull request
 
@@ -98,7 +98,7 @@ Their first merged pull request is the one with the earliest `mergedAt`. When it
 
 ## 7. Draft the intro
 
-For each entry under What's Changed, draft prose above the list, from the original pull request's description, the issue it closes, and the README. Follow [v4.7.0](https://github.com/korthout/backport-action/releases/tag/v4.7.0) and [v4.7.1](https://github.com/korthout/backport-action/releases/tag/v4.7.1):
+For each entry under What's Changed, draft prose from the original pull request's description, the issue it closes, and the README. Put each change's entry right after its prose, so readers find the reference where they read about the change. Order the changes by how much they matter to users: bug fixes and enhancements before documentation. Describe what the pull request changed: a documentation pull request explains something users could already do, so don't present it as new behavior. Follow [v4.7.0](https://github.com/korthout/backport-action/releases/tag/v4.7.0) and [v4.7.1](https://github.com/korthout/backport-action/releases/tag/v4.7.1):
 
 1. Thank the contributor, when the author isn't the maintainer: "Thanks to a contribution by @<login>, …".
 2. What went wrong before, as the user saw it.
@@ -118,9 +118,13 @@ Leave out a section that has no entries. Without user-facing changes there is no
 ```md
 ## What's Changed
 
-<intro>
+<prose for a change>
 
-<entries>
+<its entry>
+
+<prose for the next change>
+
+<its entry>
 
 ## New Contributors
 <entries>
