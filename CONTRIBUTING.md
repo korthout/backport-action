@@ -102,4 +102,6 @@ To release a version, run the [Release](https://github.com/korthout/backport-act
 This sets the release version and tags the release commit.
 It also creates/moves the major and minor tags (e.g. `v1` and `v1.2`) to the latest corresponding release as [officially recommended](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md).
 
+Then draft the release notes with the [release-notes](.claude/skills/release-notes/SKILL.md) skill. It credits each change to its original pull request and author instead of the backport pull request, and creates a draft release to edit and publish.
+
 For a new major, see [Major releases](docs/MAJOR-RELEASE.md).
