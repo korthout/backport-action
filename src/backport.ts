@@ -11,6 +11,7 @@ import { CherryPickResult, GitApi, GitRefNotFoundError } from "./git.js";
 import {
   CommentContext,
   formatInitialComment,
+  formatNoCommitsComment,
   formatNoTargetsComment,
   formatRunComment,
 } from "./comments.js";
@@ -281,6 +282,32 @@ export class Backport {
           );
         }
         throw error;
+      }
+
+      if (commitShasToCherryPick.length === 0) {
+        const reason =
+          "This pull request contains only merge commits, and `merge_commits: skip` excludes them.";
+        const message = `Nothing to backport. ${reason}`;
+        console.log(message);
+        if (isSummary) {
+          await updateSummary(formatNoCommitsComment(commentCtx, reason));
+        } else {
+          try {
+            await this.github.createComment({
+              owner: workflowOwner,
+              repo: workflowRepo,
+              issue_number: pull_number,
+              body: message,
+            });
+          } catch (error) {
+            console.error(
+              "Failed to create comment on original pull request:",
+              error,
+            );
+          }
+        }
+        this.createOutput(new Map<string, boolean>(), []);
+        return;
       }
 
       let labelsToCopy: string[] = [];
@@ -587,15 +614,7 @@ export class Backport {
   }
 
   /**
-   * Posts the per-target comments matching the existing legacy behavior:
-   *   - failed: post the failure message on the source PR
-   *   - success / success_with_conflicts: post the success message on the
-   *     source PR; for conflicts, also post the recovery instructions on
-   *     the new backport PR
-   *   - skipped: no comment (matches the previous `continue` behavior)
-   *
-   * Phase 8c will replace this with the progressive summary comment flow
-   * when `comment_style: summary` is enabled.
+   * Posts per-target comments in legacy mode. Skipped target branches are silent.
    */
   private async handleTargetResultLegacy(
     result: TargetResult,
