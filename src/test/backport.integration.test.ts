@@ -221,10 +221,12 @@ describe("Backport.run() orchestration", () => {
         const github = new FakeGithub({
           sourcePr: {
             labels: [{ name: "backport main" }, { name: "backport release" }],
+            commitShas: ["merge-sha"],
           },
+          mergeStrategyResult: MergeStrategy.MERGECOMMIT,
         });
         const git = createMockGit({
-          findMergeCommits: vi.fn().mockResolvedValue(["abc123"]),
+          findMergeCommits: vi.fn().mockResolvedValue(["merge-sha"]),
         });
         const config = makeConfig({
           commits: {
@@ -270,10 +272,12 @@ describe("Backport.run() orchestration", () => {
       const github = new FakeGithub({
         sourcePr: {
           labels: [{ name: "backport main" }, { name: "backport release" }],
+          commitShas: ["merge-sha"],
         },
+        mergeStrategyResult: MergeStrategy.MERGECOMMIT,
       });
       const git = createMockGit({
-        findMergeCommits: vi.fn().mockResolvedValue(["abc123"]),
+        findMergeCommits: vi.fn().mockResolvedValue(["merge-sha"]),
       });
       const config = makeConfig({
         commits: {
@@ -332,10 +336,13 @@ describe("Backport.run() orchestration", () => {
     });
 
     it("keeps a failed legacy explanation comment from failing the run", async () => {
-      const github = new FakeGithub();
+      const github = new FakeGithub({
+        sourcePr: { commitShas: ["merge-sha"] },
+        mergeStrategyResult: MergeStrategy.MERGECOMMIT,
+      });
       github.failOn("createComment", new Error("comment unavailable"));
       const git = createMockGit({
-        findMergeCommits: vi.fn().mockResolvedValue(["abc123"]),
+        findMergeCommits: vi.fn().mockResolvedValue(["merge-sha"]),
       });
       const config = makeConfig({
         commits: {
