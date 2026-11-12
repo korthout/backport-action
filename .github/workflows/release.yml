@@ -69,7 +69,7 @@ jobs:
           grep -Fq "\"version\": \"$NEXT_VERSION\"" package.json
 
       - name: Extract semver release version components
-        uses: madhead/semver-utils@46f4caeac2202a1e850a7bbcabe22e750d28493c # v5.1.2
+        uses: madhead/semver-utils@b1422b43403574ed9de5b73bc37b3a33fa63ba48 # v5.1.2
         id: version
         with:
           version: ${{ inputs.releaseVersion }}
