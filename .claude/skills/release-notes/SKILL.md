@@ -140,16 +140,16 @@ Leave out a section that has no entries. Without user-facing changes there is no
 
 ## 9. Create or update the draft release
 
-Write the notes to a file in the scratchpad. Find an existing release for the tag; drafts aren't returned by tag lookups, so list them:
+Write the notes to a file in the scratchpad. Find an existing release for the tag; drafts aren't returned by tag lookups, so list them. A draft written before the tag existed has a `tag_name` like `untagged-…`, so match its name too:
 
 ```
 gh api --paginate repos/korthout/backport-action/releases \
-  -q '.[] | select(.tag_name == "<new tag>") | {id, draft, html_url}'
+  -q '.[] | select(.tag_name == "<new tag>" or .name == "Backport-action <new tag>") | {id, draft, tag_name, html_url}'
 ```
 
 - **Published release:** stop. Show the notes instead of overwriting.
-- **Draft:** update it, so a re-run doesn't create a second one:
-  `gh api -X PATCH repos/korthout/backport-action/releases/<id> -f name="Backport-action <new tag>" -F body=@<file>`
+- **Draft:** update it, so a re-run doesn't create a second one. Always pass `tag_name`: an update without it detaches the draft from its tag, even when it had one.
+  `gh api -X PATCH repos/korthout/backport-action/releases/<id> -f tag_name=<new tag> -f name="Backport-action <new tag>" -F body=@<file>`
 - **None:** create it:
   `gh release create <new tag> --draft --verify-tag --title "Backport-action <new tag>" --notes-file <file>`
 
