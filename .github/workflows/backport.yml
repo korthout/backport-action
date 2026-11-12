@@ -35,7 +35,7 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }} # backport-action pushes with it
       - name: Create backport pull requests
-        uses: korthout/backport-action@8560fb503c275d433c56f05a2f64850093baa9f7 # v4.7.0
+        uses: korthout/backport-action@ad272ff24e4a8593bf18a951a154ae6af93b26b8 # v5.0.0
         with:
           comment_style: summary
           experimental: >
