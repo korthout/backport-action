@@ -17,7 +17,7 @@ The repository uses its own action to keep them in sync. A pull request merged t
 
 ## Starting the next major
 
-**Start once you know what the next major will contain.** Until then, breaking pull requests stay open.
+**Start once you know what the next major will contain.** Until then, breaking pull requests stay open. To find out, go through the open issues with the `breaking` label, and search the ADRs and the README for changes promised to "a future major release", such as a new default. Put the ones the major should contain in its milestone.
 
 **Consider a last vN release first.** Releases are done manually, so `main` may hold unreleased changes that vN users would want. A patch can also be released from `release-vN` later.
 
