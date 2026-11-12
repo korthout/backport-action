@@ -19,7 +19,7 @@ Follow the [documentation conventions](docs/DOCUMENTING.md).
 
 I welcome code changes.
 Looking for something to work on? The pinned [roadmap](https://github.com/korthout/backport-action/issues/863) lists what's planned, and every issue on it is open to contributions.
-If you're thinking of opening a large pull request, please consider opening an issue on GitHub first to discuss it.
+Before writing a pull request for a feature or a behavior change, agree on the design (interface and behavior) with the maintainer in its issue.
 When your change touches `README.md` or `action.yml`, follow the [documentation conventions](docs/DOCUMENTING.md).
 
 ### Build from source
