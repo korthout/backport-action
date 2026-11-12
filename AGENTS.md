@@ -51,6 +51,7 @@ Entry points live at the root (README, CONTRIBUTING, AGENTS, CONTEXT). Reference
 
 - [docs/DOCUMENTING.md](docs/DOCUMENTING.md) — doc conventions; read when changing or reviewing README.md or action.yml
 - [CONTRIBUTING.md](CONTRIBUTING.md) — build, package, release flow
+- [Roadmap](https://github.com/korthout/backport-action/issues/863) — direction and order of upcoming work; read when choosing or prioritizing work
 - [docs/TESTING.md](docs/TESTING.md) — test architecture, where to add tests, E2E
 - [CONTEXT.md](CONTEXT.md) — domain language; use its terms and respect its _Avoid_ lists
 - [docs/adr/](docs/adr/README.md) — product decisions: compatibility and releases, when to add an input, scope and safety, reporting and failure
