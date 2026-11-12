@@ -27,6 +27,8 @@ The repository uses its own action to keep them in sync. A pull request merged t
 3. Bump `main` to `N+1.0.0-SNAPSHOT`, only after `release-vN` exists. Otherwise the branch would be cut from a commit that already claims the next major.
 4. Add a notice to the top of the README on `main`. Most users read the default branch, and from now on it describes behavior they don't have yet. The notice links to the `release-vN` README, and doesn't get backported.
 
+**Update the [roadmap](https://github.com/korthout/backport-action/issues/863)** so it shows the next major as current work.
+
 **Now the held breaking pull requests can merge.** Merge them one at a time, and write each one's migration note right away. That's easier than reconstructing them at release time.
 
 ## Releasing the next major
