@@ -628,12 +628,20 @@ export class Backport {
     if (result.status === "failed") {
       const message = composeFailureMessage(result);
       console.error(message);
-      await this.github.createComment({
-        owner: workflowOwner,
-        repo: workflowRepo,
-        issue_number: pullNumber,
-        body: message,
-      });
+      try {
+        await this.github.createComment({
+          owner: workflowOwner,
+          repo: workflowRepo,
+          issue_number: pullNumber,
+          body: message,
+        });
+      } catch (error) {
+        // A failed comment must not change the job's status (ADR-0004).
+        console.error(
+          "Failed to create comment on original pull request:",
+          error,
+        );
+      }
       return;
     }
 
@@ -660,18 +668,36 @@ export class Backport {
             result.skippedShas,
           );
 
-    await this.github.createComment({
-      owner: workflowOwner,
-      repo: workflowRepo,
-      issue_number: pullNumber,
-      body: successMessage,
-    });
-
-    if (result.status === "success_with_conflicts") {
-      await this.commentResolveConflictsOnDraftPr(result, context);
+    try {
+      await this.github.createComment({
+        owner: workflowOwner,
+        repo: workflowRepo,
+        issue_number: pullNumber,
+        body: successMessage,
+      });
+    } catch (error) {
+      // A failed comment must not change the job's status (ADR-0004).
+      console.error(
+        "Failed to create comment on original pull request:",
+        error,
+      );
     }
 
-    await this.commentSkippedCommitsOnBackportPr(result, context);
+    // Best-effort: a failure to comment on the backport pull request
+    // shouldn't flip the target into a hard run failure or block
+    // subsequent targets.
+    try {
+      if (result.status === "success_with_conflicts") {
+        await this.commentResolveConflictsOnDraftPr(result, context);
+      }
+
+      await this.commentSkippedCommitsOnBackportPr(result, context);
+    } catch (error) {
+      console.error(
+        "Failed to post comment on the backport pull request:",
+        error,
+      );
+    }
   }
 
   private async commentSkippedCommitsOnBackportPr(

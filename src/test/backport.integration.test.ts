@@ -1070,6 +1070,80 @@ describe("Backport.run() orchestration", () => {
       }
     });
 
+    it("failed success comment does not fail the job or skip remaining targets", async () => {
+      const github = new FakeGithub({
+        sourcePr: {
+          labels: [{ name: "backport main" }, { name: "backport release" }],
+        },
+      });
+      const error = new Error("comment creation failed");
+      github.failOn("createComment", error);
+      const logError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        const backport = new Backport(github, makeConfig(), createMockGit());
+        await backport.run();
+
+        expect(logError).toHaveBeenCalledWith(
+          "Failed to create comment on original pull request:",
+          error,
+        );
+        expect(core.setFailed).not.toHaveBeenCalled();
+        expect(github.createdPRs).toHaveLength(2);
+      } finally {
+        logError.mockRestore();
+      }
+    });
+
+    it("failed failure comment does not fail the job", async () => {
+      const github = new FakeGithub();
+      const error = new Error("comment creation failed");
+      github.failOn("createComment", error);
+      const git = createMockGit({
+        cherryPick: vi.fn().mockRejectedValue(new Error("cherry-pick failed")),
+      });
+      const logError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        const backport = new Backport(github, makeConfig(), git);
+        await backport.run();
+
+        expect(logError).toHaveBeenCalledWith(
+          "Failed to create comment on original pull request:",
+          error,
+        );
+        expect(core.setFailed).not.toHaveBeenCalled();
+      } finally {
+        logError.mockRestore();
+      }
+    });
+
+    it("failed comment on the backport pull request does not fail the job", async () => {
+      const github = new FakeGithub();
+      const error = new Error("comment creation failed");
+      github.failOn("createComment", error);
+      const git = createMockGit({
+        cherryPick: vi
+          .fn()
+          .mockResolvedValue({ status: "picked", skippedShas: ["abc123"] }),
+      });
+      const logError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        const backport = new Backport(github, makeConfig(), git);
+        await backport.run();
+
+        expect(logError).toHaveBeenCalledWith(
+          "Failed to post comment on the backport pull request:",
+          error,
+        );
+        expect(core.setFailed).not.toHaveBeenCalled();
+        expect(github.createdPRs).toHaveLength(1);
+      } finally {
+        logError.mockRestore();
+      }
+    });
+
     it("single target: posts one comment and never updates", async () => {
       const github = new FakeGithub();
       const git = createMockGit();
